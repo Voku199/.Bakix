@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block extra_styles %}
+  /* ── Dashboard grid ──────────────────────────────────────── */
+  .dashboard {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 820px) {
+    .dashboard { grid-template-columns: 1fr; }
+  }
+
+  /* ── Subject accordion ───────────────────────────────────── */
+  .subject {
+    border-bottom: 1px solid var(--border);
+  }
+  .subject:last-child { border-bottom: none; }
+
+  .subject > summary {
+    list-style: none;
+    display:    flex;
+    align-items: center;
+    gap:         0.5rem;
+    padding:     0.7rem 0;
+    cursor:      pointer;
+    user-select: none;
+  }
+  .subject > summary::-webkit-details-marker { display: none; }
+
+  .subject__caret {
+    font-size:   11px;
+    color:       var(--muted);
+    margin-left: auto;
+    transition:  transform .2s;
+  }
+  .subject[open] > summary .subject__caret { transform: rotate(180deg); }
+
+  .subject__name   { font-size: 0.85rem; font-weight: 700; }
+  .subject__abbrev { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .subject__count  { font-size: 10px; color: var(--muted); }
+
+  .subject__avg {
+    font-size:     11px;
+    font-weight:   700;
+    background:    var(--accent);
+    color:         var(--btn-primary-fg);
+    padding:       2px 8px;
+    border-radius: 4px;
+    margin-left:   auto;
+  }
+  /* avg pushes caret to far right */
+  .subject__avg + .subject__caret { margin-left: 0.4rem; }
+
+  /* ── Marks table ─────────────────────────────────────────── */
+  .marks-table {
+    width:           100%;
+    border-collapse: collapse;
+    font-size:       11px;
+    margin-bottom:   0.5rem;
+  }
+
+  .marks-table th {
+    text-align:     left;
+    font-size:      9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color:          var(--muted);
+    padding:        0 0.5rem 0.4rem 0;
+    white-space:    nowrap;
+  }
+
+  .marks-table td {
+    padding:       0.35rem 0.5rem 0.35rem 0;
+    vertical-align: top;
+    border-top:    1px solid var(--border);
+  }
+
+  .marks-table tbody tr:hover { background: var(--bg); }
+
+  .mv {
+    display:       inline-block;
+    font-weight:   700;
+    font-size:     13px;
+    min-width:     20px;
+    text-align:    center;
+  }
+  .mv--1 { color: var(--green); }
+  .mv--2 { color: var(--text); }
+  .mv--3 { color: var(--accent); }
+  .mv--4 { color: var(--red); }
+  .mv--5 { color: var(--red); font-style: italic; }
+  .mv--other { color: var(--accent); font-size: 11px; }
+
+  .mark-caption { color: var(--text); }
+  .mark-meta    { color: var(--muted); font-size: 10px; }
+
+  /* ── Substitutions ───────────────────────────────────────── */
+  .sub-row {
+    display:       grid;
+    grid-template-columns: 82px 36px 1fr;
+    gap:           0.5rem;
+    align-items:   center;
+    padding:       0.55rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size:     0.8rem;
+  }
+  .sub-row:last-child { border-bottom: none; }
+
+  .sub-row__date { color: var(--muted); font-size: 11px; }
+  .sub-row__hour { font-weight: 700; }
+  .sub-row__change { font-size: 11px; }
+{% endblock %}
+
+
+{% block content %}
+
+  {# ── Grade trend chart (full width, above grid) ─────────── #}
+  {% if chart_data_json is defined and chart_data_json != '[]' %}
+  <div class="panel" style="margin-bottom:1.25rem;">
+    <div class="panel__title">Trend známek</div>
+    <canvas id="gradeChart" style="max-height:220px;"></canvas>
+  </div>
+  {% endif %}
+
+  {# ── Fatal auth error ────────────────────────────────────── #}
+  {% if error %}
+    <div class="alert alert--error">
+      <strong>Chyba přihlášení</strong> — {{ error }}
+    </div>
+
+  {% else %}
+
+  <div class="dashboard">
+
+    {# ── Marks panel ─────────────────────────────────────────── #}
+    <div class="panel">
+      <div class="panel__title">
+        Známky
+        {% if subjects %}
+          <span style="font-weight:400; margin-left:.5rem;">
+            — {{ subjects | length }} předmětů
+          </span>
+        {% endif %}
+      </div>
+
+      {% if marks_error %}
+        <div class="alert alert--error">{{ marks_error }}</div>
+
+      {% elif subjects %}
+
+        {% for subject in subjects %}
+          {%- set avg = subject.AverageText | trim -%}
+          {%- set mark_count = subject.Marks | length -%}
+
+          <details class="subject" open>
+            <summary>
+              <span class="subject__name">{{ subject.Subject.Name }}</span>
+              <span class="subject__abbrev">{{ subject.Subject.Abbrev | trim }}</span>
+              <span class="subject__count">({{ mark_count }})</span>
+              {% if avg %}<span class="subject__avg">{{ avg }}</span>{% endif %}
+              <span class="subject__caret">▾</span>
+            </summary>
+
+            {% if subject.Marks %}
+            <table class="marks-table">
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Zn.</th>
+                  <th>Popis</th>
+                  <th>Typ</th>
+                  <th>Váha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for mark in subject.Marks | sort(attribute='MarkDate', reverse=True) %}
+                  {%- set mv = mark.MarkText | trim -%}
+                  <tr>
+                    <td class="mark-meta">{{ mark.MarkDate[:10] }}</td>
+                    <td>
+                      <span class="mv
+                        {%- if mv == '1' %} mv--1
+                        {%- elif mv == '2' %} mv--2
+                        {%- elif mv == '3' %} mv--3
+                        {%- elif mv == '4' %} mv--4
+                        {%- elif mv == '5' %} mv--5
+                        {%- else %} mv--other
+                        {%- endif %}">{{ mv }}</span>
+                    </td>
+                    <td class="mark-caption">{{ mark.Caption or '—' }}</td>
+                    <td class="mark-meta">{{ mark.TypeNote or '—' }}</td>
+                    <td class="mark-meta">{{ mark.Weight or '—' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+              <p class="empty" style="padding:.4rem 0 .7rem">žádné známky</p>
+            {% endif %}
+          </details>
+        {% else %}
+          <p class="empty">Žádné předměty.</p>
+        {% endfor %}
+
+      {% else %}
+        <p class="empty">Žádné známky.</p>
+      {% endif %}
+    </div>
+
+    {# ── Substitutions panel ─────────────────────────────────── #}
+    <div class="panel">
+      <div class="panel__title">Suplování</div>
+
+      {% if subs_error %}
+        <div class="alert alert--error">{{ subs_error }}</div>
+
+      {% elif substitutions %}
+        {% for s in substitutions %}
+          {% set change = s.change %}
+          {% if change is mapping %}
+            {% set change_type  = change.get('ChangeType', '') %}
+            {% set change_label = change.get('description') or change.get('TypeName') or change_type %}
+          {% else %}
+            {% set change_type  = '' %}
+            {% set change_label = change | string %}
+          {% endif %}
+
+          <div class="sub-row">
+            <span class="sub-row__date">{{ s.day[:10] if s.day else '—' }}</span>
+            <span class="sub-row__hour">{{ s.hour }}.</span>
+            <span class="sub-row__change">
+              {% if change_type == 'Cancelled' %}
+                <span class="badge badge--red">Odpadlo</span>
+              {% elif change_type in ('Substitution', 'TeacherChange') %}
+                <span class="badge badge--warn">Suplování</span>
+              {% elif change_type == 'RoomChange' %}
+                <span class="badge badge--warn">Změna učebny</span>
+              {% endif %}
+              {% if change_label and change_label != change_type %}
+                {{ change_label }}
+              {% endif %}
+            </span>
+          </div>
+        {% endfor %}
+
+      {% else %}
+        <p class="empty">Žádné změny v rozvrhu.</p>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if chart_data_json is defined and chart_data_json != '[]' %}
+<script>const GRADE_DATA = {{ chart_data_json | safe }};</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endif %}
+{% endblock %}

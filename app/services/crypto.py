@@ -1,0 +1,30 @@
+import base64
+import json
+import os
+
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+_SALT = b"bakix-creds-v1"
+
+_fernet: "Fernet | None" = None
+_active_secret: str = ""
+
+
+def _get_fernet() -> Fernet:
+    global _fernet, _active_secret
+    secret = os.getenv("SECRET_KEY", "dev-insecure-change-in-prod")
+    if _fernet is None or secret != _active_secret:
+        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=_SALT, iterations=480_000)
+        _fernet = Fernet(base64.urlsafe_b64encode(kdf.derive(secret.encode())))
+        _active_secret = secret
+    return _fernet
+
+
+def encrypt_json(data: dict) -> str:
+    return _get_fernet().encrypt(json.dumps(data).encode()).decode()
+
+
+def decrypt_json(token: str) -> dict:
+    return json.loads(_get_fernet().decrypt(token.encode()))

@@ -1,0 +1,162 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:1.5rem;font-family:'Space Mono','Courier New',monospace}
+.mode-block{border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+.mode-label{font-size:11px;font-weight:700;letter-spacing:3px;margin-bottom:1.25rem;opacity:0.5}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.swatch{border-radius:8px;overflow:hidden}
+.swatch-color{height:52px;width:100%}
+.swatch-info{padding:8px 10px}
+.swatch-name{font-size:11px;font-weight:700;margin-bottom:2px}
+.swatch-hex{font-size:10px;opacity:0.6}
+.divider{height:1px;margin:0.25rem 0 1.25rem}
+.preview-row{display:flex;gap:10px;margin-top:1rem;flex-wrap:wrap}
+.preview-btn{padding:8px 16px;border-radius:6px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;border:none;cursor:default}
+.preview-badge{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:'Space Mono',monospace}
+</style>
+
+<div class="wrap">
+
+<div class="mode-block" style="background:#f0ebe3;border:1px solid #cec7bc">
+  <div class="mode-label" style="color:#1c1917">LIGHT MODE</div>
+  <div class="swatches">
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#f0ebe3"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">bg</div>
+        <div class="swatch-hex" style="color:#6b6560">#f0ebe3</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#e8e2d9"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">bg2 / panel</div>
+        <div class="swatch-hex" style="color:#6b6560">#e8e2d9</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#cec7bc"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">border</div>
+        <div class="swatch-hex" style="color:#6b6560">#cec7bc</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#1c1917"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">text</div>
+        <div class="swatch-hex" style="color:#6b6560">#1c1917</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#6b6560"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">muted</div>
+        <div class="swatch-hex" style="color:#6b6560">#6b6560</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#b5451b"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">accent</div>
+        <div class="swatch-hex" style="color:#6b6560">#b5451b</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#2d6a4f"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">green</div>
+        <div class="swatch-hex" style="color:#6b6560">#2d6a4f</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #cec7bc">
+      <div class="swatch-color" style="background:#922b21"></div>
+      <div class="swatch-info" style="background:#e8e2d9">
+        <div class="swatch-name" style="color:#1c1917">red</div>
+        <div class="swatch-hex" style="color:#6b6560">#922b21</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" style="background:#cec7bc"></div>
+  <div class="preview-row">
+    <button class="preview-btn" style="background:#b5451b;color:#f0ebe3">Primary</button>
+    <button class="preview-btn" style="background:transparent;color:#1c1917;border:1px solid #cec7bc">Secondary</button>
+    <span class="preview-badge" style="background:#d8f3dc;color:#2d6a4f">Splněno</span>
+    <span class="preview-badge" style="background:#fce8e6;color:#922b21">Chyba</span>
+    <span class="preview-badge" style="background:#b5451b33;color:#b5451b">Upozornění</span>
+  </div>
+</div>
+
+<div class="mode-block" style="background:#1a1612;border:1px solid #3a342c">
+  <div class="mode-label" style="color:#e8e2d9">DARK MODE</div>
+  <div class="swatches">
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#1a1612"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">bg</div>
+        <div class="swatch-hex" style="color:#8a8078">#1a1612</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#211e19"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">bg2 / panel</div>
+        <div class="swatch-hex" style="color:#8a8078">#211e19</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#3a342c"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">border</div>
+        <div class="swatch-hex" style="color:#8a8078">#3a342c</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#e8e2d9"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">text</div>
+        <div class="swatch-hex" style="color:#8a8078">#e8e2d9</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#8a8078"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">muted</div>
+        <div class="swatch-hex" style="color:#8a8078">#8a8078</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#d4622a"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">accent</div>
+        <div class="swatch-hex" style="color:#8a8078">#d4622a</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#4a9470"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">green</div>
+        <div class="swatch-hex" style="color:#8a8078">#4a9470</div>
+      </div>
+    </div>
+    <div class="swatch" style="border:1px solid #3a342c">
+      <div class="swatch-color" style="background:#c0403a"></div>
+      <div class="swatch-info" style="background:#211e19">
+        <div class="swatch-name" style="color:#e8e2d9">red</div>
+        <div class="swatch-hex" style="color:#8a8078">#c0403a</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider" style="background:#3a342c"></div>
+  <div class="preview-row">
+    <button class="preview-btn" style="background:#d4622a;color:#1a1612">Primary</button>
+    <button class="preview-btn" style="background:transparent;color:#e8e2d9;border:1px solid #3a342c">Secondary</button>
+    <span class="preview-badge" style="background:#1a3d2b;color:#4a9470">Splněno</span>
+    <span class="preview-badge" style="background:#3d1a18;color:#c0403a">Chyba</span>
+    <span class="preview-badge" style="background:#3d2010;color:#d4622a">Upozornění</span>
+  </div>
+</div>
+
+</div>
