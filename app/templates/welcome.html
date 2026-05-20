@@ -565,7 +565,115 @@
       margin:     0;
     }
 
+    /* ── Mission statement ────────────────────────────────── */
+    .mission {
+      max-width:   560px;
+      margin:      0 auto 4rem;
+      text-align:  center;
+      font-size:   0.92rem;
+      color:       var(--text-2);
+      line-height: 1.8;
+    }
+
+    /* ── Team grid ────────────────────────────────────────── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:     1rem;
+    }
+
+    @media (max-width: 780px) {
+      .team-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .team-card {
+      background:    var(--bg2);
+      border:        1px solid var(--border);
+      border-radius: var(--r);
+      padding:       1.75rem 1rem 2rem;
+      text-align:    center;
+      transition:    border-color .25s, transform .25s, box-shadow .25s;
+    }
+
+    .team-card:hover {
+      border-color: var(--accent);
+      transform:    translateY(-4px);
+      box-shadow:   0 16px 40px rgba(181,69,27,.08),
+                    0 0 0 1px rgba(181,69,27,.14);
+    }
+
+    .team-card__avatar {
+      width:          52px;
+      height:         52px;
+      border-radius:  50%;
+      background:     var(--grad);
+      display:        flex;
+      align-items:    center;
+      justify-content: center;
+      margin:         0 auto 1rem;
+      font-size:      1.15rem;
+      font-weight:    700;
+      color:          #f0ebe3;
+      flex-shrink:    0;
+    }
+
+    .team-card__name {
+      font-size:      0.9rem;
+      font-weight:    700;
+      letter-spacing: -0.3px;
+      margin-bottom:  0.3rem;
+      color:          var(--text);
+    }
+
+    .team-card__role {
+      font-size:      9px;
+      font-weight:    700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color:          var(--text-3);
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .site-footer {
+      position:        relative;
+      z-index:         1;
+      border-top:      1px solid var(--border);
+      padding:         2rem 2.5rem;
+      display:         flex;
+      align-items:     center;
+      justify-content: space-between;
+      flex-wrap:       wrap;
+      gap:             0.75rem;
+    }
+
+    .footer__copy {
+      font-size:      10px;
+      letter-spacing: 0.8px;
+      color:          var(--text-3);
+    }
+
+    .footer__links {
+      display: flex;
+      gap:     1.75rem;
+    }
+
+    .footer__link {
+      font-size:      10px;
+      letter-spacing: 0.5px;
+      color:          var(--muted);
+      text-decoration: none;
+      transition:     color .15s;
+    }
+
+    .footer__link:hover { color: var(--accent); }
+
+    @media (max-width: 500px) {
+      .site-footer { justify-content: center; text-align: center; }
+      .footer__links { gap: 1.25rem; }
+    }
+
   </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='welcome_mobile.css') }}">
 </head>
 
 <body>
@@ -579,7 +687,7 @@
     <div class="nav__actions">
       <button class="btn--theme" id="theme-btn" aria-label="Přepnout motiv">◐</button>
       <div class="mag">
-        <a href="{{ url_for('auth.onboarding') }}" class="btn btn--ghost">
+        <a href="{{ url_for('login.login') }}" class="btn btn--ghost">
           Přihlásit se
         </a>
       </div>
@@ -706,6 +814,55 @@
       </a>
     </div>
   </section>
+
+  <div class="gradient-divider"></div>
+
+  <!-- ── About / Team ─────────────────────────────────────── -->
+  <section class="section" id="about">
+    <p class="section-eye">Kdo za tím stojí</p>
+    <h2 class="section-title">Vytvořeno studenty<br><span>pro studenty.</span></h2>
+
+    <p class="mission">
+      Bakix vznikl z frustrace z nepřehledných školních systémů.
+      Naším cílem je poskytnout každému studentu přehledný,
+      rychlý a krásný přístup k jeho školním datům — zdarma, navždy.
+    </p>
+
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-card__avatar">V</div>
+        <div class="team-card__name">Voku</div>
+        <div class="team-card__role">Zakladatel &amp; Dev</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card__avatar">D</div>
+        <div class="team-card__name">Damian</div>
+        <div class="team-card__role">Backend</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card__avatar">A</div>
+        <div class="team-card__name">Alex</div>
+        <div class="team-card__role">Design</div>
+      </div>
+      <div class="team-card">
+        <div class="team-card__avatar">L</div>
+        <div class="team-card__name">Lukáš</div>
+        <div class="team-card__role">Frontend</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="gradient-divider"></div>
+
+  <!-- ── Footer ────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <span class="footer__copy">© 2026 Bakix — All rights reserved</span>
+    <nav class="footer__links" aria-label="Právní informace">
+      <a href="/cookies" class="footer__link">Cookies</a>
+      <a href="/tos"     class="footer__link">Podmínky použití</a>
+      <a href="/privacy" class="footer__link">Ochrana soukromí</a>
+    </nav>
+  </footer>
 
   <!-- ── CDN deps ──────────────────────────────────────────── -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -873,6 +1030,24 @@
       stagger:  0.14,
       ease:     'power3.out',
       scrollTrigger: { trigger: '.cta-section', start: 'top 76%' },
+    });
+
+    /* About — mission + team cards */
+    gsap.set(['.mission'], { opacity: 0, y: 24 });
+    gsap.to('.mission', {
+      opacity:  1, y: 0,
+      duration: 0.8,
+      ease:     'power3.out',
+      scrollTrigger: { trigger: '#about', start: 'top 74%' },
+    });
+
+    gsap.set('.team-card', { opacity: 0, y: 32, scale: 0.96 });
+    gsap.to('.team-card', {
+      opacity:  1, y: 0, scale: 1,
+      duration: 0.7,
+      stagger:  0.1,
+      ease:     'power3.out',
+      scrollTrigger: { trigger: '.team-grid', start: 'top 78%' },
     });
   })();
   </script>

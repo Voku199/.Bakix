@@ -1,0 +1,136 @@
+/* ── Bakix welcome.html — mobile / touch overrides ──────────────
+   Breakpoints used here (inline CSS already handles these):
+     900px  bento 3→2 col
+     640px  .section padding
+     600px  .glass padding
+     560px  bento 2→1 col
+   So we target the remaining gaps at ≤768px and ≤480px.
+──────────────────────────────────────────────────────────────── */
+
+/* ── Nav ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav {
+    padding: 0 1rem;
+    height:  52px;
+  }
+
+  .nav__logo-text {
+    font-size:      12px;
+    letter-spacing: 3px;
+  }
+
+  /* Larger touch targets for nav buttons */
+  .nav__actions .btn--ghost,
+  .nav__actions .btn--theme {
+    padding:     8px 14px;
+    font-size:   12px;
+    min-height:  40px;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Hide logo text on very narrow screens to avoid overflow */
+  .nav__logo-text { display: none; }
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero {
+    min-height: 100svh; /* safe-area-aware on iOS */
+  }
+
+  .hero-content {
+    padding:   0 1rem;
+    max-width: 100%;
+  }
+
+  /* Tighten headline tracking at small sizes */
+  .hero-headline {
+    letter-spacing: -1.2px;
+  }
+
+  .hero-sub {
+    font-size:     0.88rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Stack CTA buttons vertically on narrow screens */
+  .hero-actions {
+    flex-direction: column;
+    align-items:    center;
+    gap:            0.65rem;
+  }
+
+  .hero-actions .mag,
+  .hero-actions > a {
+    width: 100%;
+  }
+
+  .btn--cta,
+  .hero-actions .btn--ghost {
+    width:       100%;
+    justify-content: center;
+    min-height:  48px;  /* comfortable touch target */
+    font-size:   14px;
+  }
+}
+
+/* ── Bento cards ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* All cards stack in a single column — overrides the inline 900/560 breakpoints */
+  .bento              { grid-template-columns: 1fr; }
+  .bento-card--wide   { grid-column: span 1; }
+
+  .bento-card {
+    padding: 1.4rem 1.4rem 1.6rem;
+  }
+
+  .bento-card__title { font-size: 0.95rem; }
+  .bento-card__desc  { font-size: 0.80rem; }
+}
+
+/* ── Section titles ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .section-title { margin-bottom: 2.25rem; }
+}
+
+/* ── Final CTA section ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .cta-section {
+    padding: 4rem 1.25rem 6rem;
+  }
+
+  .cta-sub { font-size: 0.85rem; }
+
+  .cta-section .mag,
+  .cta-section > a {
+    width: 100%;
+  }
+
+  .cta-section .btn--cta {
+    width:           100%;
+    justify-content: center;
+    min-height:      48px;
+    font-size:       14px;
+  }
+}
+
+/* ── Prevent horizontal overflow on all viewports ────────────── */
+@media (max-width: 768px) {
+  body { overflow-x: hidden; }
+
+  .hero-aurora {
+    width:  600px;
+    height: 400px;
+  }
+
+  .cta-glow {
+    width:  90vw;
+    height: 280px;
+  }
+}
+
+/* ── Scroll hint: hide on short screens ──────────────────────── */
+@media (max-height: 600px) {
+  .scroll-hint { display: none; }
+}

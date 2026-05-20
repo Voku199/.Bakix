@@ -1,18 +1,21 @@
 import logging
+import os
 
 import requests
 
 log = logging.getLogger(__name__)
 
-BASE_URL = "https://zstsobra.bakalari.cz"
-USERNAME = "Kurin37221"
-PASSWORD = "83VcyxxJ"
-
 
 class BakalariService:
 
-    def __init__(self, base_url: str = BASE_URL):
-        self._base = base_url.rstrip("/")
+    _LOGIN     = "/api/login"
+    _MARKS     = "/api/3/marks"
+    _TIMETABLE = "/api/3/timetable/actual"
+    _HOMEWORKS = "/api/3/homeworks"
+    _KOMENS    = "/api/3/komens/messages/received"
+
+    def __init__(self, base_url: str = ""):
+        self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
 
     # ── School validation ────────────────────────────────────────────────────
 
@@ -79,18 +82,22 @@ class BakalariService:
 
     # ── Auth & API ───────────────────────────────────────────────────────────
 
-    def login(self, username: str = USERNAME, password: str = PASSWORD) -> dict:
-        response = requests.post(
-            f"{self._base}/api/login",
-            data={
-                "grant_type": "password",
-                "username":   username,
-                "password":   password,
-                "client_id":  "ANDR",
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
-        )
+    def login(self, username: str, password: str) -> dict:
+        try:
+            response = requests.post(
+                f"{self._base}{self._LOGIN}",
+                data={
+                    "grant_type": "password",
+                    "username":   username,
+                    "password":   password,
+                    "client_id":  "ANDR",
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            return {"error": "Login request failed", "detail": str(exc)}
+
         if not response.ok:
             return {
                 "error":       "Login failed",
@@ -104,24 +111,40 @@ class BakalariService:
         }
 
     def get_marks(self, access_token: str) -> dict:
-        response = requests.get(
-            f"{self._base}/api/3/marks",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
+        try:
+            response = requests.get(
+                f"{self._base}{self._MARKS}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_marks: request failed")
+            return {"error": "Marks request failed"}
         if not response.ok:
             return {"error": "Failed to fetch marks", "status_code": response.status_code}
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_marks: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
 
     def get_timetable(self, access_token: str) -> dict:
-        response = requests.get(
-            f"{self._base}/api/3/timetable/actual",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
+        try:
+            response = requests.get(
+                f"{self._base}{self._TIMETABLE}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_timetable: request failed")
+            return {"error": "Timetable request failed"}
         if not response.ok:
             return {"error": "Failed to fetch timetable", "status_code": response.status_code}
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_timetable: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
 
     def get_substitutions_from_timetable(self, access_token: str) -> list:
         timetable = self.get_timetable(access_token)
@@ -138,6 +161,43 @@ class BakalariService:
                         "change": atom.get("Change"),
                     })
         return changes
+
+    def get_homeworks(self, access_token: str, from_date: str, to_date: str) -> dict:
+        try:
+            response = requests.get(
+                f"{self._base}{self._HOMEWORKS}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"from": from_date, "to": to_date},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_homeworks: request failed")
+            return {"error": "Homeworks request failed"}
+        if not response.ok:
+            return {"error": "Failed to fetch homeworks", "status_code": response.status_code}
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_homeworks: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    def get_komens(self, access_token: str) -> dict:
+        try:
+            response = requests.post(
+                f"{self._base}{self._KOMENS}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_komens: request failed")
+            return {"error": "Komens request failed"}
+        if not response.ok:
+            return {"error": "Failed to fetch komens", "status_code": response.status_code}
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_komens: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
 
     def print_marks(self, access_token: str):
         data = self.get_marks(access_token)
@@ -156,26 +216,3 @@ class BakalariService:
                 print(f"   • {mark['MarkText']} | {mark['Caption']} | {mark['TypeNote']} "
                       f"| váha: {mark.get('Weight') or 'body'} | {mark['MarkDate'][:10]}")
             print()
-
-
-if __name__ == "__main__":
-    svc = BakalariService()
-    print("Přihlašuji se...")
-    result = svc.login()
-
-    if "error" in result:
-        print(f"CHYBA pri prihlaseni: {result['error']}")
-        print(f"Status kod: {result['status_code']}")
-        print(f"Detail: {result['detail']}")
-    else:
-        print("Prihlaseni uspesne!")
-        print(f"Access token: {result['access_token'][:30]}...")
-        print("\nNacitam znamky...")
-        svc.print_marks(result["access_token"])
-
-        print("\nNacitam suplovani...")
-        subs = svc.get_substitutions_from_timetable(result["access_token"])
-        if isinstance(subs, dict) and "error" in subs:
-            print(f"CHYBA: {subs['error']} (status {subs['status_code']})")
-        else:
-            print(f"Suplovani OK — pocet zmen: {len(subs)}")

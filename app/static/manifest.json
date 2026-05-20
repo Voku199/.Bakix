@@ -1,0 +1,17 @@
+{
+  "name": "Bakix",
+  "short_name": "Bakix",
+  "description": "Bakaláři dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0ebe3",
+  "theme_color": "#b5451b",
+  "icons": [
+    {
+      "src": "/static/bakix.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
