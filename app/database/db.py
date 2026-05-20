@@ -1,37 +1,9 @@
+import json
 import logging
-import os
-import sqlite3
+
+from app.database.connection import get_connection
 
 log = logging.getLogger(__name__)
-
-_DB_PATH = os.getenv("BAKIX_DB_PATH", "bakix.db")
-
-
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db() -> None:
-    """Create the credentials table and migrate any missing columns."""
-    with _connect() as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS saved_credentials (
-                user_id       TEXT PRIMARY KEY,
-                school_url    TEXT NOT NULL,
-                enc_creds     TEXT NOT NULL,
-                access_token  TEXT,
-                refresh_token TEXT
-            )
-        """)
-        # Non-destructive migration: add token columns to existing installs
-        for col_def in ("access_token TEXT", "refresh_token TEXT"):
-            try:
-                db.execute(f"ALTER TABLE saved_credentials ADD COLUMN {col_def}")
-            except sqlite3.OperationalError:
-                pass  # column already exists
-    log.info("DB ready at %s", _DB_PATH)
 
 
 def upsert_all(
@@ -41,7 +13,7 @@ def upsert_all(
     access_token: "str | None" = None,
     refresh_token: "str | None" = None,
 ) -> None:
-    with _connect() as db:
+    with get_connection() as db:
         db.execute("""
             INSERT INTO saved_credentials
                 (user_id, school_url, enc_creds, access_token, refresh_token)
@@ -60,7 +32,7 @@ def update_tokens(
     access_token: str,
     refresh_token: "str | None",
 ) -> None:
-    with _connect() as db:
+    with get_connection() as db:
         db.execute(
             "UPDATE saved_credentials SET access_token = ?, refresh_token = ? WHERE user_id = ?",
             (access_token, refresh_token, user_id),
@@ -69,7 +41,7 @@ def update_tokens(
 
 
 def fetch_row(user_id: str) -> "dict | None":
-    with _connect() as db:
+    with get_connection() as db:
         row = db.execute(
             "SELECT * FROM saved_credentials WHERE user_id = ?", (user_id,)
         ).fetchone()
@@ -78,3 +50,29 @@ def fetch_row(user_id: str) -> "dict | None":
         return dict(row)
     log.debug("DB read miss: user=%.8s", user_id)
     return None
+
+
+def get_settings(user_id: str) -> dict:
+    from app.services.crypto import decrypt_json
+    with get_connection() as db:
+        row = db.execute(
+            "SELECT school_url, enc_creds, settings_json FROM saved_credentials WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+    if not row:
+        return {}
+    try:
+        username = decrypt_json(row["enc_creds"]).get("username", "")
+    except Exception:
+        username = ""
+    prefs = json.loads(row["settings_json"]) if row["settings_json"] else {}
+    return {"school_url": row["school_url"], "username": username, **prefs}
+
+
+def save_settings(user_id: str, prefs: dict) -> None:
+    with get_connection() as db:
+        db.execute(
+            "UPDATE saved_credentials SET settings_json = ? WHERE user_id = ?",
+            (json.dumps(prefs), user_id),
+        )
+    log.debug("settings saved: user=%.8s", user_id)

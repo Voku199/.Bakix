@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% block title %}Bakix — Přihlášení{% endblock %}
+
+{% block extra_styles %}
+
+  /* ── Page layout ────────────────────────────────────────────── */
+  .login-page {
+    min-height:      calc(100vh - var(--header-h));
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    padding:         2rem 1.25rem 4rem;
+  }
+
+  /* ── Card ───────────────────────────────────────────────────── */
+  .login-card {
+    width:         100%;
+    max-width:     400px;
+    animation:     cardIn .35s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Header block inside card ───────────────────────────────── */
+  .login-header {
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+    text-align:      center;
+    gap:             0.55rem;
+    margin-bottom:   1.75rem;
+  }
+
+  .login-header__icon {
+    width:           42px;
+    height:          42px;
+    border-radius:   50%;
+    background:      var(--bg);
+    border:          1px solid var(--border);
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    margin-bottom:   0.2rem;
+  }
+
+  .login-header__icon img {
+    height: 22px;
+    width:  auto;
+  }
+
+  .login-header__title {
+    font-size:      1.05rem;
+    font-weight:    700;
+    letter-spacing: -0.5px;
+    color:          var(--text);
+  }
+
+  .login-header__sub {
+    font-size:  0.78rem;
+    color:      var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── Fields ─────────────────────────────────────────────────── */
+  .field { margin-bottom: 1rem; }
+
+  .field__label {
+    display:        block;
+    font-size:      9px;
+    font-weight:    700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color:          var(--muted);
+    margin-bottom:  0.4rem;
+  }
+
+  .field__input {
+    width:         100%;
+    padding:       9px 12px;
+    background:    var(--bg);
+    border:        1px solid var(--border);
+    border-radius: var(--radius);
+    color:         var(--text);
+    font-family:   var(--font);
+    font-size:     12px;
+    outline:       none;
+    transition:    border-color .15s, box-shadow .15s;
+  }
+
+  .field__input:focus {
+    border-color: var(--accent);
+    box-shadow:   0 0 0 3px rgba(181,69,27,.12);
+  }
+
+  .field__input.has-error {
+    border-color: var(--red);
+    box-shadow:   0 0 0 3px rgba(146,43,33,.1);
+  }
+
+  /* ── School URL collapsible row ─────────────────────────────── */
+  .school-row {
+    display:         flex;
+    align-items:     center;
+    gap:             0.5rem;
+    margin-bottom:   1rem;
+    padding:         0.55rem 0.75rem;
+    background:      var(--bg);
+    border:          1px solid var(--border);
+    border-radius:   var(--radius);
+    cursor:          pointer;
+    transition:      border-color .15s;
+  }
+
+  .school-row:hover { border-color: var(--accent); }
+
+  .school-row__dot {
+    width:        7px;
+    height:       7px;
+    border-radius: 50%;
+    background:   var(--green);
+    flex-shrink:  0;
+  }
+
+  .school-row__label {
+    flex:        1;
+    font-size:   11px;
+    color:       var(--muted);
+    overflow:    hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .school-row__change {
+    font-size:      9px;
+    font-weight:    700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color:          var(--accent);
+    flex-shrink:    0;
+  }
+
+  .school-expand {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height .28s cubic-bezier(.4,0,.2,1),
+                opacity    .2s ease;
+    opacity: 0;
+  }
+
+  .school-expand.is-open {
+    max-height: 80px;
+    opacity: 1;
+  }
+
+  /* ── Remember me row ────────────────────────────────────────── */
+  .remember-row {
+    display:     flex;
+    align-items: center;
+    gap:         0.55rem;
+    margin:      1.1rem 0 1.25rem;
+    cursor:      pointer;
+  }
+
+  .remember-row input[type="checkbox"] {
+    width:         15px;
+    height:        15px;
+    border-radius: 3px;
+    accent-color:  var(--accent);
+    cursor:        pointer;
+    flex-shrink:   0;
+  }
+
+  .remember-row__label {
+    font-size:  11px;
+    color:      var(--muted);
+    user-select: none;
+  }
+
+  /* ── Submit ─────────────────────────────────────────────────── */
+  .btn--login {
+    width:       100%;
+    padding:     10px 0;
+    font-size:   12px;
+    letter-spacing: 0.5px;
+    justify-content: center;
+    border-radius: var(--radius);
+    transition:  opacity .15s, transform .1s;
+  }
+
+  .btn--login:active { transform: scale(0.99); }
+
+  .btn--login.is-loading {
+    pointer-events: none;
+    opacity: .75;
+  }
+
+  .btn--login.is-loading::after {
+    content:          '';
+    display:          inline-block;
+    width:            10px;
+    height:           10px;
+    border:           2px solid currentColor;
+    border-top-color: transparent;
+    border-radius:    50%;
+    animation:        spin .5s linear infinite;
+    margin-left:      0.5rem;
+    vertical-align:   middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Footer link ────────────────────────────────────────────── */
+  .login-footer {
+    text-align:  center;
+    margin-top:  1.25rem;
+    font-size:   11px;
+    color:       var(--muted);
+  }
+
+  .login-footer a {
+    color:           var(--accent);
+    text-decoration: none;
+  }
+
+  .login-footer a:hover { text-decoration: underline; }
+
+{% endblock %}
+
+
+{% block content %}
+<div class="login-page">
+  <div class="login-card">
+
+    {# ── Header ───────────────────────────────────────────────── #}
+    <div class="login-header">
+      <div class="login-header__icon">
+        <img src="{{ url_for('static', filename='bakix.svg') }}" alt="Bakix">
+      </div>
+      <div class="login-header__title">Vítejte zpět</div>
+      <div class="login-header__sub">Přihlaste se ke svému účtu Bakalářů</div>
+    </div>
+
+    {# ── Flash messages ───────────────────────────────────────── #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert--{{ 'error' if category == 'error' else category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {# ── Card ─────────────────────────────────────────────────── #}
+    <div class="panel">
+
+      {# JS-driven error box #}
+      <div id="login-error" class="alert alert--error" style="display:none;"></div>
+
+      <form id="login-form" novalidate autocomplete="on">
+
+        {# ── School URL ──────────────────────────────────────── #}
+        <div class="school-row" id="school-row" role="button" tabindex="0"
+             aria-label="Změnit adresu školy">
+          <span class="school-row__dot"></span>
+          <span class="school-row__label" id="school-display">Načítám školu…</span>
+          <span class="school-row__change">Změnit</span>
+        </div>
+
+        <div class="school-expand" id="school-expand">
+          <div class="field" style="margin-bottom:.75rem;">
+            <label class="field__label" for="school_url">URL školy</label>
+            <input type="text" id="school_url" name="school_url" class="field__input"
+                   placeholder="zstsobra.bakalari.cz"
+                   autocomplete="off" spellcheck="false" inputmode="url">
+          </div>
+        </div>
+
+        {# ── Credentials ─────────────────────────────────────── #}
+        <div class="field">
+          <label class="field__label" for="username">Uživatelské jméno</label>
+          <input type="text" id="username" name="username" class="field__input"
+                 placeholder="např. Novak12345"
+                 autocomplete="username" required>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="password">Heslo</label>
+          <input type="password" id="password" name="password" class="field__input"
+                 placeholder="••••••••"
+                 autocomplete="current-password" required>
+        </div>
+
+        {# ── Remember me ─────────────────────────────────────── #}
+        <label class="remember-row">
+          <input type="checkbox" id="remember-me" checked>
+          <span class="remember-row__label">Zapamatovat přihlašovací jméno a školu</span>
+        </label>
+
+        <button type="submit" class="btn btn--primary btn--login" id="btn-submit">
+          Přihlásit se
+        </button>
+
+      </form>
+    </div>
+
+    <p class="login-footer">
+      Nový uživatel? <a href="{{ url_for('auth.onboarding') }}">Nastavit účet →</a>
+    </p>
+
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+(function () {
+  const LS_SCHOOL   = 'bakix-school';
+  const LS_USERNAME = 'bakix-username';
+
+  const schoolDisplay = document.getElementById('school-display');
+  const schoolInput   = document.getElementById('school_url');
+  const schoolRow     = document.getElementById('school-row');
+  const schoolExpand  = document.getElementById('school-expand');
+  const usernameInput = document.getElementById('username');
+  const rememberCb    = document.getElementById('remember-me');
+  const form          = document.getElementById('login-form');
+  const errorBox      = document.getElementById('login-error');
+  const btnSubmit     = document.getElementById('btn-submit');
+
+  /* ── Restore from localStorage ─────────────────────────────── */
+  const savedSchool   = localStorage.getItem(LS_SCHOOL)   || '';
+  const savedUsername = localStorage.getItem(LS_USERNAME) || '';
+
+  if (savedSchool) {
+    schoolInput.value   = savedSchool;
+    schoolDisplay.textContent = savedSchool;
+  } else {
+    schoolDisplay.textContent = 'Zadat adresu školy';
+    openSchoolField();
+  }
+
+  if (savedUsername) {
+    usernameInput.value = savedUsername;
+  }
+
+  /* ── School row toggle ──────────────────────────────────────── */
+  function openSchoolField() {
+    schoolExpand.classList.add('is-open');
+    schoolRow.style.display = 'none';
+  }
+
+  schoolRow.addEventListener('click', openSchoolField);
+  schoolRow.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSchoolField(); }
+  });
+
+  schoolInput.addEventListener('blur', function () {
+    const v = schoolInput.value.trim();
+    if (v) {
+      schoolDisplay.textContent = v;
+      schoolExpand.classList.remove('is-open');
+      schoolRow.style.display = '';
+    }
+  });
+
+  /* ── Form submit ────────────────────────────────────────────── */
+  let submitting = false;
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (submitting) return;
+
+    errorBox.style.display = 'none';
+
+    let schoolUrl = schoolInput.value.trim().replace(/\/+$/, '');
+    const username = usernameInput.value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!schoolUrl) {
+      showError('Zadejte adresu školy.');
+      openSchoolField();
+      schoolInput.focus();
+      return;
+    }
+
+    if (!username || !password) {
+      showError('Vyplňte uživatelské jméno i heslo.');
+      return;
+    }
+
+    if (!schoolUrl.startsWith('http://') && !schoolUrl.startsWith('https://')) {
+      schoolUrl = 'https://' + schoolUrl;
+    }
+
+    submitting = true;
+    setLoading(true);
+
+    const body = new FormData();
+    body.append('school_url', schoolUrl);
+    body.append('username',   username);
+    body.append('password',   password);
+
+    let succeeded = false;
+
+    try {
+      const resp = await fetch('/login', { method: 'POST', body });
+
+      if (resp.redirected) {
+        succeeded = true;
+        if (rememberCb.checked) {
+          try {
+            localStorage.setItem(LS_SCHOOL,   schoolUrl);
+            localStorage.setItem(LS_USERNAME, username);
+          } catch (_) {}
+        } else {
+          localStorage.removeItem(LS_SCHOOL);
+          localStorage.removeItem(LS_USERNAME);
+        }
+        window.location.href = resp.url;
+        return;
+      }
+
+      if (!resp.ok) {
+        let msg;
+        try {
+          const data = await resp.json();
+          msg = data.detail || data.error || null;
+        } catch (_) {
+          msg = null;
+        }
+        if (!msg) {
+          msg = resp.status >= 500
+            ? `Chyba serveru (${resp.status}). Zkuste to znovu.`
+            : `Přihlášení selhalo — zkontrolujte jméno a heslo.`;
+        } else if (resp.status >= 500) {
+          msg = `Chyba serveru: ${msg}`;
+        }
+        showError(msg);
+        return;
+      }
+
+      showError('Neočekávaná odpověď serveru. Zkuste to znovu.');
+    } catch (_) {
+      showError('Nepodařilo se spojit se serverem. Zkuste to znovu.');
+    } finally {
+      submitting = false;
+      if (!succeeded) setLoading(false);
+    }
+  });
+
+  function setLoading(on) {
+    btnSubmit.disabled = on;
+    btnSubmit.classList.toggle('is-loading', on);
+    btnSubmit.textContent = on ? 'Přihlašuji' : 'Přihlásit se';
+  }
+
+  function showError(msg) {
+    errorBox.textContent   = msg;
+    errorBox.style.display = 'block';
+    errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+})();
+</script>
+{% endblock %}

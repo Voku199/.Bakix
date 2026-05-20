@@ -1,10 +1,13 @@
 import base64
 import json
+import logging
 import os
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+log = logging.getLogger(__name__)
 
 _SALT = b"bakix-creds-v1"
 
@@ -27,4 +30,8 @@ def encrypt_json(data: dict) -> str:
 
 
 def decrypt_json(token: str) -> dict:
-    return json.loads(_get_fernet().decrypt(token.encode()))
+    try:
+        return json.loads(_get_fernet().decrypt(token.encode()))
+    except InvalidToken:
+        log.error("decrypt_json: InvalidToken — key mismatch or corrupted data (SECRET_KEY changed?)")
+        raise ValueError("Credentials cannot be decrypted with the current SECRET_KEY")
