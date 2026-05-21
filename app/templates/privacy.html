@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .legal { max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  .legal h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .legal .legal__meta { font-size: .8rem; color: var(--muted); margin-bottom: 2rem; }
+  .legal h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  .legal p, .legal li { font-size: .9rem; line-height: 1.7; color: var(--text); }
+  .legal ul { padding-left: 1.25rem; margin: .4rem 0; }
+  .legal li { margin-bottom: .25rem; }
+  .legal .legal__back { display: inline-block; margin-bottom: 1.5rem; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .legal .legal__back:hover { color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal">
+  <a class="legal__back" href="javascript:history.back()">← Zpět</a>
+
+  <h1>Zásady ochrany osobních údajů</h1>
+  <p class="legal__meta">Platné od: 21. 5. 2026</p>
+
+  <p>Bakix bere tvoje soukromí vážně. Tenhle dokument ti říká, co ukládáme a proč — bez zbytečného právnického žargonu.</p>
+
+  <h2>Kdo je správce dat?</h2>
+  <p>Vojtěch Kurinec, fyzická osoba.<br>
+  Kontakt: <a href="mailto:vojta.kurinec@gmail.com">vojta.kurinec@gmail.com</a></p>
+
+  <h2>Co ukládáme?</h2>
+  <ul>
+    <li><strong>Přihlašovací údaje k Bakalářům</strong> — šifrovaně (Fernet + PBKDF2). Nikdo jiný k nim nemá přístup.</li>
+    <li><strong>Tvé jméno</strong> — pouze pro zobrazení uvítací zprávy v aplikaci („Vítej zpět, [jméno]").</li>
+    <li><strong>Historii konverzací s AI asistentem</strong> — lokálně v databázi aplikace.</li>
+    <li><strong>Cache API odpovědí</strong> — pro rychlejší načítání, neobsahuje citlivé údaje.</li>
+  </ul>
+
+  <h2>Co neukládáme</h2>
+  <ul>
+    <li>E-mail, telefon ani jiné kontaktní údaje.</li>
+    <li>Platební informace (zatím žádné platby neprobíhají).</li>
+    <li>Nic, co nepotřebujeme k fungování aplikace.</li>
+  </ul>
+
+  <h2>Proč data zpracováváme?</h2>
+  <p>Pouze pro provoz aplikace (čl. 6 odst. 1 písm. b) GDPR — plnění smlouvy/služby). Žádný marketing, žádná analytika třetích stran.</p>
+
+  <h2>Nezletilí uživatelé</h2>
+  <p>Bakix je určen studentům ZŠ a SŠ. Pokud je ti méně než 16 let, potřebujeme souhlas tvého rodiče nebo zákonného zástupce. Použitím aplikace potvrzuješ, že souhlas máš.</p>
+
+  <h2>Sdílení dat</h2>
+  <p>Data nesdílíme s třetími stranami, s výjimkou:</p>
+  <ul>
+    <li><strong>Google Gemini API</strong> — konverzace s AI asistentem prochází přes Gemini. Google má vlastní Privacy Policy.</li>
+    <li><strong>Bakaláři API</strong> — komunikujeme přímo s tvou školou pro načtení dat.</li>
+  </ul>
+
+  <h2>Jak dlouho data uchováváme?</h2>
+  <p>Po dobu, kdy používáš aplikaci. Pokud požádáš o smazání účtu, smažeme vše do 30 dnů.</p>
+
+  <h2>Tvá práva (GDPR)</h2>
+  <p>Máš právo na:</p>
+  <ul>
+    <li>Přístup ke svým datům</li>
+    <li>Opravu nepřesných dat</li>
+    <li>Výmaz dat („právo být zapomenut")</li>
+    <li>Přenositelnost dat</li>
+    <li>Podání stížnosti u ÚOOÚ (<a href="https://www.uoou.cz" target="_blank" rel="noopener">www.uoou.cz</a>)</li>
+  </ul>
+  <p>Pro uplatnění práv napiš na: <a href="mailto:vojta.kurinec@gmail.com">vojta.kurinec@gmail.com</a></p>
+
+  <h2>Budoucí platby</h2>
+  <p>Pokud v budoucnu zavedeme placené funkce, tento dokument aktualizujeme a budeme tě o změnách informovat s předstihem.</p>
+</div>
+{% endblock %}

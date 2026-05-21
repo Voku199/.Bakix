@@ -9,6 +9,7 @@ log = logging.getLogger(__name__)
 _AUTH_EXEMPT = frozenset({
     "/welcome", "/onboarding",
     "/login", "/login/now", "/logout",
+    "/cookies", "/privacy", "/tos",
 })
 
 
@@ -47,6 +48,18 @@ def create_app():
 
     app.add_url_rule("/welcome",    endpoint="auth.welcome",    build_only=True)
     app.add_url_rule("/onboarding", endpoint="auth.onboarding", build_only=True)
+
+    @app.route("/cookies")
+    def cookies():
+        return render_template("cookies.html")
+
+    @app.route("/privacy")
+    def privacy():
+        return render_template("privacy.html")
+
+    @app.route("/tos")
+    def tos():
+        return render_template("terms.html")
 
     @app.route("/sw.js")
     def service_worker():
