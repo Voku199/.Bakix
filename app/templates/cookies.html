@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .legal { max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  .legal h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .legal .legal__meta { font-size: .8rem; color: var(--muted); margin-bottom: 2rem; }
+  .legal h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  .legal p, .legal li { font-size: .9rem; line-height: 1.7; color: var(--text); }
+  .legal ul { padding-left: 1.25rem; margin: .4rem 0; }
+  .legal li { margin-bottom: .25rem; }
+  .legal .legal__back { display: inline-block; margin-bottom: 1.5rem; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .legal .legal__back:hover { color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal">
+  <a class="legal__back" href="javascript:history.back()">← Zpět</a>
+
+  <h1>Cookies</h1>
+  <p class="legal__meta">Platné od: 21. 5. 2026</p>
+
+  <p>Bakix používá cookies, aby ti aplikace správně fungovala. Tady je rychlý přehled, co a proč.</p>
+
+  <h2>Co jsou cookies?</h2>
+  <p>Cookies jsou malé soubory, které si prohlížeč ukládá do tvého zařízení. Neublíží ti, jen pomáhají aplikaci pamatovat si věci (třeba že jsi přihlášený).</p>
+
+  <h2>Jaké cookies používáme?</h2>
+  <ul>
+    <li><strong>Nezbytné cookies</strong> — bez nich aplikace prostě nefunguje (přihlášení, session). Nemůžeš je vypnout.</li>
+    <li><strong>Funkční cookies</strong> — pamatují si tvé preference, aby ses nemusel pořád přihlašovat.</li>
+  </ul>
+
+  <h2>Co NEděláme</h2>
+  <ul>
+    <li>Nesdílíme cookies s reklamními sítěmi.</li>
+    <li>Nesledujeme tě napříč jinými weby.</li>
+    <li>Neprodáváme žádná data třetím stranám.</li>
+  </ul>
+
+  <h2>Jak cookies vypnout?</h2>
+  <p>V nastavení svého prohlížeče. Ale pozor — bez nezbytných cookies ti Bakix nebude fungovat správně.</p>
+</div>
+{% endblock %}

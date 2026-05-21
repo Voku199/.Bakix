@@ -1,0 +1,107 @@
+﻿Cookies
+Platné od: 21. 5. 2026
+
+Bakix používá cookies, aby ti aplikace správně fungovala. Tady je rychlý přehled, co a proč.
+
+Co jsou cookies?
+Cookies jsou malé soubory, které si prohlížeč ukládá do tvého zařízení. Neublíží ti, jen pomáhají aplikaci pamatovat si věci (třeba že jsi přihlášený).
+
+Jaké cookies používáme?
+• Nezbytné cookies - bez nich aplikace prostě nefunguje (přihlášení, session). Nemůžeš je vypnout.
+• Funkční cookies - pamatují si tvé preference, aby ses nemusel pořád přihlašovat.
+
+Co NEděláme
+• Nesdílíme cookies s reklamními sítěmi.
+• Nesledujeme tě napříč jinými weby.
+• Neprodáváme žádná data třetím stranám.
+
+Jak cookies vypnout?
+V nastavení svého prohlížeče. Ale pozor - bez nezbytných cookies ti Bakix nebude fungovat správně.
+
+
+Zásady ochrany osobních údajů
+Platné od: 21. 5. 2026
+
+Bakix bere tvoje soukromí vážně. Tenhle dokument ti říká, co ukládáme a proč - bez zbytečného právnického žargonu.
+
+Kdo je správce dat?
+Vojtěch Kurinec, fyzická osoba.
+Kontakt: vojta.kurinec@gmail.com
+
+Co ukládáme?
+• Přihlašovací údaje k Bakalářům - šifrovaně (Fernet + PBKDF2). Nikdo jiný k nim nemá přístup.
+• Tvé jméno - pouze pro zobrazení uvítací zprávy v aplikaci ("Vítej zpět, [jméno]").
+• Historii konverzací s AI asistentem - lokálně v databázi aplikace.
+• Cache API odpovědí - pro rychlejší načítání, neobsahuje citlivé údaje.
+
+Co neukládáme
+• E-mail, telefon ani jiné kontaktní údaje.
+• Platební informace (zatím žádné platby neprobíhají).
+• Nic, co nepotřebujeme k fungování aplikace.
+
+Proč data zpracováváme?
+Pouze pro provoz aplikace (čl. 6 odst. 1 písm. b) GDPR - plnění smlouvy/služby). Žádný marketing, žádná analytika třetích stran.
+
+Nezletilí uživatelé
+Bakix je určen studentům ZŠ a SŠ. Pokud je ti méně než 16 let, potřebujeme souhlas tvého rodiče nebo zákonného zástupce. Použitím aplikace potvrzuješ, že souhlas máš.
+
+Sdílení dat
+Data nesdílíme s třetími stranami, s výjimkou:
+• Google Gemini API - konverzace s AI asistentem prochází přes Gemini. Google má vlastní Privacy Policy.
+• Bakaláři API - komunikujeme přímo s tvou školou pro načtení dat.
+
+Jak dlouho data uchováváme?
+Po dobu, kdy používáš aplikaci. Pokud požádáš o smazání účtu, smažeme vše do 30 dnů.
+
+Tvá práva (GDPR)
+Máš právo na:
+• Přístup ke svým datům
+• Opravu nepřesných dat
+• Výmaz dat ("právo být zapomenut")
+• Přenositelnost dat
+• Podání stížnosti u ÚOOÚ (www.uoou.cz)
+
+Pro uplatnění práv napiš na: vojta.kurinec@gmail.com
+
+Budoucí platby
+Pokud v budoucnu zavedeme placené funkce, tento dokument aktualizujeme a budeme tě o změnách informovat s předstihem.
+
+
+Podmínky používání
+Platné od: 21. 5. 2026
+
+Používáním Bakixu souhlasíš s těmito podmínkami. Jsou krátké, přečti si je.
+
+Co je Bakix?
+Bakix je webová aplikace pro studenty, která se připojuje k systému Bakaláři a přidává AI asistenta pro pomoc se studiem.
+
+Kdo může Bakix používat?
+• Studenti ZŠ a SŠ v ČR.
+• Uživatelé mladší 16 let potřebují souhlas rodiče nebo zákonného zástupce.
+• Nesmíš aplikaci používat k nelegálním účelům.
+
+Tvůj účet
+• Bakix přistupuje k Bakalářům tvým jménem - jsi za to zodpovědný ty.
+• Nesdílej své přihlašovací údaje s nikým jiným.
+• Pokud zjistíš, že někdo zneužívá tvůj účet, kontaktuj nás ihned.
+
+Co nesmíš dělat
+• Zneužívat AI asistenta k podvádění nebo zakázaným aktivitám.
+• Pokoušet se hackovat nebo narušit fungování aplikace.
+• Vydávat se za někoho jiného.
+
+Dostupnost
+Bakix poskytujeme "tak jak je". Snažíme se o maximální dostupnost, ale nezaručujeme ji. Aplikace může být dočasně nedostupná z důvodu údržby.
+
+Odpovědnost
+Nejsme odpovědní za obsah generovaný AI asistentem - vždy si výstup ověř. AI se může mýlit.
+Nejsme odpovědní za data z Bakalářů - ta pocházejí přímo od tvé školy.
+
+Platby
+Bakix je momentálně zdarma. Pokud v budoucnu zavedeme placené funkce, dáme ti vědět předem a budeš mít možnost se rozhodnout, zda chceš pokračovat.
+
+Změny podmínek
+Pokud podmínky změníme, upozorníme tě v aplikaci. Pokračování v používání Bakixu po změně = souhlas s novými podmínkami.
+
+Kontakt
+Máš otázky? Napiš na vojta.kurinec@gmail.com

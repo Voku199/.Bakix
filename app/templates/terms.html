@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  .legal { max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  .legal h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .legal .legal__meta { font-size: .8rem; color: var(--muted); margin-bottom: 2rem; }
+  .legal h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  .legal p, .legal li { font-size: .9rem; line-height: 1.7; color: var(--text); }
+  .legal ul { padding-left: 1.25rem; margin: .4rem 0; }
+  .legal li { margin-bottom: .25rem; }
+  .legal .legal__back { display: inline-block; margin-bottom: 1.5rem; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .legal .legal__back:hover { color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal">
+  <a class="legal__back" href="javascript:history.back()">← Zpět</a>
+
+  <h1>Podmínky používání</h1>
+  <p class="legal__meta">Platné od: 21. 5. 2026</p>
+
+  <p>Používáním Bakixu souhlasíš s těmito podmínkami. Jsou krátké, přečti si je.</p>
+
+  <h2>Co je Bakix?</h2>
+  <p>Bakix je webová aplikace pro studenty, která se připojuje k systému Bakaláři a přidává AI asistenta pro pomoc se studiem.</p>
+
+  <h2>Kdo může Bakix používat?</h2>
+  <ul>
+    <li>Studenti ZŠ a SŠ v ČR.</li>
+    <li>Uživatelé mladší 16 let potřebují souhlas rodiče nebo zákonného zástupce.</li>
+    <li>Nesmíš aplikaci používat k nelegálním účelům.</li>
+  </ul>
+
+  <h2>Tvůj účet</h2>
+  <ul>
+    <li>Bakix přistupuje k Bakalářům tvým jménem — jsi za to zodpovědný ty.</li>
+    <li>Nesdílej své přihlašovací údaje s nikým jiným.</li>
+    <li>Pokud zjistíš, že někdo zneužívá tvůj účet, kontaktuj nás ihned.</li>
+  </ul>
+
+  <h2>Co nesmíš dělat</h2>
+  <ul>
+    <li>Zneužívat AI asistenta k podvádění nebo zakázaným aktivitám.</li>
+    <li>Pokoušet se hackovat nebo narušit fungování aplikace.</li>
+    <li>Vydávat se za někoho jiného.</li>
+  </ul>
+
+  <h2>Dostupnost</h2>
+  <p>Bakix poskytujeme „tak jak je". Snažíme se o maximální dostupnost, ale nezaručujeme ji. Aplikace může být dočasně nedostupná z důvodu údržby.</p>
+
+  <h2>Odpovědnost</h2>
+  <p>Nejsme odpovědní za obsah generovaný AI asistentem — vždy si výstup ověř. AI se může mýlit.<br>
+  Nejsme odpovědní za data z Bakalářů — ta pocházejí přímo od tvé školy.</p>
+
+  <h2>Platby</h2>
+  <p>Bakix je momentálně zdarma. Pokud v budoucnu zavedeme placené funkce, dáme ti vědět předem a budeš mít možnost se rozhodnout, zda chceš pokračovat.</p>
+
+  <h2>Změny podmínek</h2>
+  <p>Pokud podmínky změníme, upozorníme tě v aplikaci. Pokračování v používání Bakixu po změně = souhlas s novými podmínkami.</p>
+
+  <h2>Kontakt</h2>
+  <p>Máš otázky? Napiš na <a href="mailto:vojta.kurinec@gmail.com">vojta.kurinec@gmail.com</a></p>
+</div>
+{% endblock %}
