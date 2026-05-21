@@ -56,7 +56,7 @@ def get_settings(user_id: str) -> dict:
     from app.services.crypto import decrypt_json
     with get_connection() as db:
         row = db.execute(
-            "SELECT school_url, enc_creds, settings_json FROM saved_credentials WHERE user_id = ?",
+            "SELECT school_url, enc_creds, settings_json, display_name FROM saved_credentials WHERE user_id = ?",
             (user_id,),
         ).fetchone()
     if not row:
@@ -66,7 +66,12 @@ def get_settings(user_id: str) -> dict:
     except Exception:
         username = ""
     prefs = json.loads(row["settings_json"]) if row["settings_json"] else {}
-    return {"school_url": row["school_url"], "username": username, **prefs}
+    return {
+        "school_url":   row["school_url"],
+        "username":     username,
+        "display_name": row["display_name"] or "",
+        **prefs,
+    }
 
 
 def save_settings(user_id: str, prefs: dict) -> None:
@@ -76,3 +81,39 @@ def save_settings(user_id: str, prefs: dict) -> None:
             (json.dumps(prefs), user_id),
         )
     log.debug("settings saved: user=%.8s", user_id)
+
+
+def update_display_name(user_id: str, display_name: str) -> None:
+    with get_connection() as db:
+        db.execute(
+            "UPDATE saved_credentials SET display_name = ? WHERE user_id = ?",
+            (display_name, user_id),
+        )
+    log.debug("display_name updated: user=%.8s", user_id)
+
+
+def cache_get(user_id: str, key: str, ttl: int = 300) -> "dict | list | None":
+    with get_connection() as db:
+        row = db.execute(
+            "SELECT response_json FROM api_cache "
+            "WHERE user_id=? AND cache_key=? AND cached_at > datetime('now', ?)",
+            (user_id, key, f"-{ttl} seconds"),
+        ).fetchone()
+    if row:
+        try:
+            return json.loads(row["response_json"])
+        except Exception:
+            return None
+    return None
+
+
+def cache_set(user_id: str, key: str, data) -> None:
+    with get_connection() as db:
+        db.execute(
+            "INSERT INTO api_cache (user_id, cache_key, response_json, cached_at) "
+            "VALUES (?, ?, ?, datetime('now')) "
+            "ON CONFLICT(user_id, cache_key) DO UPDATE SET "
+            "    response_json = excluded.response_json, "
+            "    cached_at     = excluded.cached_at",
+            (user_id, key, json.dumps(data, ensure_ascii=False)),
+        )
