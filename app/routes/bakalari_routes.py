@@ -8,7 +8,7 @@ import uuid
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, abort, current_app
 from markupsafe import Markup
 
-from app.database.db import fetch_row, get_settings as _db_get_settings, save_settings as _db_save_settings, upsert_all
+from app.database.db import fetch_row, get_settings as _db_get_settings, save_settings as _db_save_settings, upsert_all, update_display_name as _db_update_display_name, cache_get, cache_set
 from app.services.bakalari import BakalariService
 from app.services.crypto import encrypt_json
 from app.services.gemini_service import GeminiService
@@ -67,6 +67,11 @@ def api_homeworks():
             return jsonify({"error": "Not authenticated"}), 401
 
         today   = datetime.date.today()
+        _ck     = f"hw_{today}"
+        _hit    = cache_get(user_id, _ck)
+        if _hit is not None:
+            return jsonify(_hit)
+
         to_date = today + datetime.timedelta(days=7)
         data    = svc.get_homeworks(token, today.isoformat(), to_date.isoformat())
 
@@ -95,6 +100,7 @@ def api_homeworks():
             ],
             key=lambda h: h["DateEnd"] or "",
         )
+        cache_set(user_id, _ck, homeworks)
         return jsonify(homeworks)
     except Exception:
         log.exception("api_homeworks: unexpected error")
@@ -107,6 +113,10 @@ def api_komens():
         svc, token, user_id = _get_svc_and_token()
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
+
+        _hit = cache_get(user_id, "komens")
+        if _hit is not None:
+            return jsonify(_hit)
 
         data = svc.get_komens(token)
 
@@ -138,6 +148,7 @@ def api_komens():
             }
             for m in top3
         ]
+        cache_set(user_id, "komens", result)
         return jsonify(result)
     except Exception:
         log.exception("api_komens: unexpected error")
@@ -150,6 +161,10 @@ def api_marks():
         svc, token, user_id = _get_svc_and_token()
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
+
+        _hit = cache_get(user_id, "marks")
+        if _hit is not None:
+            return jsonify(_hit)
 
         data = svc.get_marks(token)
 
@@ -184,6 +199,7 @@ def api_marks():
             }
             for s in (data.get("Subjects") if isinstance(data, dict) else []) or []
         ]
+        cache_set(user_id, "marks", subjects)
         return jsonify(subjects)
     except Exception:
         log.exception("api_marks: unexpected error")
@@ -222,6 +238,10 @@ def api_dashboard_today():
         svc, token, user_id = _get_svc_and_token()
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
+
+        _hit = cache_get(user_id, "tt_today")
+        if _hit is not None:
+            return jsonify(_hit)
 
         data = svc.get_timetable(token)
 
@@ -277,6 +297,7 @@ def api_dashboard_today():
             })
 
         result.sort(key=lambda x: x["hour"] or 0)
+        cache_set(user_id, "tt_today", result)
         return jsonify(result)
     except Exception:
         log.exception("api_dashboard_today: unexpected error")
@@ -289,6 +310,10 @@ def api_dashboard_tomorrow():
         svc, token, user_id = _get_svc_and_token()
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
+
+        _hit = cache_get(user_id, "tt_tomorrow")
+        if _hit is not None:
+            return jsonify(_hit)
 
         data = svc.get_timetable(token)
 
@@ -338,6 +363,7 @@ def api_dashboard_tomorrow():
             })
 
         result.sort(key=lambda x: x["hour"] or 0)
+        cache_set(user_id, "tt_tomorrow", result)
         return jsonify(result)
     except Exception:
         log.exception("api_dashboard_tomorrow: unexpected error")
@@ -493,6 +519,40 @@ def _save_gen_index(index: dict) -> None:
         json.dump(index, f, ensure_ascii=False)
 
 
+def get_user_projects(user_id: str) -> list:
+    """Return [{page_id, topic}] for all generated pages owned by user_id."""
+    index = _load_gen_index()
+    return [
+        {"page_id": page_id, "topic": meta.get("title") or "AI obsah"}
+        for page_id, meta in index.items()
+        if meta.get("user_id") == user_id
+    ]
+
+
+@bakalari_bp.route("/api/user/settings", methods=["POST"])
+def api_user_settings_post():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    data         = request.get_json(force=True, silent=True) or {}
+    display_name = (data.get("display_name") or "").strip()[:80]
+
+    if not display_name:
+        return jsonify({"error": "display_name is required"}), 400
+
+    _db_update_display_name(user_id, display_name)
+    return jsonify({"ok": True, "display_name": display_name})
+
+
+@bakalari_bp.route("/api/ai/pages", methods=["GET"])
+def api_ai_pages():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    return jsonify(get_user_projects(user_id))
+
+
 # ── AI chat endpoint (structured response with optional page generation) ─────
 
 @bakalari_bp.route("/api/ai/chat", methods=["POST"])
@@ -502,42 +562,59 @@ def api_ai_chat():
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
 
-        body    = request.get_json(force=True, silent=True) or {}
-        message = (body.get("message") or "").strip()
-        history = body.get("history") or []
+        body      = request.get_json(force=True, silent=True) or {}
+        message   = (body.get("message") or "").strip()
+        chat_mode = (body.get("chat_mode") or "auto").strip().lower()
 
         if not message:
             return jsonify({"error": "Prázdná zpráva"}), 400
 
-        # Best-effort: attach student marks as context
+        # Best-effort: fetch student marks for grade-context routing.
+        # Skipped when chat_mode == "general" to avoid unnecessary API calls.
         student_data = None
-        try:
-            svc, token, _ = _get_svc_and_token()
-            if token:
-                marks_raw = svc.get_marks(token)
-                if isinstance(marks_raw, dict) and "Subjects" in marks_raw:
-                    student_data = {
-                        "subjects": [
-                            {
-                                "name":    (s.get("Subject") or {}).get("Name"),
-                                "average": s.get("AverageText"),
-                            }
-                            for s in marks_raw["Subjects"] or []
-                        ]
-                    }
-        except Exception:
-            pass
+        flat_grades: list = []
+        if chat_mode != "general":
+            try:
+                svc, token, _ = _get_svc_and_token()
+                if token:
+                    marks_raw = svc.get_marks(token)
+                    if isinstance(marks_raw, dict) and "Subjects" in marks_raw:
+                        student_data = {
+                            "subjects": [
+                                {
+                                    "name":    (s.get("Subject") or {}).get("Name"),
+                                    "average": s.get("AverageText"),
+                                }
+                                for s in marks_raw["Subjects"] or []
+                            ]
+                        }
+                        for s in marks_raw["Subjects"] or []:
+                            subject_name = (s.get("Subject") or {}).get("Name", "")
+                            for m in s.get("Marks") or []:
+                                flat_grades.append({
+                                    "subject":   subject_name,
+                                    "MarkText":  m.get("MarkText"),
+                                    "Caption":   m.get("Caption") or "",
+                                    "EditDate":  m.get("EditDate") or "",
+                                    "timestamp": m.get("EditDate") or "",
+                                    "topic":     m.get("Caption") or "",
+                                })
+            except Exception:
+                pass
 
         try:
-            gemini    = GeminiService()
-            ai_result = gemini.generate_chat_response(message, history, student_data)
+            gemini = GeminiService()
+            if chat_mode == "grades" or (chat_mode == "auto" and flat_grades):
+                ai_result = gemini.handle_grades_context(user_id, flat_grades, message)
+            else:
+                ai_result = gemini.get_response(user_id, message, student_data)
         except ValueError:
             return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
 
         action_url = None
         html_body  = ai_result.get("page_content_html") or ""
         if ai_result.get("intent") == "create_page" and html_body.strip():
-            page_id   = uuid.uuid4().hex           # 32-char hex, alphanumeric only
+            page_id   = uuid.uuid4().hex
             page_path = os.path.join(_gen_dir(), f"{page_id}.html")
             os.makedirs(_gen_dir(), exist_ok=True)
             with open(page_path, "w", encoding="utf-8") as f:
@@ -555,6 +632,8 @@ def api_ai_chat():
             "action_url":   action_url,
             "action_label": ai_result.get("action_label") if action_url else None,
             "is_test":      bool(ai_result.get("is_test", False)),
+            "sender":       "ai",
+            "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
         })
     except Exception:
         log.exception("api_ai_chat: unexpected error")
@@ -616,6 +695,29 @@ def api_ai_generated_update(page_id):
     return jsonify({"ok": True})
 
 
+@bakalari_bp.route("/api/ai/generated/<page_id>", methods=["DELETE"])
+def api_ai_generated_delete(page_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    if not page_id.isalnum() or len(page_id) > 32:
+        return abort(404)
+
+    index = _load_gen_index()
+    meta  = index.get(page_id)
+    if not meta or meta.get("user_id") != user_id:
+        return abort(404)
+
+    page_path = os.path.join(_gen_dir(), f"{page_id}.html")
+    if os.path.isfile(page_path):
+        os.remove(page_path)
+
+    del index[page_id]
+    _save_gen_index(index)
+    return jsonify({"ok": True})
+
+
 @bakalari_bp.route("/api/ai/regen/<page_id>", methods=["POST"])
 def api_ai_regen(page_id):
     try:
@@ -671,6 +773,53 @@ def api_ai_regen(page_id):
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
+@bakalari_bp.route("/api/ai/modify/<page_id>", methods=["POST"])
+def api_ai_modify(page_id):
+    """Stateful page modification — uses persistent conversation history per user.
+
+    Accepts {"prompt": "..."} and rewrites the stored page HTML using Gemini
+    with the full conversation context, so accumulated instructions (e.g.
+    'modern design', 'focus on Matematika') carry forward across requests.
+    """
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        if not page_id.isalnum() or len(page_id) > 32:
+            return abort(404)
+
+        index = _load_gen_index()
+        meta  = index.get(page_id)
+        if not meta or meta.get("user_id") != user_id:
+            return abort(404)
+
+        page_path = os.path.join(_gen_dir(), f"{page_id}.html")
+        if not os.path.isfile(page_path):
+            return abort(404)
+
+        body   = request.get_json(force=True, silent=True) or {}
+        prompt = (body.get("prompt") or "").strip()
+        if not prompt:
+            return jsonify({"error": "Prázdný požadavek"}), 400
+
+        with open(page_path, encoding="utf-8") as f:
+            current_html = f.read()
+
+        try:
+            new_html = GeminiService().modify_page(user_id, current_html, prompt)
+        except ValueError:
+            return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
+
+        with open(page_path, "w", encoding="utf-8") as f:
+            f.write(new_html)
+
+        return jsonify({"ok": True, "page_url": f"/api/ai/generated/{page_id}"})
+    except Exception:
+        log.exception("api_ai_modify: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
 @bakalari_bp.route("/")
 def index():
     user_id = session.get("user_id")
@@ -721,6 +870,8 @@ def index():
 
     chart_datasets = _build_chart_datasets(subjects) if subjects else []
 
+    display_name = (row.get("display_name") or "") if row else ""
+
     return render_template(
         "index.html",
         error=None,
@@ -729,4 +880,6 @@ def index():
         substitutions=substitutions,
         subs_error=subs_error,
         chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
+        user_projects=get_user_projects(user_id),
+        display_name=display_name,
     )

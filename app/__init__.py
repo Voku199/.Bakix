@@ -53,6 +53,15 @@ def create_app():
         from flask import send_from_directory
         return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
 
+    @app.context_processor
+    def _inject_user_globals():
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"display_name": ""}
+        from app.database.db import fetch_row as _fetch_row
+        row = _fetch_row(user_id)
+        return {"display_name": (row.get("display_name") or "") if row else ""}
+
     @app.before_request
     def _check_auth():
         if (request.path in _AUTH_EXEMPT

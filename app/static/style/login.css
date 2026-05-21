@@ -1,0 +1,224 @@
+/* ── Page layout ────────────────────────────────────────────── */
+.login-page {
+  min-height:      calc(100vh - var(--header-h));
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         2rem 1.25rem 4rem;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.login-card {
+  width:         100%;
+  max-width:     400px;
+  animation:     cardIn .35s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header block inside card ───────────────────────────────── */
+.login-header {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  text-align:      center;
+  gap:             0.55rem;
+  margin-bottom:   1.75rem;
+}
+
+.login-header__icon {
+  width:           42px;
+  height:          42px;
+  border-radius:   50%;
+  background:      var(--bg);
+  border:          1px solid var(--border);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  margin-bottom:   0.2rem;
+}
+
+.login-header__icon img {
+  height: 22px;
+  width:  auto;
+}
+
+.login-header__title {
+  font-size:      1.05rem;
+  font-weight:    700;
+  letter-spacing: -0.5px;
+  color:          var(--text);
+}
+
+.login-header__sub {
+  font-size:  0.78rem;
+  color:      var(--muted);
+  line-height: 1.6;
+}
+
+/* ── Fields ─────────────────────────────────────────────────── */
+.field { margin-bottom: 1rem; }
+
+.field__label {
+  display:        block;
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color:          var(--muted);
+  margin-bottom:  0.4rem;
+}
+
+.field__input {
+  width:         100%;
+  padding:       9px 12px;
+  background:    var(--bg);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  color:         var(--text);
+  font-family:   var(--font);
+  font-size:     12px;
+  outline:       none;
+  transition:    border-color .15s, box-shadow .15s;
+}
+
+.field__input:focus {
+  border-color: var(--accent);
+  box-shadow:   0 0 0 3px rgba(181,69,27,.12);
+}
+
+.field__input.has-error {
+  border-color: var(--red);
+  box-shadow:   0 0 0 3px rgba(146,43,33,.1);
+}
+
+/* ── School URL collapsible row ─────────────────────────────── */
+.school-row {
+  display:         flex;
+  align-items:     center;
+  gap:             0.5rem;
+  margin-bottom:   1rem;
+  padding:         0.55rem 0.75rem;
+  background:      var(--bg);
+  border:          1px solid var(--border);
+  border-radius:   var(--radius);
+  cursor:          pointer;
+  transition:      border-color .15s;
+}
+
+.school-row:hover { border-color: var(--accent); }
+
+.school-row__dot {
+  width:        7px;
+  height:       7px;
+  border-radius: 50%;
+  background:   var(--green);
+  flex-shrink:  0;
+}
+
+.school-row__label {
+  flex:        1;
+  font-size:   11px;
+  color:       var(--muted);
+  overflow:    hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.school-row__change {
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color:          var(--accent);
+  flex-shrink:    0;
+}
+
+.school-expand {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .28s cubic-bezier(.4,0,.2,1),
+              opacity    .2s ease;
+  opacity: 0;
+}
+
+.school-expand.is-open {
+  max-height: 80px;
+  opacity: 1;
+}
+
+/* ── Remember me row ────────────────────────────────────────── */
+.remember-row {
+  display:     flex;
+  align-items: center;
+  gap:         0.55rem;
+  margin:      1.1rem 0 1.25rem;
+  cursor:      pointer;
+}
+
+.remember-row input[type="checkbox"] {
+  width:         15px;
+  height:        15px;
+  border-radius: 3px;
+  accent-color:  var(--accent);
+  cursor:        pointer;
+  flex-shrink:   0;
+}
+
+.remember-row__label {
+  font-size:  11px;
+  color:      var(--muted);
+  user-select: none;
+}
+
+/* ── Submit ─────────────────────────────────────────────────── */
+.btn--login {
+  width:       100%;
+  padding:     10px 0;
+  font-size:   12px;
+  letter-spacing: 0.5px;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition:  opacity .15s, transform .1s;
+}
+
+.btn--login:active { transform: scale(0.99); }
+
+.btn--login.is-loading {
+  pointer-events: none;
+  opacity: .75;
+}
+
+.btn--login.is-loading::after {
+  content:          '';
+  display:          inline-block;
+  width:            10px;
+  height:           10px;
+  border:           2px solid currentColor;
+  border-top-color: transparent;
+  border-radius:    50%;
+  animation:        spin .5s linear infinite;
+  margin-left:      0.5rem;
+  vertical-align:   middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Footer link ────────────────────────────────────────────── */
+.login-footer {
+  text-align:  center;
+  margin-top:  1.25rem;
+  font-size:   11px;
+  color:       var(--muted);
+}
+
+.login-footer a {
+  color:           var(--accent);
+  text-decoration: none;
+}
+
+.login-footer a:hover { text-decoration: underline; }
+
