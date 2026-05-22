@@ -27,6 +27,32 @@
 })();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
+  console.log('[bakix:push] SW register start', {
+    standalone: !!navigator.standalone || window.matchMedia('(display-mode: standalone)').matches,
+    controller: !!navigator.serviceWorker.controller,
+  });
+
+  navigator.serviceWorker.register('/sw.js').then(function (reg) {
+    console.log('[bakix:push] SW register success', {
+      scope: reg.scope,
+      active: reg.active ? reg.active.state : 'none',
+      installing: reg.installing ? reg.installing.state : 'none',
+      waiting: reg.waiting ? reg.waiting.state : 'none',
+    });
+    return navigator.serviceWorker.ready;
+  }).then(function (readyReg) {
+    console.log('[bakix:push] SW ready after register', {
+      scope: readyReg.scope,
+      active: readyReg.active ? readyReg.active.state : 'none',
+    });
+  }).catch(function (err) {
+    console.error('[bakix:push] SW register failed', err);
+  });
+} else {
+  console.warn('[bakix:push] SW register skipped', {
+    secureContext: !!window.isSecureContext,
+    origin: location.origin,
+    reason: 'navigator.serviceWorker unavailable',
+  });
 }
 

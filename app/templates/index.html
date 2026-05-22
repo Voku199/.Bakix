@@ -7,6 +7,7 @@
 
 {% block header_actions %}
   <a href="/logout" class="btn btn--icon" title="Odhlásit se" aria-label="Odhlásit se">↩</a>
+  <button class="btn btn--icon" id="header-notif-btn" style="display:none;" aria-label="Notifikace">🔔</button>
   <button class="btn btn--icon" id="settings-open" title="Nastavení" aria-label="Nastavení">⚙</button>
 {% endblock %}
 
@@ -14,9 +15,22 @@
 
   {# ── Grade trend chart (full width, above grid) ─────────── #}
   {% if chart_data_json is defined and chart_data_json != '[]' %}
-  <div class="panel" style="margin-bottom:1.25rem;">
-    <div class="panel__title">Trend známek</div>
-    <canvas id="gradeChart" style="max-height:220px;"></canvas>
+  <div class="panel chart-panel" style="margin-bottom:1.25rem;">
+    <div class="chart-panel__header">
+      <div class="panel__title">Trend známek</div>
+    </div>
+    <div class="chart-nav">
+      <button class="btn btn--icon chart-nav__arrow" id="chart-prev" aria-label="Předchozí předmět">‹</button>
+      <span class="chart-subject-label" id="chart-subject-label" aria-live="polite"></span>
+      <button class="btn btn--icon chart-nav__arrow" id="chart-next" aria-label="Další předmět">›</button>
+    </div>
+    <div style="position:relative; height:210px;">
+      <canvas id="gradeChart"></canvas>
+    </div>
+    <div class="chart-progress" aria-hidden="true">
+      <div class="chart-progress__bar" id="chart-progress-bar"></div>
+    </div>
+    <div class="chart-dots" id="chart-dots" role="group" aria-label="Výběr předmětu"></div>
   </div>
   {% endif %}
 
@@ -29,6 +43,28 @@
   {% else %}
 
   <p id="dash-greeting" class="dash-greeting"></p>
+
+  {# Push invite — push.js shows this when APIs available + not yet subscribed #}
+  <div id="push-prompt-row" style="display:none;" role="region" aria-label="Push notifikace">
+    <div class="push-prompt">
+      <span class="push-prompt__icon" aria-hidden="true">🔔</span>
+      <span class="push-prompt__text">Chces dostavat upozorneni na zpravy a absence?</span>
+      <button class="btn btn--secondary push-prompt__btn" id="push-prompt-btn">Zapnout</button>
+      <button class="btn btn--icon push-prompt__dismiss" id="push-prompt-dismiss" aria-label="Zavrit">×</button>
+    </div>
+  </div>
+
+  {# iOS install hint — push.js shows this when iOS + NOT running as home-screen PWA #}
+  <div id="ios-prompt-row" style="display:none;" role="alert" aria-label="Instalace aplikace">
+    <div class="push-prompt push-prompt--ios">
+      <span class="push-prompt__icon" aria-hidden="true">📲</span>
+      <div class="push-prompt__body">
+        <strong class="push-prompt__heading">Notifikace vyzaduji instalaci</strong>
+        <span class="push-prompt__text">Klepni na <strong>Sdilet</strong> ↑ a pak <strong>Pridat na plochu</strong></span>
+      </div>
+      <button class="btn btn--icon push-prompt__dismiss" id="ios-prompt-dismiss" aria-label="Zavrit">×</button>
+    </div>
+  </div>
 
   <div id="ai-summary-card" class="ai-summary" style="display:none;" aria-live="polite">
     <span class="ai-summary__icon" aria-hidden="true">
@@ -58,22 +94,22 @@
           <button class="btn btn--icon tt-day-btn" data-day="tomorrow">Zítra</button>
         </div>
       </div>
-      <div id="events-body"><p class="card-loading">Načítám…</p></div>
+      <div id="events-body"><div class="skel-rows"><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div></div>
     </section>
 
     <section class="card">
       <h2 class="card__title">Úkoly</h2>
-      <div id="homeworks-body"><p class="card-loading">Načítám…</p></div>
+      <div id="homeworks-body"><div class="skel-rows"><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line--short"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div>
     </section>
 
     <section class="card">
       <h2 class="card__title">Zprávy</h2>
-      <div id="komens-body"><p class="card-loading">Načítám…</p></div>
+      <div id="komens-body"><div class="skel-rows"><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div><div class="skel-col"><div class="skel skel-line--short"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div></div>
     </section>
 
     <section class="card">
       <h2 class="card__title">Známky</h2>
-      <div id="marks-body"><p class="card-loading">Načítám…</p></div>
+      <div id="marks-body"><div class="skel-rows"><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line--short"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line--short"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div></div></div>
     </section>
 
   </div>
@@ -96,6 +132,27 @@
         <p class="empty">Zatím žádné projekty. Popros AI o vytvoření stránky!</p>
       {% endif %}
     </div>
+  </section>
+  {% endif %}
+
+  {# ── Debug: push notification test panel ─────────────────── #}
+  {% if config.DEBUG %}
+  <section class="card" id="debug-push-panel" style="margin-bottom:1.25rem; border:1px dashed var(--border);">
+    <div class="card__title-row">
+      <h2 class="card__title" style="font-size:.8rem;">Push — debug</h2>
+      <span style="font-size:9px; font-weight:700; letter-spacing:1px; padding:2px 6px;
+                   background:var(--badge-warn-bg); color:var(--badge-warn-fg);
+                   border-radius:4px;">DEBUG</span>
+    </div>
+    <p style="font-size:11px; color:var(--muted); margin:.35rem 0 .75rem;">
+      Testuje celý push flow (server → VAPID → prohlížeč). Subscription musí být aktivní.
+    </p>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+      <button class="btn btn--secondary" id="debug-push-grade"    style="font-size:11px;">Test Grade Push</button>
+      <button class="btn btn--secondary" id="debug-push-homework" style="font-size:11px;">Test Homework Push</button>
+      <button class="btn btn--secondary" id="debug-push-komens"   style="font-size:11px;">Test Komens Push</button>
+    </div>
+    <div id="debug-push-status" style="margin-top:.6rem; font-size:11px; color:var(--muted); min-height:1.2em;"></div>
   </section>
   {% endif %}
 
@@ -163,21 +220,38 @@
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-label">
-          Prémiové funkce <span class="settings-premium-badge">PREMIUM</span>
+        <div class="settings-section-label">Notifikace</div>
+        {# notif-wrap shown by notifications.js when Push API is available #}
+        <div id="notif-wrap" style="display:none; margin-bottom:.65rem;">
+          <button class="btn btn--secondary" id="notif-enable-btn" style="width:100%; display:none;">Zapnout notifikace</button>
+          <div id="notif-status" style="margin-top:.4rem; font-size:12px; color:var(--muted);"></div>
         </div>
         <label class="settings-check">
-          <input id="s-notif-absences" type="checkbox">
-          Notifikace — absence
+          <input id="s-notif-messages" type="checkbox" data-notif="messages">
+          Zprávy
         </label>
         <label class="settings-check">
-          <input id="s-notif-messages" type="checkbox">
-          Notifikace — zprávy
+          <input id="s-notif-homeworks" type="checkbox" data-notif="homeworks">
+          Úkoly
         </label>
-        <div style="margin-top:.75rem; display:flex; gap:.5rem;">
-          <button class="btn btn--secondary" id="s-export-pdf">Export PDF</button>
-          <button class="btn btn--secondary" id="s-export-csv">Export CSV</button>
-        </div>
+        <label class="settings-check">
+          <input id="s-notif-marks" type="checkbox" data-notif="marks">
+          Nové známky
+        </label>
+        <label class="settings-check">
+          <input id="s-notif-subs" type="checkbox" data-notif="subs">
+          Změny rozvrhu
+        </label>
+        <label class="settings-check">
+          <input id="s-notif-daily" type="checkbox" data-notif="daily">
+          Denní shrnutí
+        </label>
+        <label class="settings-check">
+          <input id="s-notif-absences" type="checkbox" data-notif="absences">
+          Absence
+        </label>
+        {# notif-test-btn: kept hidden — notifications.js requires it in the DOM #}
+        <button id="notif-test-btn" style="display:none;" aria-hidden="true" tabindex="-1"></button>
       </div>
 
       <div id="settings-status" class="settings-status"></div>
@@ -211,6 +285,7 @@
     <div class="ai-sidebar__footer">
       <div id="ai-suggestions" class="ai-suggestions"></div>
       <div id="ai-modify-picker" class="chat-modify-picker" style="display:none;" aria-label="Výběr projektu"></div>
+      <div id="ai-cmd-palette" class="ai-cmd-palette" style="display:none;" role="listbox" aria-label="Dostupné příkazy"></div>
       <div class="ai-input-row">
         <button id="ai-modify-btn" class="btn btn--icon" title="Upravit projekt" aria-label="Vybrat projekt k úpravě"
                 style="flex-shrink:0;">✦</button>
@@ -220,9 +295,72 @@
     </div>
   </aside>
 
+  {# ── Message detail modal ───────────────────────────────── #}
+  <div id="msg-modal" class="msg-modal" role="dialog" aria-modal="true" aria-label="Detail zprávy">
+    <div class="msg-modal__panel">
+      <div class="msg-modal__header">
+        <div class="msg-modal__header-left">
+          <div class="msg-modal__title" id="msg-modal-title"></div>
+          <div class="msg-modal__meta"  id="msg-modal-meta"></div>
+        </div>
+        <button class="msg-modal__close" id="msg-modal-close" aria-label="Zavřít">×</button>
+      </div>
+      <div class="msg-modal__body" id="msg-modal-body"></div>
+    </div>
+  </div>
+
 {% endblock %}
 
 {% block scripts %}
+{% if config.DEBUG %}
+<script>
+(function () {
+  'use strict';
+  var status = document.getElementById('debug-push-status');
+
+  function setStatus(msg, isErr) {
+    if (!status) return;
+    status.textContent = msg;
+    status.style.color = isErr ? 'var(--red)' : 'var(--muted)';
+  }
+
+  ['grade', 'homework', 'komens'].forEach(function (type) {
+    var btn = document.getElementById('debug-push-' + type);
+    if (!btn) return;
+
+    btn.addEventListener('click', function () {
+      // Gate: warn if notifications aren't enabled yet
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        setStatus('Povol nejdřív notifikace v nastavení (nebo v Bakixu níže).', true);
+        return;
+      }
+
+      btn.disabled = true;
+      setStatus('Odesílám…');
+
+      fetch('/api/debug/push/' + type, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.ok) {
+            setStatus('[' + type + '] Odesláno na ' + d.sent + ' zařízení ✓');
+          } else {
+            setStatus('[' + type + '] Chyba: ' + (d.error || '?'), true);
+          }
+        })
+        .catch(function (err) {
+          setStatus('Síťová chyba: ' + err, true);
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    });
+  });
+})();
+</script>
+{% endif %}
 {% if chart_data_json is defined and chart_data_json != '[]' %}
 <script>const GRADE_DATA = {{ chart_data_json | safe }};</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -232,4 +370,6 @@
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 <script>const USER_PROJECTS = {{ user_projects | tojson | safe }};</script>
 <script src="{{ url_for('static', filename='js/chat_interface.js') }}"></script>
+<script>window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};</script>
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endblock %}

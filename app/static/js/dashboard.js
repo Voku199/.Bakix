@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const t = document.createElement('div'); t.className = 'msg-item__text'; t.textContent = m.Text;
         div.appendChild(t);
       }
+      div.addEventListener('click', function () { openMsgModal(m); });
       frag.appendChild(div);
     });
     const body = document.getElementById('komens-body');
@@ -221,11 +222,42 @@ document.addEventListener('DOMContentLoaded', function () {
       document.querySelectorAll('.tt-day-btn').forEach(function (b) { b.classList.remove('tt-day-btn--active'); });
       this.classList.add('tt-day-btn--active');
       const url = this.dataset.day === 'tomorrow' ? '/api/dashboard/tomorrow' : '/api/dashboard/today';
-      setCard('events-body', '<p class="card-loading">Načítám…</p>');
+      setCard('events-body', '<div class="skel-rows"><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div>');
       fetch(url).then(function (r) { return r.json(); })
         .then(renderTimetable)
         .catch(function () { cardErr('events-body', 'Síťová chyba.'); });
     });
   });
 });
+
+/* ── Komens message modal ─────────────────────────────────── */
+(function () {
+  var modal      = document.getElementById('msg-modal');
+  var modalTitle = document.getElementById('msg-modal-title');
+  var modalMeta  = document.getElementById('msg-modal-meta');
+  var modalBody  = document.getElementById('msg-modal-body');
+  var closeBtn   = document.getElementById('msg-modal-close');
+  if (!modal) return;
+
+  function fmtDateLocal(iso) { return iso ? iso.substring(0, 10) : ''; }
+
+  window.openMsgModal = function (m) {
+    modalTitle.textContent = m.Title  || '—';
+    modalMeta.textContent  = (m.Sender || '—') + ' · ' + fmtDateLocal(m.SentDate);
+    modalBody.textContent  = m.Text   || '';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  function closeModal() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+})();
 

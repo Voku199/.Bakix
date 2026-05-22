@@ -3,7 +3,9 @@ import hashlib
 import json
 import logging
 import os
+import re
 
+import requests
 from google import genai
 from google.genai import types
 
@@ -101,6 +103,74 @@ _LIVE_PAGE_CONSTRAINTS = (
 
 _LIVE_PAGE_PROMPT = _AI_CHAT_PROMPT + _LIVE_PAGE_CONSTRAINTS
 
+_EXPLAIN_PROMPT = (
+    "Jsi AI tutor pro středoškolské studenty. "
+    "Student označil konkrétní text a chce ho vysvětlit. "
+    "Vždy odpovídej česky. Buď stručný (2–4 věty), jasný a srozumitelný pro studenta střední školy. "
+    "Nevracej otázky zpět. Nenavrhuj tvorbu studijní stránky. "
+    "Odpověz POUZE validním JSON objektem: "
+    '{"message": "string", "intent": "chat", '
+    '"page_title": null, "page_content_html": null, "action_label": null, "is_test": false}'
+)
+
+_SKILL_REFINE_PROMPT = (
+    "You are a system-prompt engineer. Based on the user's description, craft a concise, "
+    "effective system instruction defining an AI persona. Write in English. Max 120 words. "
+    "Return ONLY the system instruction text — no quotes, no explanation, no preamble."
+)
+
+_WEEKLY_SUMMARY_PROMPT = (
+    "Jsi AI tutor pro středoškolské studenty. Analyzuj výsledky studenta za uplynulý týden "
+    "a vytvoř personalizované shrnutí v češtině.\n\n"
+    "Zahrň:\n"
+    "1. Celkové hodnocení výkonu tohoto týdne (pochval za dobré výsledky)\n"
+    "2. Identifikaci slabých míst (předměty nebo témata s horší známkou ≥ 3)\n"
+    "3. Konkrétní studijní plán na příští týden\n\n"
+    "Pokud má student průměrnou známku horší než 3, nebo dostal čtyřku či pětku, nastav "
+    "poor_performance=true a přidej výzvu k akci: zeptej se, zda chce vygenerovat "
+    "studijní stránku pro problematické téma.\n\n"
+    "Odpověz POUZE validním JSON objektem:\n"
+    '{"summary": "string (celé shrnutí, 3-5 vět)", '
+    '"weak_subjects": ["string"], '
+    '"study_plan": "string (konkrétní kroky na příští týden)", '
+    '"poor_performance": bool, '
+    '"cta": "string nebo null"}'
+)
+
+_STUDY_PLAN_PROMPT = (
+    "Jsi AI studijní plánovač pro středoškolské studenty. Na základě rozvrhu, "
+    "domácích úkolů a slabých předmětů vytvoř realistický studijní plán "
+    "pro nadcházející dny v češtině.\n\n"
+    "Prioritizuj:\n"
+    "1. Úkoly s nejbližším termínem odevzdání\n"
+    "2. Opakování slabých předmětů (průměr ≥ 3)\n"
+    "3. Přípravu na předměty z rozvrhu\n\n"
+    "Navrhni konkrétní studijní bloky (den + aktivita) do volných oken po škole. "
+    "Předpokládej cca 1,5–2 hodiny studia denně a buď realistický.\n\n"
+    "Odpověz POUZE validním JSON objektem:\n"
+    '{"plan": "string (celý plán, 5-10 řádků s konkrétními bloky)", '
+    '"priority_tasks": ["string (max 5 nejdůležitějších úkolů)"], '
+    '"study_slots": "string (kdy má student největší prostor na studium)", '
+    '"tip": "string nebo null"}'
+)
+
+_DAILY_SUMMARY_PROMPT = (
+    "Jsi AI tutor pro středoškolské studenty. Analyzuj dnešní výsledky studenta "
+    "a vytvoř personalizované shrnutí dne v češtině.\n\n"
+    "Zahrň:\n"
+    "1. Co student dnes dostal za hodnocení (pochval za dobré výsledky)\n"
+    "2. Identifikaci slabých míst (předměty s horší známkou ≥ 3)\n"
+    "3. Konkrétní tip na dnešní večerní přípravu\n\n"
+    "Pokud student dnes dostal čtyřku či pětku, nastav poor_performance=true "
+    "a přidej výzvu k akci: zeptej se, zda chce vygenerovat studijní stránku.\n\n"
+    "Odpověz POUZE validním JSON objektem:\n"
+    '{"summary": "string (shrnutí dne, 2-4 věty)", '
+    '"weak_subjects": ["string"], '
+    '"study_plan": "string (konkrétní tip na dnešní večer)", '
+    '"poor_performance": bool, '
+    '"cta": "string nebo null"}'
+)
+
 # ── Python-side intent signals ────────────────────────────────────────────────
 
 _GRADE_KEYWORDS = frozenset([
@@ -131,6 +201,50 @@ _HISTORY_KEEP = 40
 _HISTORY_CONTEXT = 20
 
 
+# ── OpenRouter fallback ───────────────────────────────────────────────────────
+
+_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _is_quota_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(t in msg for t in ("429", "quota", "rate_limit", "resource_exhausted", "too many request"))
+
+
+def _call_openrouter(
+    system_instruction: str,
+    contents: str,
+    history: "list[dict] | None" = None,
+    json_mode: bool = False,
+) -> str:
+    """Call OpenRouter as a drop-in fallback for Gemini. Returns raw response text."""
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY not set — cannot use OpenRouter fallback")
+    model = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+    messages: list[dict] = []
+    if system_instruction:
+        messages.append({"role": "system", "content": system_instruction})
+    for h in (history or []):
+        if h.get("text"):
+            messages.append({
+                "role":    "assistant" if h.get("role") == "model" else "user",
+                "content": h["text"],
+            })
+    messages.append({"role": "user", "content": contents})
+    body: dict = {"model": model, "messages": messages}
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    resp = requests.post(
+        _OPENROUTER_URL,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=body,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
 class GeminiService:
     def __init__(self):
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -156,6 +270,48 @@ class GeminiService:
         self._modify_config = types.GenerateContentConfig(
             system_instruction=_MODIFY_PROMPT,
         )
+
+    # ── Gemini → OpenRouter fallback wrapper ─────────────────────────────────
+
+    def _generate_with_fallback(
+        self,
+        config: types.GenerateContentConfig,
+        contents: str,
+        history: "list[dict] | None" = None,
+    ) -> str:
+        """Call Gemini; on quota/rate-limit errors transparently retry via OpenRouter.
+
+        history — raw list[{"role": "user"|"model", "text": str}] from DB.
+        """
+        try:
+            if history:
+                hist = [
+                    types.Content(role=h["role"], parts=[types.Part(text=h["text"])])
+                    for h in history
+                    if h.get("role") in ("user", "model") and h.get("text")
+                ]
+                chat = self._client.chats.create(model=self._model, config=config, history=hist)
+                return chat.send_message(contents).text
+            return self._client.models.generate_content(
+                model=self._model, config=config, contents=contents,
+            ).text
+        except Exception as exc:
+            if not _is_quota_error(exc):
+                raise
+            log.warning("Gemini quota exceeded, routing to OpenRouter: %s", exc)
+            # Extract system instruction string from config (may be str or Content)
+            si = config.system_instruction
+            if isinstance(si, str):
+                sys_instr = si
+            elif si is not None:
+                try:
+                    sys_instr = "".join(getattr(p, "text", "") for p in getattr(si, "parts", [si]))
+                except Exception:
+                    sys_instr = ""
+            else:
+                sys_instr = ""
+            json_mode = getattr(config, "response_mime_type", "") == "application/json"
+            return _call_openrouter(sys_instr, contents, history, json_mode)
 
     # ── Persistent conversation history ───────────────────────────────────────
 
@@ -308,16 +464,9 @@ class GeminiService:
             except json.JSONDecodeError:
                 pass
 
-        db_history = self._load_history(user_id)
-        hist = [
-            types.Content(role=h["role"], parts=[types.Part(text=h["text"])])
-            for h in db_history
-            if h.get("role") in ("user", "model") and h.get("text")
-        ]
-
-        chat = self._client.chats.create(model=self._model, config=config, history=hist)
-        response = chat.send_message(prompt_text)
-        result = json.loads(response.text)
+        db_history    = self._load_history(user_id)
+        response_text = self._generate_with_fallback(config, prompt_text, history=db_history)
+        result        = json.loads(response_text)
 
         result_json = json.dumps(result, ensure_ascii=False)
         self._save_exchange(user_id, user_input, result_json)
@@ -503,14 +652,201 @@ class GeminiService:
         """Alias for get_response — kept for call-site compatibility."""
         return self.get_response(user_id, user_input, student_data)
 
+    def explain_term(self, user_id: str, term: str) -> dict:
+        """Return a concise explanation of a user-selected text snippet."""
+        config = types.GenerateContentConfig(
+            system_instruction=_EXPLAIN_PROMPT,
+            response_mime_type="application/json",
+        )
+        try:
+            return self._call_api(user_id, term, [], config)
+        except Exception:
+            log.exception("GeminiService.explain_term failed")
+            return _error_response()
+
+    def _generate_summary_period(
+        self,
+        grades: list,
+        all_subjects: list,
+        system_prompt: str,
+    ) -> dict:
+        """Shared Gemini call for both weekly and daily summaries. Stateless."""
+        payload = json.dumps(
+            {"grades": grades, "all_subjects_averages": all_subjects},
+            ensure_ascii=False,
+        )
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            response_mime_type="application/json",
+        )
+        try:
+            return json.loads(self._generate_with_fallback(config, payload))
+        except Exception:
+            log.exception("GeminiService._generate_summary_period failed")
+            return {
+                "summary": "Shrnutí se nepodařilo vygenerovat.",
+                "weak_subjects": [],
+                "study_plan": "",
+                "poor_performance": False,
+                "cta": None,
+                "error": "AI unavailable",
+            }
+
+    def generate_weekly_summary(
+        self,
+        user_id: str,
+        weekly_grades: list,
+        all_subjects: list,
+    ) -> dict:
+        return self._generate_summary_period(weekly_grades, all_subjects, _WEEKLY_SUMMARY_PROMPT)
+
+    def generate_daily_summary(
+        self,
+        user_id: str,
+        daily_grades: list,
+        all_subjects: list,
+    ) -> dict:
+        return self._generate_summary_period(daily_grades, all_subjects, _DAILY_SUMMARY_PROMPT)
+
+    def generate_study_plan(self, user_id: str, context: dict) -> dict:
+        """Generate a personalised study plan from timetable, homeworks and weak subjects."""
+        config = types.GenerateContentConfig(
+            system_instruction=_STUDY_PLAN_PROMPT,
+            response_mime_type="application/json",
+        )
+        try:
+            return json.loads(self._generate_with_fallback(
+                config, json.dumps(context, ensure_ascii=False)
+            ))
+        except Exception:
+            log.exception("GeminiService.generate_study_plan failed")
+            return {
+                "plan": "Studijní plán se nepodařilo vygenerovat.",
+                "priority_tasks": [],
+                "study_slots": "",
+                "tip": None,
+                "error": "AI unavailable",
+            }
+
+    # ── /skill command ────────────────────────────────────────────────────────
+
+    def handle_skill_command(self, user_id: str, message: str) -> dict:
+        """Route /skill commands and in-progress skill-creation flows."""
+        parts = message.strip().split(None, 2)
+        sub   = parts[1].lower() if len(parts) > 1 else ""
+
+        if sub == "cancel":
+            _clear_pending_skill(user_id)
+            return _chat_reply("Tvorba skilu byla zrušena.")
+
+        pending = _get_pending_skill(user_id)
+        if pending is not None:
+            return self._skill_create_step(user_id, message, pending)
+
+        if sub == "create":
+            _set_pending_skill(user_id, 0, {})
+            return _chat_reply(
+                "Vytváříme nový skill. Popiš jeho účel a chování — "
+                "jak má reagovat na uživatele a co je jeho specialita?"
+            )
+
+        if sub == "list":
+            skills = _list_skills(user_id)
+            if not skills:
+                return _chat_reply("Žádné uložené skilly. Vytvoř první pomocí `/skill create`.")
+            names = "  \n".join(f"• `{s['name']}`" for s in skills)
+            return _chat_reply(f"Tvoje skilly:\n{names}")
+
+        if sub == "delete" and len(parts) > 2:
+            name = parts[2].strip()
+            if _delete_skill(user_id, name):
+                return _chat_reply(f"Skill `{name}` byl smazán.")
+            return _chat_reply(f"Skill `{name}` neexistuje.")
+
+        if sub:
+            context = parts[2] if len(parts) > 2 else ""
+            return self._skill_use(user_id, sub, context)
+
+        return _chat_reply(
+            "**Skill příkazy:**  \n"
+            "• `/skill create` — vytvoří nový skill  \n"
+            "• `/skill [jméno] [zpráva]` — použije skill  \n"
+            "• `/skill list` — vypíše skilly  \n"
+            "• `/skill delete [jméno]` — smaže skill  \n"
+            "• `/skill cancel` — zruší tvorbu skilu"
+        )
+
+    def _skill_create_step(self, user_id: str, user_input: str, pending: dict) -> dict:
+        lower = user_input.strip().lower()
+        if lower in ("/skill cancel", "cancel", "zrušit", "konec", "stop"):
+            _clear_pending_skill(user_id)
+            return _chat_reply("Tvorba skilu byla zrušena. Začni znovu pomocí `/skill create`.")
+
+        step = pending["step"]
+        data = pending["data"]
+
+        if step == 0:
+            # User gave description → refine with Gemini, ask for name
+            try:
+                cfg     = types.GenerateContentConfig(system_instruction=_SKILL_REFINE_PROMPT)
+                refined = self._generate_with_fallback(cfg, user_input).strip()
+            except Exception:
+                log.exception("_skill_create_step: refinement failed")
+                refined = user_input.strip()
+
+            _set_pending_skill(user_id, 1, {"description": refined})
+            return _chat_reply(
+                f"Navrhovaný systémový prompt:\n\n> {refined}\n\n"
+                "Jak chceš skill pojmenovat? (použij pomlčkový slug, např. `strict-teacher`)  \n"
+                "Nebo napiš `upravit` pro úpravu popisu."
+            )
+
+        if step == 1:
+            if lower in ("upravit", "uprav", "edit", "změnit", "změn"):
+                _set_pending_skill(user_id, 0, {})
+                return _chat_reply("Dobře, zkusíme znovu. Jak má skill vypadat?")
+
+            name = re.sub(r"[^a-z0-9\-]", "", user_input.strip().lower().replace(" ", "-"))
+            if not name:
+                return _chat_reply("Jméno musí obsahovat písmena nebo číslice. Zkus znovu.")
+
+            try:
+                _save_skill(user_id, name, data.get("description", ""))
+            except Exception:
+                _clear_pending_skill(user_id)
+                return _chat_reply("Nepodařilo se uložit skill. Zkus to znovu.")
+
+            _clear_pending_skill(user_id)
+            return _chat_reply(
+                f"✓ Skill `{name}` uložen.\n\nPoužití: `/skill {name} [tvoje zpráva]`"
+            )
+
+        _clear_pending_skill(user_id)
+        return _chat_reply("Stav tvorby skilu byl resetován. Začni znovu: `/skill create`")
+
+    def _skill_use(self, user_id: str, name: str, context: str) -> dict:
+        description = _get_skill(user_id, name)
+        if description is None:
+            return _chat_reply(
+                f"Skill `{name}` neexistuje. Vypiš dostupné pomocí `/skill list`."
+            )
+        if not context.strip():
+            return _chat_reply(f"Skill `{name}` je připraven. Co chceš vědět nebo udělat?")
+
+        cfg = types.GenerateContentConfig(system_instruction=description)
+        try:
+            reply = self._generate_with_fallback(cfg, context).strip()
+        except Exception:
+            log.exception("_skill_use: API call failed for skill=%s", name)
+            reply = "Omlouvám se, nastala chyba při volání AI."
+
+        return _chat_reply(reply)
+
     def get_proactive_insights(self, data: dict) -> dict:
         try:
-            response = self._client.models.generate_content(
-                model=self._model,
-                config=self._insights_config,
-                contents=json.dumps(data, ensure_ascii=False),
-            )
-            return json.loads(response.text)
+            return json.loads(self._generate_with_fallback(
+                self._insights_config, json.dumps(data, ensure_ascii=False)
+            ))
         except Exception:
             log.exception("GeminiService.get_proactive_insights failed")
             return {
@@ -561,3 +897,101 @@ def _error_response() -> dict:
         "action_label": None,
         "is_test": False,
     }
+
+
+def _chat_reply(message: str) -> dict:
+    return {
+        "message": message,
+        "intent": "chat",
+        "page_title": None,
+        "page_content_html": None,
+        "action_label": None,
+        "is_test": False,
+    }
+
+
+# ── Skill DB helpers ──────────────────────────────────────────────────────────
+
+def has_pending_skill(user_id: str) -> bool:
+    return _get_pending_skill(user_id) is not None
+
+
+def _get_pending_skill(user_id: str) -> "dict | None":
+    try:
+        with get_connection() as db:
+            row = db.execute(
+                "SELECT step, data_json FROM pending_skills WHERE user_id = ?", (user_id,)
+            ).fetchone()
+        if row:
+            return {"step": row["step"], "data": json.loads(row["data_json"] or "{}")}
+    except Exception:
+        log.warning("_get_pending_skill failed for user=%.8s", user_id)
+    return None
+
+
+def _set_pending_skill(user_id: str, step: int, data: dict) -> None:
+    try:
+        with get_connection() as db:
+            db.execute(
+                "INSERT INTO pending_skills (user_id, step, data_json, updated_at) "
+                "VALUES (?, ?, ?, datetime('now')) "
+                "ON CONFLICT(user_id) DO UPDATE SET "
+                "  step = excluded.step, "
+                "  data_json = excluded.data_json, "
+                "  updated_at = excluded.updated_at",
+                (user_id, step, json.dumps(data, ensure_ascii=False)),
+            )
+    except Exception:
+        log.warning("_set_pending_skill failed for user=%.8s", user_id)
+
+
+def _clear_pending_skill(user_id: str) -> None:
+    try:
+        with get_connection() as db:
+            db.execute("DELETE FROM pending_skills WHERE user_id = ?", (user_id,))
+    except Exception:
+        log.warning("_clear_pending_skill failed for user=%.8s", user_id)
+
+
+def _get_skill(user_id: str, name: str) -> "str | None":
+    try:
+        with get_connection() as db:
+            row = db.execute(
+                "SELECT description FROM skills WHERE user_id = ? AND name = ?", (user_id, name)
+            ).fetchone()
+        return row["description"] if row else None
+    except Exception:
+        log.warning("_get_skill failed: user=%.8s name=%s", user_id, name)
+    return None
+
+
+def _list_skills(user_id: str) -> list:
+    try:
+        with get_connection() as db:
+            rows = db.execute(
+                "SELECT name FROM skills WHERE user_id = ? ORDER BY name", (user_id,)
+            ).fetchall()
+        return [{"name": r["name"]} for r in rows]
+    except Exception:
+        log.warning("_list_skills failed for user=%.8s", user_id)
+    return []
+
+
+def _save_skill(user_id: str, name: str, description: str) -> None:
+    with get_connection() as db:
+        db.execute(
+            "INSERT INTO skills (user_id, name, description) VALUES (?, ?, ?) "
+            "ON CONFLICT(user_id, name) DO UPDATE SET "
+            "  description = excluded.description, created_at = datetime('now')",
+            (user_id, name, description),
+        )
+
+
+def _delete_skill(user_id: str, name: str) -> bool:
+    try:
+        with get_connection() as db:
+            db.execute("DELETE FROM skills WHERE user_id = ? AND name = ?", (user_id, name))
+        return True
+    except Exception:
+        log.warning("_delete_skill failed: user=%.8s name=%s", user_id, name)
+        return False

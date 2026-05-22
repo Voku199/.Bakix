@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import threading
 import uuid
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, abort, current_app
@@ -11,7 +12,8 @@ from markupsafe import Markup
 from app.database.db import fetch_row, get_settings as _db_get_settings, save_settings as _db_save_settings, upsert_all, update_display_name as _db_update_display_name, cache_get, cache_set
 from app.services.bakalari import BakalariService
 from app.services.crypto import encrypt_json
-from app.services.gemini_service import GeminiService
+from app.services.gemini_service import GeminiService, has_pending_skill
+from app.services.push_service import PushNotificationService
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +47,47 @@ def _build_chart_datasets(subjects):
     return datasets
 
 
-_HTML_TAG_RE = re.compile(r'<[^>]+>')
+_HTML_TAG_RE   = re.compile(r'<[^>]+>')
+_HTML_ENTITY_RE = re.compile(r'&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);')
+
+# ── SVG / interactive HTML in chat messages ───────────────────────────────────
+_SVG_DETECT_RE = re.compile(r'<(svg|canvas|figure|table)\b', re.I)
+_SCRIPT_RE     = re.compile(r'<script\b[^>]*>.*?</script>', re.I | re.S)
+_EVENT_ATTR_RE = re.compile(r'\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\')', re.I)
+_JS_HREF_RE    = re.compile(r'(href|src)\s*=\s*"javascript:[^"]*"', re.I)
+
+
+def _prep_chat_msg(text: str) -> "tuple[str, bool]":
+    """Return (sanitized_text, is_html).
+
+    is_html=True when the message contains SVG or block-level HTML that should
+    be rendered as markup rather than escaped plain text.
+    """
+    if not _SVG_DETECT_RE.search(text):
+        return text, False
+    text = _SCRIPT_RE.sub('', text)
+    text = _EVENT_ATTR_RE.sub('', text)
+    text = _JS_HREF_RE.sub(r'\1="#"', text)
+    return text, True
+
+# 30-day TTL so seen-IDs survive across cache expiry cycles
+_SEEN_TTL = 2_592_000
+
+_push_svc = PushNotificationService()
+
+
+def _fire_push_if_new(user_id: str, seen_key: str, current_ids: set, title: str, body: str) -> None:
+    """Push only for IDs not in the persisted seen-set; update the seen-set afterwards.
+
+    Runs the webpush call in a daemon thread so it never blocks the API response.
+    """
+    seen_ids  = set(cache_get(user_id, seen_key, ttl=_SEEN_TTL) or [])
+    novel_ids = current_ids - seen_ids
+    if novel_ids:
+        _push_svc.send_to_user_async(user_id, title, body)
+    updated = seen_ids | current_ids
+    if updated != seen_ids:
+        cache_set(user_id, seen_key, list(updated))
 
 
 def _get_svc_and_token():
@@ -100,6 +142,27 @@ def api_homeworks():
             ],
             key=lambda h: h["DateEnd"] or "",
         )
+
+        hw_ids = {str(h["ID"]) for h in homeworks if h["ID"]}
+        if hw_ids:
+            seen_ids  = set(cache_get(user_id, "push_seen_hw", ttl=_SEEN_TTL) or [])
+            novel_ids = hw_ids - seen_ids
+            if novel_ids:
+                # Classify topic for the first new homework in a background thread
+                first_new = next((h for h in homeworks if str(h["ID"]) in novel_ids), None)
+                def _send_hw_push(hw=first_new, count=len(novel_ids)):
+                    subject = hw["Subject"] or "" if hw else ""
+                    content = hw["Content"] or "" if hw else ""
+                    topic   = BakalariService.classify_homework_topic(subject, content)
+                    if count == 1 and hw:
+                        due  = (hw["DateEnd"] or "")[:10]
+                        body = f"{topic} z {subject} – odevzdat do {due}"
+                    else:
+                        body = f"Máš {count} nových úkolů"
+                    _push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body)
+                threading.Thread(target=_send_hw_push, daemon=True).start()
+            cache_set(user_id, "push_seen_hw", list(hw_ids | seen_ids))
+
         cache_set(user_id, _ck, homeworks)
         return jsonify(homeworks)
     except Exception:
@@ -131,11 +194,16 @@ def api_komens():
         if "error" in data:
             return jsonify({"error": f"Nepodařilo se načíst zprávy ({data.get('status_code', '')})"}), 502
 
-        top3 = sorted(
+        top5 = sorted(
             (data.get("Messages") if isinstance(data, dict) else []) or [],
             key=lambda m: m.get("SentDate") or "",
             reverse=True,
-        )[:3]
+        )[:5]
+
+        def _clean_text(raw: str) -> str:
+            text = _HTML_TAG_RE.sub("", raw)
+            text = _HTML_ENTITY_RE.sub(" ", text)
+            return " ".join(text.split())
 
         result = [
             {
@@ -144,10 +212,24 @@ def api_komens():
                 "Sender":   (m.get("Sender") or {}).get("Name"),
                 "SentDate": m.get("SentDate"),
                 "Read":     bool(m.get("Read")),
-                "Text":     _HTML_TAG_RE.sub("", m.get("Text") or "")[:80],
+                "Text":     _clean_text(m.get("Text") or ""),
             }
-            for m in top3
+            for m in top5
         ]
+
+        msg_ids = {str(m["Id"]) for m in result if m["Id"]}
+        if msg_ids:
+            seen_ids     = set(cache_get(user_id, "push_seen_komens", ttl=_SEEN_TTL) or [])
+            novel_unread = [m for m in result if str(m["Id"]) not in seen_ids and not m["Read"]]
+            if novel_unread:
+                first   = novel_unread[0]
+                sender  = first["Sender"] or "škola"
+                title_t = (first["Title"] or "Zpráva")[:60]
+                _push_svc.send_to_user_async(user_id, "Nová zpráva v Bakixu", f"{sender}: {title_t}")
+            updated = seen_ids | msg_ids
+            if updated != seen_ids:
+                cache_set(user_id, "push_seen_komens", list(updated))
+
         cache_set(user_id, "komens", result)
         return jsonify(result)
     except Exception:
@@ -199,10 +281,75 @@ def api_marks():
             }
             for s in (data.get("Subjects") if isinstance(data, dict) else []) or []
         ]
+
+        mark_ids = {
+            f"{s['Subject']['Name']}:{m['MarkText']}:{m['EditDate']}"
+            for s in subjects
+            for m in s["Marks"]
+            if m.get("EditDate")
+        }
+        if mark_ids:
+            seen_ids  = set(cache_get(user_id, "push_seen_marks", ttl=_SEEN_TTL) or [])
+            novel_ids = mark_ids - seen_ids
+            if novel_ids:
+                first_id = next(iter(novel_ids))
+                parts    = first_id.split(":", 2)
+                subj_nm  = parts[0] if len(parts) > 0 else "předmět"
+                mark_txt = parts[1] if len(parts) > 1 else "?"
+                count    = len(novel_ids)
+                body = (
+                    f"{mark_txt} z {subj_nm}" if count == 1
+                    else f"{count} nových známek (první: {mark_txt} z {subj_nm})"
+                )
+                _push_svc.send_to_user_async(user_id, "Nová známka v Bakixu", body)
+                cache_set(user_id, "push_seen_marks", list(seen_ids | mark_ids))
+
         cache_set(user_id, "marks", subjects)
         return jsonify(subjects)
     except Exception:
         log.exception("api_marks: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/api/3/subjects/themes/<string:subject_id>", methods=["GET"])
+def api_subject_themes(subject_id):
+    try:
+        svc, token, user_id = _get_svc_and_token()
+        if not token:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        from app.database.db import cache_get, cache_set
+        cache_key = f"themes_{subject_id}"
+        cached = cache_get(user_id, cache_key, ttl=604_800)
+        if cached is not None:
+            return jsonify({"themes": cached})
+
+        data = svc.get_subject_themes(token, subject_id)
+        if data.get("status_code") == 401:
+            token = svc.reauth(user_id)
+            if not token:
+                return jsonify({"error": "Not authenticated"}), 401
+            data = svc.get_subject_themes(token, subject_id)
+            if data.get("status_code") == 401:
+                return jsonify({"error": "Not authenticated"}), 401
+
+        if "error" in data:
+            return jsonify({"error": f"Nepodařilo se načíst témata ({data.get('status_code', '')})"}), 502
+
+        themes_raw = data.get("Themes") or data.get("themes") or []
+        themes = []
+        for t in themes_raw:
+            if not isinstance(t, dict):
+                continue
+            name = t.get("Title") or t.get("Name") or t.get("name") or ""
+            date = (t.get("Date") or "")[:10]
+            if name:
+                themes.append({"name": name, "date": date})
+
+        cache_set(user_id, cache_key, themes)
+        return jsonify({"themes": themes})
+    except Exception:
+        log.exception("api_subject_themes: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
@@ -569,6 +716,114 @@ def api_ai_chat():
         if not message:
             return jsonify({"error": "Prázdná zpráva"}), 400
 
+        _msg_lower = message.lower().strip()
+
+        # /studie plan — personalised study plan
+        if _msg_lower in ("/studie plan", "/studie plán", "/studijní plán", "/studijni plan"):
+            try:
+                from app.services.weekly_summary import generate_study_plan_for_user
+                _result = generate_study_plan_for_user(user_id)
+            except Exception:
+                log.exception("api_ai_chat: study plan command failed")
+                _result = None
+
+            if _result is None:
+                _plan_msg = "Studijní plán se nepodařilo vygenerovat. Zkontroluj připojení k Bakalářům."
+            else:
+                _parts = [_result.get("plan", "")]
+                if _result.get("priority_tasks"):
+                    _parts.append("**Prioritní úkoly:**\n" + "\n".join(f"• {t}" for t in _result["priority_tasks"]))
+                if _result.get("study_slots"):
+                    _parts.append(f"**Studijní okna:** {_result['study_slots']}")
+                if _result.get("tip"):
+                    _parts.append(f"**Tip:** {_result['tip']}")
+                _plan_msg = "\n\n".join(p for p in _parts if p)
+
+            _plan_msg, _plan_html = _prep_chat_msg(_plan_msg)
+            return jsonify({
+                "message":      _plan_msg,
+                "is_html":      _plan_html,
+                "action_url":   None,
+                "action_label": None,
+                "is_test":      False,
+                "sender":       "ai",
+                "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
+            })
+
+        # "Vysvětlit přes AI:" — contextual text explanation from chat selection
+        if _msg_lower.startswith("vysvětlit přes ai:"):
+            _explain_term = message[len("Vysvětlit přes AI:"):].strip()
+            if _explain_term:
+                try:
+                    ai_result = GeminiService().explain_term(user_id, _explain_term)
+                except ValueError:
+                    return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
+                _exp_msg, _exp_html = _prep_chat_msg(ai_result.get("message", ""))
+                return jsonify({
+                    "message":      _exp_msg,
+                    "is_html":      _exp_html,
+                    "action_url":   None,
+                    "action_label": None,
+                    "is_test":      False,
+                    "sender":       "ai",
+                    "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
+                })
+
+        # /shrnutí commands — short-circuit to period summaries
+        if _msg_lower in ("/shrnutí den", "/shrnuti den", "/shrnutí", "/shrnuti"):
+            _is_daily = "den" in _msg_lower
+            try:
+                if _is_daily:
+                    from app.services.weekly_summary import generate_daily_summary_for_user
+                    _result = generate_daily_summary_for_user(user_id)
+                else:
+                    from app.services.weekly_summary import generate_weekly_summary_for_user
+                    _result = generate_weekly_summary_for_user(user_id)
+            except Exception:
+                log.exception("api_ai_chat: summary command failed")
+                _result = None
+
+            if _result is None:
+                _summary_msg = "Shrnutí se nepodařilo vygenerovat. Zkontroluj připojení k Bakalářům."
+            else:
+                _parts = [_result.get("summary", "")]
+                if _result.get("weak_subjects"):
+                    _parts.append("**Slabá místa:** " + ", ".join(_result["weak_subjects"]))
+                if _result.get("study_plan"):
+                    _label = "Tip na dnešní večer" if _is_daily else "Plán na příští týden"
+                    _parts.append(f"**{_label}:** {_result['study_plan']}")
+                if _result.get("cta"):
+                    _parts.append(_result["cta"])
+                _summary_msg = "\n\n".join(p for p in _parts if p)
+
+            _summary_msg, _summary_html = _prep_chat_msg(_summary_msg)
+            return jsonify({
+                "message":      _summary_msg,
+                "is_html":      _summary_html,
+                "action_url":   None,
+                "action_label": None,
+                "is_test":      False,
+                "sender":       "ai",
+                "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
+            })
+
+        # /skill command or active skill-creation questionnaire — short-circuit normal flow
+        if message.startswith("/skill") or has_pending_skill(user_id):
+            try:
+                ai_result = GeminiService().handle_skill_command(user_id, message)
+            except ValueError:
+                return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
+            _skill_msg, _skill_html = _prep_chat_msg(ai_result.get("message", ""))
+            return jsonify({
+                "message":      _skill_msg,
+                "is_html":      _skill_html,
+                "action_url":   None,
+                "action_label": None,
+                "is_test":      False,
+                "sender":       "ai",
+                "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
+            })
+
         # Best-effort: fetch student marks for grade-context routing.
         # Skipped when chat_mode == "general" to avoid unnecessary API calls.
         student_data = None
@@ -627,8 +882,10 @@ def api_ai_chat():
             _save_gen_index(index)
             action_url = f"/api/ai/generated/{page_id}"
 
+        chat_msg, is_html = _prep_chat_msg(ai_result.get("message", ""))
         return jsonify({
-            "message":      ai_result.get("message", ""),
+            "message":      chat_msg,
+            "is_html":      is_html,
             "action_url":   action_url,
             "action_label": ai_result.get("action_label") if action_url else None,
             "is_test":      bool(ai_result.get("is_test", False)),
@@ -817,6 +1074,24 @@ def api_ai_modify(page_id):
         return jsonify({"ok": True, "page_url": f"/api/ai/generated/{page_id}"})
     except Exception:
         log.exception("api_ai_modify: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/shrnutí", methods=["GET", "POST"])
+def api_shrnuti():
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        from app.services.weekly_summary import generate_weekly_summary_for_user
+        result = generate_weekly_summary_for_user(user_id)
+        if result is None:
+            return jsonify({"error": "Shrnutí se nepodařilo vygenerovat"}), 503
+
+        return jsonify(result)
+    except Exception:
+        log.exception("api_shrnuti: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 

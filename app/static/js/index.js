@@ -15,8 +15,12 @@
         document.getElementById('s-remember').checked         = !!d.remember_password;
         document.getElementById('s-theme').value              = d.theme    || localStorage.getItem('bakix-theme') || 'auto';
         document.getElementById('s-language').value           = d.language || 'cs';
-        document.getElementById('s-notif-absences').checked   = !!d.notifications_absences;
         document.getElementById('s-notif-messages').checked   = !!d.notifications_messages;
+        document.getElementById('s-notif-homeworks').checked  = !!d.notifications_homeworks;
+        document.getElementById('s-notif-marks').checked      = !!d.notifications_marks;
+        document.getElementById('s-notif-subs').checked       = !!d.notifications_subs;
+        document.getElementById('s-notif-daily').checked      = !!d.notifications_daily;
+        document.getElementById('s-notif-absences').checked   = !!d.notifications_absences;
         status.textContent = '';
         status.className   = 'settings-status';
         overlay.classList.add('open');
@@ -39,8 +43,12 @@
       remember_password:      document.getElementById('s-remember').checked,
       theme:                  document.getElementById('s-theme').value,
       language:               document.getElementById('s-language').value,
-      notifications_absences: document.getElementById('s-notif-absences').checked,
-      notifications_messages: document.getElementById('s-notif-messages').checked,
+      notifications_messages:  document.getElementById('s-notif-messages').checked,
+      notifications_homeworks: document.getElementById('s-notif-homeworks').checked,
+      notifications_marks:     document.getElementById('s-notif-marks').checked,
+      notifications_subs:      document.getElementById('s-notif-subs').checked,
+      notifications_daily:     document.getElementById('s-notif-daily').checked,
+      notifications_absences:  document.getElementById('s-notif-absences').checked,
     };
 
     const t = payload.theme;
@@ -96,12 +104,133 @@
   document.getElementById('settings-save')  ?.addEventListener('click', saveSettings);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
 
-  document.getElementById('s-export-pdf')?.addEventListener('click', () => {
-    window.location.href = '/api/export/grades?format=pdf';
-  });
-  document.getElementById('s-export-csv')?.addEventListener('click', () => {
-    window.location.href = '/api/export/grades?format=csv';
-  });
+})();
+
+/* ----- Themes popup ----- */
+(function () {
+  'use strict';
+
+  var popup = null;
+  var activeAbbrev = null;
+  var cache = {};
+
+  function getPopup() {
+    if (popup) return popup;
+    popup = document.createElement('div');
+    popup.id = 'themes-popup';
+    popup.innerHTML =
+      '<div class="themes-popup__header">' +
+        '<span class="themes-popup__label" id="themes-popup-label"></span>' +
+        '<button class="themes-popup__close" id="themes-popup-close" aria-label="Zavřít">×</button>' +
+      '</div>' +
+      '<div class="themes-popup__body" id="themes-popup-body"></div>';
+    document.body.appendChild(popup);
+    document.getElementById('themes-popup-close').addEventListener('click', hide);
+    document.addEventListener('click', function (e) {
+      if (!popup || !popup.classList.contains('visible')) return;
+      if (popup.contains(e.target) || e.target.classList.contains('mv--detail')) return;
+      hide();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') hide();
+    });
+    return popup;
+  }
+
+  function position(triggerRect) {
+    var p     = popup;
+    var margin = 10;
+    var vw    = window.innerWidth;
+    var vh    = window.innerHeight;
+    var popW  = p.offsetWidth  || 240;
+    var popH  = p.offsetHeight || 120;
+
+    var left = triggerRect.right + margin;
+    var top  = triggerRect.top;
+
+    if (left + popW > vw - margin) left = triggerRect.left - popW - margin;
+    if (left < margin) left = margin;
+    if (top + popH > vh - margin) top = vh - popH - margin;
+    if (top < margin) top = margin;
+
+    p.style.left = left + 'px';
+    p.style.top  = top  + 'px';
+  }
+
+  function renderThemes(themes) {
+    var body = document.getElementById('themes-popup-body');
+    if (!body) return;
+    if (!themes.length) {
+      body.innerHTML = '<span class="themes-popup__empty">Žádná témata nenalezena.</span>';
+      return;
+    }
+    var ul = document.createElement('ul');
+    ul.className = 'themes-popup__list';
+    themes.forEach(function (t) {
+      var li   = document.createElement('li');
+      var name = document.createElement('span');
+      name.className   = 'themes-popup__theme-name';
+      name.textContent = t.name || t;
+      li.appendChild(name);
+      if (t.date) {
+        var date = document.createElement('span');
+        date.className   = 'themes-popup__theme-date';
+        date.textContent = t.date;
+        li.appendChild(date);
+      }
+      ul.appendChild(li);
+    });
+    body.innerHTML = '';
+    body.appendChild(ul);
+  }
+
+  function show(triggerEl, abbrev, subjectName) {
+    var p = getPopup();
+    activeAbbrev = abbrev;
+
+    document.getElementById('themes-popup-label').textContent = subjectName || abbrev;
+    document.getElementById('themes-popup-body').innerHTML =
+      '<span class="themes-popup__loading">Načítám…</span>';
+
+    p.style.display = 'block';
+    // measure before animating
+    requestAnimationFrame(function () {
+      position(triggerEl.getBoundingClientRect());
+      p.classList.add('visible');
+    });
+
+    if (cache[abbrev]) {
+      renderThemes(cache[abbrev]);
+      return;
+    }
+
+    fetch('/api/3/subjects/themes/' + encodeURIComponent(abbrev))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (activeAbbrev !== abbrev) return;
+        cache[abbrev] = data.themes || [];
+        renderThemes(cache[abbrev]);
+        // re-clamp height after content loads
+        requestAnimationFrame(function () { position(triggerEl.getBoundingClientRect()); });
+      })
+      .catch(function () {
+        if (activeAbbrev !== abbrev) return;
+        var body = document.getElementById('themes-popup-body');
+        if (body) body.innerHTML = '<span class="themes-popup__error">Nepodařilo se načíst témata.</span>';
+      });
+  }
+
+  function hide() {
+    if (!popup) return;
+    popup.classList.remove('visible');
+    activeAbbrev = null;
+    // hide after transition
+    setTimeout(function () {
+      if (popup && !popup.classList.contains('visible')) popup.style.display = 'none';
+    }, 200);
+  }
+
+  window.showMarkThemes = show;
 })();
 
 /* ----- Dashboard data fetching (formerly index.js) ----- */
@@ -224,9 +353,11 @@ document.addEventListener('DOMContentLoaded', function () {
       meta.textContent = (m.Sender || '—') + ' · ' + fmtDate(m.SentDate);
       div.appendChild(title); div.appendChild(meta);
       if (m.Text) {
-        const t = document.createElement('div'); t.className = 'msg-item__text'; t.textContent = m.Text;
+        const t = document.createElement('div'); t.className = 'msg-item__text';
+        t.textContent = m.Text.length > 60 ? m.Text.slice(0, 60) + '…' : m.Text;
         div.appendChild(t);
       }
+      div.addEventListener('click', function () { if (window.openMsgModal) window.openMsgModal(m); });
       frag.appendChild(div);
     });
     const body = document.getElementById('komens-body');
@@ -243,7 +374,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const header = document.createElement('div');
       header.className = 'marks-sum-row__header';
       const name = document.createElement('span');
-      name.textContent = (s.Subject && s.Subject.Name) || '—';
+      const subjectName = (s.Subject && s.Subject.Name) || '—';
+      name.textContent = subjectName;
       const abbrev = document.createElement('span');
       abbrev.className = 'subject__abbrev';
       const abbrevStr = ((s.Subject && s.Subject.Abbrev) || '').trim();
@@ -267,8 +399,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const mrow = document.createElement('div');
         mrow.className = 'marks-detail-row';
         const mv = document.createElement('span');
-        mv.className = 'mv mv--' + (parseInt(m.MarkText) || 'other');
+        mv.className = 'mv mv--' + (parseInt(m.MarkText) || 'other') + (abbrevStr ? ' mv--detail' : '');
         mv.textContent = m.MarkText || '?';
+        if (abbrevStr) {
+          mv.title = 'Zobrazit témata';
+          mv.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (window.showMarkThemes) window.showMarkThemes(mv, abbrevStr, subjectName);
+          });
+        }
         const cap = document.createElement('span');
         cap.className = 'marks-detail-caption';
         cap.textContent = m.Caption || '';
@@ -328,10 +467,41 @@ document.addEventListener('DOMContentLoaded', function () {
       document.querySelectorAll('.tt-day-btn').forEach(function (b) { b.classList.remove('tt-day-btn--active'); });
       this.classList.add('tt-day-btn--active');
       const url = this.dataset.day === 'tomorrow' ? '/api/dashboard/tomorrow' : '/api/dashboard/today';
-      setCard('events-body', '<p class="card-loading">Načítám…</p>');
+      setCard('events-body', '<div class="skel-rows"><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div>');
       fetch(url).then(function (r) { return r.json(); })
         .then(renderTimetable)
         .catch(function () { cardErr('events-body', 'Síťová chyba.'); });
     });
   });
 });
+
+/* ── Komens message modal ─────────────────────────────────── */
+(function () {
+  var modal      = document.getElementById('msg-modal');
+  var modalTitle = document.getElementById('msg-modal-title');
+  var modalMeta  = document.getElementById('msg-modal-meta');
+  var modalBody  = document.getElementById('msg-modal-body');
+  var closeBtn   = document.getElementById('msg-modal-close');
+  if (!modal) return;
+
+  function fmtDate(iso) { return iso ? iso.substring(0, 10) : ''; }
+
+  window.openMsgModal = function (m) {
+    modalTitle.textContent = m.Title  || '—';
+    modalMeta.textContent  = (m.Sender || '—') + ' · ' + fmtDate(m.SentDate);
+    modalBody.textContent  = m.Text   || '';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  function close() {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) close();
+  });
+}());
