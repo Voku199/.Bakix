@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import quote
 
 import requests
 
@@ -13,6 +14,7 @@ class BakalariService:
     _TIMETABLE = "/api/3/timetable/actual"
     _HOMEWORKS = "/api/3/homeworks"
     _KOMENS    = "/api/3/komens/messages/received"
+    _THEMES    = "/api/3/subjects/themes/{subject_id}"
 
     def __init__(self, base_url: str = ""):
         self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
@@ -198,6 +200,69 @@ class BakalariService:
         except ValueError:
             log.exception("get_komens: non-JSON response (HTTP %s)", response.status_code)
             return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    def get_subject_themes(self, access_token: str, subject_id: str) -> dict:
+        """Fetch theme metadata for subject_id (abbreviation, e.g. 'MAT').
+
+        Returns {"Themes": [...]} on success, {"themes": []} on 405 (unsupported
+        by the school), or {"error": ..., "status_code": ...} on other failures.
+        """
+        encoded = quote(subject_id, safe="")
+        url = f"{self._base}{self._THEMES.format(subject_id=encoded)}"
+        try:
+            response = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_subject_themes: request failed for subject=%s", subject_id)
+            return {"error": "Themes request failed"}
+        if response.status_code == 405:
+            log.debug("get_subject_themes: 405 for subject=%s (not supported)", subject_id)
+            return {"themes": []}
+        if response.status_code == 401:
+            return {"error": "Unauthorized", "status_code": 401}
+        if not response.ok:
+            return {"error": "Failed to fetch themes", "status_code": response.status_code}
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_subject_themes: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    @staticmethod
+    def classify_homework_topic(subject: str, content: str) -> str:
+        """Ask OpenRouter for a 1-word topic type. Falls back to subject on any error."""
+        api_key = os.getenv("OPENROUTER_API_KEY", "")
+        if not api_key:
+            return subject or "Úkol"
+        prompt = (
+            f"Předmět: {subject}\nZadání: {content}\n\n"
+            "Odpověz JEDNÍM českým slovem, které nejlépe popisuje typ tohoto úkolu "
+            "(např. Čtení, Výpočet, Opakování, Esej, Projekt, Test, Překlad, Cvičení). "
+            "Jen jedno slovo, bez vysvětlení."
+        )
+        try:
+            r = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model":       "openrouter/free",
+                    "messages":    [{"role": "user", "content": prompt}],
+                    "max_tokens":  10,
+                },
+                timeout=8,
+            )
+            r.raise_for_status()
+            word = r.json()["choices"][0]["message"]["content"].strip().split()[0]
+            return word or subject or "Úkol"
+        except Exception:
+            log.debug("classify_homework_topic: OpenRouter call failed, returning subject")
+            return subject or "Úkol"
 
     def print_marks(self, access_token: str):
         data = self.get_marks(access_token)

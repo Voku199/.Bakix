@@ -27,12 +27,17 @@ def create_app():
     from app.database.schema import init_db
     init_db()
 
+    from app.services.scheduler import start_scheduler
+    start_scheduler(app)
+
     from app.routes.auth_routes import auth_bp
     from app.routes.bakalari_routes import bakalari_bp
     from app.routes.login import login_bp
+    from app.routes.push import push_bp          # push.py — definitive blueprint
     app.register_blueprint(auth_bp)
     app.register_blueprint(bakalari_bp)
     app.register_blueprint(login_bp)
+    app.register_blueprint(push_bp)
 
     # ── Page routes ───────────────────────────────────────────────────────────
     # Endpoints are "welcome" / "onboarding" so url_for("welcome") works in
@@ -69,11 +74,15 @@ def create_app():
     @app.context_processor
     def _inject_user_globals():
         user_id = session.get("user_id")
+        vapid_public_key = os.getenv("VAPID_PUBLIC_KEY", "")
         if not user_id:
-            return {"display_name": ""}
+            return {"display_name": "", "vapid_public_key": vapid_public_key}
         from app.database.db import fetch_row as _fetch_row
         row = _fetch_row(user_id)
-        return {"display_name": (row.get("display_name") or "") if row else ""}
+        return {
+            "display_name": (row.get("display_name") or "") if row else "",
+            "vapid_public_key": vapid_public_key,
+        }
 
     @app.before_request
     def _check_auth():

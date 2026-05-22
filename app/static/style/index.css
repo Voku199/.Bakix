@@ -1,3 +1,82 @@
+/* ── Chart panel nav ─────────────────────────────────────── */
+.chart-panel__header {
+  margin-bottom: .4rem;
+}
+
+.chart-nav {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             .4rem;
+  margin-bottom:   .5rem;
+}
+
+.chart-nav__arrow {
+  font-size:   18px;
+  width:       34px;
+  height:      34px;
+  padding:     0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.chart-nav__arrow:disabled { opacity: .25; cursor: default; }
+
+.chart-subject-label {
+  flex:        1;
+  text-align:  center;
+  font-size:   .85rem;
+  font-weight: 700;
+  transition:  color .4s;
+  min-width:   0;
+  overflow:    hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Thin progress bar — fills over CYCLE_MS via JS-driven CSS animation */
+.chart-progress {
+  height:       2px;
+  background:   var(--border);
+  border-radius: 1px;
+  margin-top:   .55rem;
+  overflow:     hidden;
+}
+
+.chart-progress__bar {
+  height:     100%;
+  background: var(--accent);
+  width:      0%;
+}
+
+@keyframes chart-fill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* Dot indicators */
+.chart-dots {
+  display:         flex;
+  justify-content: center;
+  gap:             5px;
+  margin-top:      .55rem;
+  flex-wrap:       wrap;
+}
+
+.chart-dot {
+  width:         7px;
+  height:        7px;
+  border-radius: 50%;
+  background:    var(--border);
+  border:        none;
+  padding:       0;
+  cursor:        pointer;
+  transition:    background .3s, transform .2s;
+}
+
+.chart-dot--active {
+  transform: scale(1.7);
+}
+
 /* ── Dashboard grid ──────────────────────────────────────── */
 .dashboard {
   display: grid;
@@ -390,20 +469,92 @@
 
 /* ── Komens items ─────────────────────────────────────── */
 .msg-item {
-  padding:       0.45rem 0;
+  padding:       0.45rem 0.4rem;
   border-bottom: 1px solid var(--border);
+  border-radius: 4px;
   font-size:     0.8rem;
+  cursor:        pointer;
+  transition:    background .15s;
 }
 .msg-item:last-child { border-bottom: none; }
+.msg-item:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
 .msg-item--unread {
   background:    color-mix(in srgb, var(--accent) 6%, transparent);
-  border-radius: 4px;
-  padding:       0.45rem 0.4rem;
 }
+.msg-item--unread:hover { background: color-mix(in srgb, var(--accent) 11%, transparent); }
 .msg-item--unread .msg-item__title { font-weight: 700; }
 .msg-item__title { font-weight: 500; overflow-wrap: break-word; word-break: break-word; }
 .msg-item__meta  { color: var(--muted); font-size: 11px; }
-.msg-item__text  { color: var(--muted); font-size: 11px; margin-top: 2px; overflow-wrap: break-word; word-break: break-word; }
+.msg-item__text  { color: var(--muted); font-size: 11px; margin-top: 2px; overflow-wrap: break-word; word-break: break-word; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Message detail modal ─────────────────────────────── */
+.msg-modal {
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0,0,0,.5);
+  z-index:         300;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         1rem;
+  opacity:         0;
+  pointer-events:  none;
+  transition:      opacity .2s ease;
+}
+.msg-modal.open { opacity: 1; pointer-events: auto; }
+.msg-modal__panel {
+  background:    var(--bg2);
+  border:        1px solid var(--border);
+  border-radius: 12px;
+  width:         min(580px, 100%);
+  max-height:    80vh;
+  display:       flex;
+  flex-direction: column;
+  overflow:      hidden;
+}
+.msg-modal__header {
+  display:         flex;
+  align-items:     flex-start;
+  justify-content: space-between;
+  gap:             1rem;
+  padding:         1.25rem 1.5rem .9rem;
+  border-bottom:   1px solid var(--border);
+  background:      var(--bg2);
+  flex-shrink:     0;
+}
+.msg-modal__header-left { min-width: 0; }
+.msg-modal__title {
+  font-size:    14px;
+  font-weight:  700;
+  line-height:  1.4;
+  word-break:   break-word;
+}
+.msg-modal__meta {
+  font-size:  11px;
+  color:      var(--muted);
+  margin-top: .25rem;
+}
+.msg-modal__close {
+  background:  none;
+  border:      none;
+  font-size:   22px;
+  line-height: 1;
+  padding:     0 2px;
+  cursor:      pointer;
+  color:       var(--muted);
+  flex-shrink: 0;
+  transition:  color .15s;
+}
+.msg-modal__close:hover { color: var(--text); }
+.msg-modal__body {
+  padding:     1.25rem 1.5rem;
+  font-size:   13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break:  break-word;
+  overflow-y:  auto;
+  flex:        1;
+}
 
 /* ── Marks summary ────────────────────────────────────── */
 .marks-sum-row {
@@ -465,6 +616,33 @@
 
 .card-loading { color: var(--muted); font-size: 12px; font-style: italic; }
 .card-error   { color: var(--red);   font-size: 12px; }
+
+/* ── Skeleton loading ────────────────────────────────────── */
+@keyframes skel-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX( 100%); }
+}
+.skel {
+  position:      relative;
+  overflow:      hidden;
+  background:    var(--border);
+  border-radius: 3px;
+}
+.skel::after {
+  content:    '';
+  position:   absolute;
+  inset:      0;
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,.18) 50%, transparent 75%);
+  animation:  skel-shimmer 1.4s ease-in-out infinite;
+}
+.skel-rows { display: flex; flex-direction: column; gap: .65rem; }
+.skel-row  { display: flex; align-items: center;    gap: .6rem;  }
+.skel-col  { flex: 1; display: flex; flex-direction: column; gap: .3rem; }
+.skel-sq           { width: 28px; height: 28px; flex-shrink: 0; }
+.skel-badge        { width: 30px; height: 18px; flex-shrink: 0; border-radius: 4px; }
+.skel-line         { height: 11px; }
+.skel-line--short  { height: 10px; width: 58%; }
+.skel-line--xshort { height:  9px; width: 36%; }
 
 /* ── AI Floating button ───────────────────────────────── */
 .ai-fab {
@@ -947,4 +1125,174 @@
   transition:   background .12s;
 }
 .project-thread-modify:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+/* ── Push notification invite rows ──────────────────────── */
+.push-prompt {
+  display:       flex;
+  align-items:   center;
+  gap:           0.65rem;
+  background:    var(--bg2);
+  border:        1px solid var(--border);
+  border-left:   3px solid var(--accent);
+  border-radius: 8px;
+  padding:       0.6rem 0.85rem;
+  margin-bottom: 1.1rem;
+  font-size:     0.82rem;
+}
+.push-prompt__icon    { flex-shrink: 0; line-height: 1; font-size: 1.1rem; }
+.push-prompt__text    { flex: 1; min-width: 0; color: var(--muted); }
+.push-prompt__btn     { flex-shrink: 0; }
+.push-prompt__dismiss { flex-shrink: 0; font-size: 14px; }
+
+/* iOS install hint variant — stacked heading + instruction text */
+.push-prompt--ios             { align-items: flex-start; }
+.push-prompt--ios .push-prompt__icon { margin-top: 2px; }
+.push-prompt__body            { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.push-prompt__heading         { font-size: 0.82rem; color: var(--text); }
+.push-prompt--ios .push-prompt__text { font-size: 0.78rem; }
+
+@media (max-width: 480px) {
+  .push-prompt               { flex-wrap: wrap; gap: 0.4rem; }
+  .push-prompt__text         { flex-basis: 100%; order: -1; }
+  .push-prompt--ios          { flex-wrap: nowrap; }
+}
+
+/* ── Clickable grade value in mark detail rows ───────────── */
+.mv--detail {
+  cursor:        pointer;
+  border-radius: 4px;
+  transition:    background .12s ease, color .12s ease;
+  padding:       0 3px;
+  margin:        0 -3px;
+}
+.mv--detail:hover {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* ── Themes popup ────────────────────────────────────────── */
+#themes-popup {
+  position:      fixed;
+  z-index:       920;
+  background:    var(--bg2);
+  border:        1px solid var(--border);
+  border-radius: 10px;
+  box-shadow:    0 8px 28px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.10);
+  padding:       .7rem .9rem;
+  min-width:     180px;
+  max-width:     260px;
+  font-size:     12px;
+  display:       none;
+  opacity:       0;
+  transform:     translateY(5px) scale(0.97);
+  transition:    opacity .18s ease, transform .18s ease;
+}
+#themes-popup.visible {
+  opacity:   1;
+  transform: translateY(0) scale(1);
+}
+.themes-popup__header {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  margin-bottom:   .45rem;
+  gap:             .5rem;
+}
+.themes-popup__label {
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color:          var(--muted);
+  overflow:       hidden;
+  text-overflow:  ellipsis;
+  white-space:    nowrap;
+}
+.themes-popup__close {
+  background:  none;
+  border:      none;
+  cursor:      pointer;
+  color:       var(--muted);
+  font-size:   16px;
+  line-height: 1;
+  padding:     0;
+  flex-shrink: 0;
+  font-family: var(--font);
+  transition:  color .12s;
+}
+.themes-popup__close:hover { color: var(--text); }
+.themes-popup__body        { line-height: 1.6; }
+.themes-popup__loading     { color: var(--muted); font-style: italic; font-size: 11px; }
+.themes-popup__empty       { color: var(--muted); font-style: italic; font-size: 11px; }
+.themes-popup__error       { color: var(--red);   font-size: 11px; }
+.themes-popup__list {
+  margin:      0;
+  padding:     0;
+  list-style:  none;
+}
+.themes-popup__list li {
+  display:       flex;
+  gap:           .4rem;
+  align-items:   baseline;
+  padding:       .18rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size:     11px;
+}
+.themes-popup__list li:last-child { border-bottom: none; }
+.themes-popup__theme-name { flex: 1; color: var(--text); }
+.themes-popup__theme-date { color: var(--muted); font-size: 10px; white-space: nowrap; }
+
+/* ── Rich (SVG / HTML) chat messages ────────────────────── */
+.ai-msg--rich {
+  overflow-x: auto;
+}
+.ai-msg--rich svg {
+  max-width:  100%;
+  height:     auto;
+  display:    block;
+}
+.ai-msg--rich table {
+  border-collapse: collapse;
+  font-size:       .82rem;
+  width:           100%;
+}
+.ai-msg--rich th,
+.ai-msg--rich td {
+  border:  1px solid var(--border);
+  padding: .25rem .5rem;
+  text-align: left;
+}
+
+/* ── Slash command palette ──────────────────────────────── */
+.ai-cmd-palette {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  overflow:      hidden;
+  margin-bottom: .4rem;
+  box-shadow:    0 -4px 12px rgba(0,0,0,.18);
+}
+.ai-cmd-item {
+  display:     flex;
+  align-items: baseline;
+  gap:         .5rem;
+  padding:     .38rem .65rem;
+  cursor:      pointer;
+  transition:  background .1s;
+}
+.ai-cmd-item:hover,
+.ai-cmd-item--active { background: rgba(99,102,241,.12); }
+.ai-cmd-item__cmd {
+  font-family: monospace;
+  font-size:   .78rem;
+  font-weight: 700;
+  color:       var(--accent);
+  white-space: nowrap;
+}
+.ai-cmd-item__desc {
+  font-size:     .75rem;
+  color:         var(--muted);
+  overflow:      hidden;
+  text-overflow: ellipsis;
+  white-space:   nowrap;
+}
 

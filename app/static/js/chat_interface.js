@@ -22,6 +22,125 @@ document.addEventListener('DOMContentLoaded', function () {
   var userProjects    = (typeof USER_PROJECTS !== 'undefined' && Array.isArray(USER_PROJECTS))
                         ? USER_PROJECTS : [];
   var insightsPromise;
+  var cmdPalette      = document.getElementById('ai-cmd-palette');
+  var cmdActive       = -1;
+
+  // ── Slash command palette ────────────────────────────────
+
+  var SLASH_COMMANDS = [
+    { cmd: '/studie plan',         desc: 'Personalizovaný studijní plán' },
+    { cmd: '/shrnutí den',         desc: 'Shrnutí dnešních známek' },
+    { cmd: '/shrnutí',             desc: 'Týdenní přehled učiva' },
+    { cmd: '/skill create',        desc: 'Vytvoř nový AI skill' },
+    { cmd: '/skill list',          desc: 'Zobraz uložené skilly' },
+    { cmd: '/skill delete',        desc: 'Smaž skill' },
+    { cmd: '/skill cancel',        desc: 'Zruš probíhající tvorbu' },
+  ];
+
+  function showCmdPalette(commands) {
+    if (!cmdPalette || !commands.length) { hideCmdPalette(); return; }
+    cmdPalette.innerHTML = '';
+    cmdActive = -1;
+    commands.forEach(function (item) {
+      var el = document.createElement('div');
+      el.className = 'ai-cmd-item';
+      el.setAttribute('role', 'option');
+      el.dataset.cmd = item.cmd;
+      var cmdSpan = document.createElement('span');
+      cmdSpan.className = 'ai-cmd-item__cmd';
+      cmdSpan.textContent = item.cmd;
+      var descSpan = document.createElement('span');
+      descSpan.className = 'ai-cmd-item__desc';
+      descSpan.textContent = item.desc;
+      el.appendChild(cmdSpan);
+      el.appendChild(descSpan);
+      el.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        selectCmd(item.cmd);
+      });
+      cmdPalette.appendChild(el);
+    });
+    cmdPalette.style.display = '';
+  }
+
+  function hideCmdPalette() {
+    if (!cmdPalette) return;
+    cmdPalette.style.display = 'none';
+    cmdPalette.innerHTML = '';
+    cmdActive = -1;
+  }
+
+  function moveCmdSelection(dir) {
+    var items = cmdPalette ? cmdPalette.querySelectorAll('.ai-cmd-item') : [];
+    if (!items.length) return;
+    if (cmdActive >= 0) items[cmdActive].classList.remove('ai-cmd-item--active');
+    cmdActive = (cmdActive + dir + items.length) % items.length;
+    items[cmdActive].classList.add('ai-cmd-item--active');
+    items[cmdActive].scrollIntoView({ block: 'nearest' });
+  }
+
+  function selectCmd(cmd) {
+    if (input) { input.value = cmd + ' '; input.focus(); }
+    hideCmdPalette();
+  }
+
+  // ── Text-selection "Vysvětlit" button ────────────────────
+
+  var _selBtn = document.createElement('button');
+  _selBtn.textContent = '✦ Vysvětlit';
+  _selBtn.style.cssText = (
+    'display:none;position:fixed;z-index:9999;padding:4px 12px;font-size:12px;' +
+    'border:none;border-radius:12px;background:var(--accent,#5c7a9e);color:#fff;' +
+    'cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);white-space:nowrap;' +
+    'font-family:inherit;line-height:1.4;'
+  );
+  document.body.appendChild(_selBtn);
+
+  var _selText = '';
+
+  function _hideSelBtn() {
+    _selBtn.style.display = 'none';
+    _selText = '';
+  }
+
+  document.addEventListener('mouseup', function (e) {
+    if (_selBtn.contains(e.target)) return;
+    var sel  = window.getSelection();
+    var text = sel ? sel.toString().trim() : '';
+    if (!text || text.length < 2 || text.length > 400) { _hideSelBtn(); return; }
+    var range = sel.rangeCount ? sel.getRangeAt(0) : null;
+    if (!range) { _hideSelBtn(); return; }
+    var rect  = range.getBoundingClientRect();
+    if (!rect.width && !rect.height) { _hideSelBtn(); return; }
+    _selText = text;
+    _selBtn.style.display = '';
+    var btnW = _selBtn.offsetWidth || 96;
+    var x    = rect.left + (rect.width - btnW) / 2;
+    x        = Math.max(4, Math.min(window.innerWidth - btnW - 4, x));
+    var y    = rect.top - 38;
+    if (y < 6) y = rect.bottom + 6;
+    _selBtn.style.left = Math.round(x) + 'px';
+    _selBtn.style.top  = Math.round(y) + 'px';
+  });
+
+  document.addEventListener('mousedown', function (e) {
+    if (!_selBtn.contains(e.target)) _hideSelBtn();
+  });
+
+  document.addEventListener('scroll', _hideSelBtn, true);
+
+  _selBtn.addEventListener('click', function () {
+    var text       = _selText;
+    var wasOpen    = sidebar.classList.contains('open');
+    _hideSelBtn();
+    if (!text) return;
+    if (!wasOpen) openSidebar();
+    insightsPromise.then(function () {
+      setTimeout(function () {
+        sendMessage('Vysvětlit přes AI: ' + text);
+      }, wasOpen ? 0 : 50);
+    });
+  });
 
   // ── Utility ──────────────────────────────────────────────
 
@@ -222,6 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function sendMessage(text) {
     if (!text) return;
+    hideCmdPalette();
     appendMsg('user', text, false, new Date().toISOString());
     chatHistory.push({ role: 'user', text: text });
     if (input) { input.value = ''; delete input.dataset.modifyPageId; }
@@ -239,9 +359,10 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json(); })
       .then(function (r) {
         var reply = r.message || r.error || 'Nastala chyba.';
-        thinking.innerHTML = parseMarkdown(esc(reply));
+        thinking.innerHTML = r.is_html ? reply : parseMarkdown(esc(reply));
         thinking.classList.remove('ai-msg--thinking');
-        if (r.is_test) thinking.classList.add('ai-msg--test');
+        if (r.is_html)  thinking.classList.add('ai-msg--rich');
+        if (r.is_test)  thinking.classList.add('ai-msg--test');
 
         if (r.timestamp) {
           var ts = document.createElement('div');
@@ -268,8 +389,44 @@ document.addEventListener('DOMContentLoaded', function () {
       .finally(function () { if (sendBtn) sendBtn.disabled = false; });
   }
 
-  if (sendBtn) sendBtn.addEventListener('click', function () { sendMessage((input ? input.value : '').trim()); });
-  if (input)   input.addEventListener('keydown', function (e) {
+  if (sendBtn) sendBtn.addEventListener('click', function () {
+    hideCmdPalette();
+    sendMessage((input ? input.value : '').trim());
+  });
+
+  if (input) input.addEventListener('input', function () {
+    var val = input.value;
+    if (!val.startsWith('/')) { hideCmdPalette(); return; }
+    var query = val.slice(1).toLowerCase();
+    var filtered = SLASH_COMMANDS.filter(function (c) {
+      return c.cmd.slice(1).toLowerCase().startsWith(query);
+    });
+    showCmdPalette(filtered);
+  });
+
+  if (input) input.addEventListener('keydown', function (e) {
+    var paletteVisible = cmdPalette && cmdPalette.style.display !== 'none';
+    if (paletteVisible) {
+      if (e.key === 'ArrowUp')   { e.preventDefault(); moveCmdSelection(-1); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveCmdSelection(1);  return; }
+      if (e.key === 'Escape')    { e.preventDefault(); hideCmdPalette();     return; }
+      if (e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        var items = cmdPalette.querySelectorAll('.ai-cmd-item');
+        selectCmd((cmdActive >= 0 && items[cmdActive] ? items[cmdActive] : items[0]).dataset.cmd);
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        var items = cmdPalette.querySelectorAll('.ai-cmd-item');
+        if (cmdActive >= 0 && items[cmdActive]) {
+          e.preventDefault();
+          selectCmd(items[cmdActive].dataset.cmd);
+          return;
+        }
+        hideCmdPalette();
+        // fall through to send
+      }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input.value.trim()); }
   });
 

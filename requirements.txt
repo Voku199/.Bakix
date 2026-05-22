@@ -3,3 +3,5 @@ requests
 cryptography
 python-dotenv
 google-genai
+pywebpush
+APScheduler
