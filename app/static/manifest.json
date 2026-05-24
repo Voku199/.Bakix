@@ -9,7 +9,19 @@
   "theme_color": "#b5451b",
   "icons": [
     {
-      "src": "/static/bakix.svg",
+      "src": "/static/bakix-icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/bakix-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/bakix-icon-apple.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

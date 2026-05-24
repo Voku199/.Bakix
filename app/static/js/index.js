@@ -106,6 +106,88 @@
 
 })();
 
+/* Desktop PWA install prompt (Chrome/Edge) */
+(function () {
+  'use strict';
+
+  var installBtn = document.getElementById('pwa-install-btn');
+  var installStatus = document.getElementById('pwa-install-status');
+  if (!installBtn || !installStatus) return;
+
+  var deferredPrompt = null;
+  var ua = navigator.userAgent || '';
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var isStandalone = !!navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  var isSecure = !!window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  function setStatus(msg) {
+    installStatus.textContent = msg || '';
+  }
+
+  function setInstalledState() {
+    installBtn.disabled = true;
+    installBtn.textContent = 'Aplikace je nainstalovana';
+    setStatus('Bakix je nainstalovany v tomto zarizeni.');
+  }
+
+  if (!isSecure) {
+    installBtn.disabled = true;
+    setStatus('Instalace funguje jen pres HTTPS (nebo localhost).');
+    return;
+  }
+
+  if (isStandalone) {
+    setInstalledState();
+    return;
+  }
+
+  if (isIOS) {
+    installBtn.disabled = true;
+    setStatus('Na iOS pouzij Safari -> Sdilet -> Pridat na plochu.');
+    return;
+  }
+
+  setStatus('Pokud se tlacitko neaktivuje, otevri Bakix v Chrome nebo Edge.');
+
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.disabled = false;
+    installBtn.textContent = 'Nainstalovat aplikaci';
+    setStatus('Instalace je pripravena.');
+  });
+
+  installBtn.addEventListener('click', function () {
+    if (!deferredPrompt) {
+      setStatus('Instalace zatim neni dostupna. Zkus obnovit stranku.');
+      return;
+    }
+
+    installBtn.disabled = true;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice
+      .then(function (choice) {
+        if (choice && choice.outcome === 'accepted') {
+          setStatus('Instalace potvrzena.');
+        } else {
+          installBtn.disabled = false;
+          setStatus('Instalace zrusena.');
+        }
+      })
+      .catch(function () {
+        installBtn.disabled = false;
+        setStatus('Nepodarilo se spustit instalaci.');
+      })
+      .finally(function () {
+        deferredPrompt = null;
+      });
+  });
+
+  window.addEventListener('appinstalled', function () {
+    setInstalledState();
+  });
+})();
+
 /* ----- Themes popup ----- */
 (function () {
   'use strict';
