@@ -2,6 +2,10 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style/index.css') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='bakix-icon-apple.svg') }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bakix">
 {% endblock %}
 
 
@@ -252,6 +256,15 @@
         </label>
         {# notif-test-btn: kept hidden — notifications.js requires it in the DOM #}
         <button id="notif-test-btn" style="display:none;" aria-hidden="true" tabindex="-1"></button>
+      </div>
+
+      <div class="settings-section" id="pwa-install-section">
+        <div class="settings-section-label">Aplikace na plochu</div>
+        <p class="pwa-install-help">Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci.</p>
+        <button class="btn btn--secondary" id="pwa-install-btn" style="width:100%;" disabled>
+          Nainstalovat aplikaci
+        </button>
+        <div id="pwa-install-status" class="pwa-install-status"></div>
       </div>
 
       <div id="settings-status" class="settings-status"></div>

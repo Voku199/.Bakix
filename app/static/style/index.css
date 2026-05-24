@@ -1,3 +1,45 @@
+/* ── Mobile overflow guards ───────────────────────────── */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.container,
+.dash-grid,
+.card,
+.panel,
+.push-prompt,
+.ai-summary,
+.projects-grid {
+  max-width: 100%;
+}
+
+.settings-links {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .card,
+  .panel,
+  .push-prompt,
+  .ai-summary {
+    overflow-x: hidden;
+  }
+
+  .project-link,
+  .project-link__title,
+  .msg-item__title,
+  .marks-detail-caption {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .ai-sidebar--windowed {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+  }
+}
+
 /* ── Chart panel nav ─────────────────────────────────────── */
 .chart-panel__header {
   margin-bottom: .4rem;
@@ -341,6 +383,20 @@
   transition: opacity .15s ease;
 }
 .settings-links a:hover { opacity: .7; text-decoration: underline; }
+
+.pwa-install-help {
+  margin:      0 0 .55rem;
+  font-size:   11px;
+  line-height: 1.45;
+  color:       var(--muted);
+}
+
+.pwa-install-status {
+  margin-top: .45rem;
+  min-height: 1.2em;
+  font-size:  11px;
+  color:      var(--muted);
+}
 
 .settings-premium-badge {
   font-size:      8px;

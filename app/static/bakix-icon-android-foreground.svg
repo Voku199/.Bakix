@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108" role="img" aria-labelledby="title desc">
+  <title id="title">Bakix Android Foreground Icon</title>
+  <desc id="desc">Transparent Bakix foreground for Android adaptive icon.</desc>
+
+  <defs>
+    <linearGradient id="bakixGradAndroid" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b5451b"/>
+      <stop offset="100%" stop-color="#922b21"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sized to stay in the Android adaptive icon safe zone -->
+  <g transform="translate(54 54) scale(0.25)">
+    <polygon points="0,-128 110.85,-64 110.85,64 0,128 -110.85,64 -110.85,-64" fill="#f0ebe3"/>
+    <polygon points="0,-96 83.14,-48 83.14,48 0,96 -83.14,48 -83.14,-48" fill="url(#bakixGradAndroid)"/>
+
+    <path d="M -44 56 L -44 -28 Q -44 -62 -12 -62 L 16 -62 Q 41 -62 41 -40 Q 41 -28 31 -20 Q 47 -10 47 8 Q 47 38 16 38 L -4 38"
+          fill="none"
+          stroke="#f0ebe3"
+          stroke-width="21"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+
+    <path d="M 12 -17 L 31 -6 L 13 6 L 30 18 L 10 30"
+          fill="none"
+          stroke="#b5451b"
+          stroke-width="9"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+  </g>
+</svg>
+
