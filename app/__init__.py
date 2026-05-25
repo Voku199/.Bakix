@@ -66,6 +66,16 @@ def create_app():
     def tos():
         return render_template("terms.html")
 
+    @app.route("/prompt")
+    def prompt():
+        txt_path = os.path.join(app.static_folder, "macaly.txt")
+        try:
+            with open(txt_path, encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            content = ""
+        return render_template("prompt.html", content=content)
+
     @app.route("/sw.js")
     def service_worker():
         from flask import send_from_directory

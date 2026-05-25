@@ -1,0 +1,788 @@
+#PROMPT 1 Setup, DB schema, design system
+Build the foundation for "Bakix" — a Czech student dashboard PWA that wraps the Bakaláři school information system via a proxy API.
+
+DATABASE TABLES (create these):
+
+1. `bakalari_credentials`
+   - user_id (FK to current user, unique — one row per user)
+   - school_url (text, e.g. "https://bakalari.skola.cz")
+   - bakalari_access_token (text, sensitive — NEVER expose to client)
+   - display_name (text, nullable)
+   - settings_json (json, default {})
+   - created_at, updated_at (timestamps)
+
+2. `app_cache`
+   - user_id (FK)
+   - cache_key (text)
+   - cache_value (json)
+   - created_at (timestamp)
+   - Composite PK: (user_id, cache_key)
+
+SECURITY: `bakalari_access_token` must only be readable by server-side functions, NEVER returned to frontend in any query or response.
+
+DESIGN SYSTEM (CSS custom properties in global stylesheet):
+
+Light theme:
+  --bg: #f0ebe3
+  --bg2: #e8e1d5
+  --text: #2a2520
+  --text-muted: #6b6258
+  --accent: #b5451b
+  --border: #d4c9b8
+
+Dark theme ([data-theme="dark"]):
+  --bg: #1a1612
+  --bg2: #25201a
+  --text: #f0ebe3
+  --text-muted: #a89e90
+  --accent: #d4622a
+  --border: #3a3228
+
+Shared:
+  --radius: 12px
+  --header-height: 52px
+  --font-family: "Space Mono", monospace
+  --green: #4a9d5f
+  --red: #c14545
+  --warn: #d4a017
+
+Mark badge colors:
+  --mark-1: #4a9d5f
+  --mark-2: #8aaa3a
+  --mark-3: #d4a017
+  --mark-4: #e07b1f
+  --mark-5: #c14545
+
+Import "Space Mono" from Google Fonts. Base font-size: 13px.
+
+BASE LAYOUT COMPONENTS (reusable):
+
+- <Header />: fixed top, 52px tall, background var(--bg2), border-bottom var(--border), flex space-between, contains logo left ("Bakix") and slot for actions right
+- <Container />: max-width 900px, centered, padding 16px (8px on mobile)
+- <Panel />: background var(--bg2), border var(--border), border-radius var(--radius), padding 16px
+- <Skeleton /> variants: line, square, badge, row — shimmer animation via gradient background-position
+
+Use this design system consistently across all future pages. Do NOT add Tailwind classes — use CSS custom properties and semantic component classes.
+
+The app is in Czech. All UI texts in Czech.
+
+This prompt only sets up DB + design + base components. No routes/pages yet.
+
+#PROMPT 1B — DB extension pro AI
+Extend the Bakix database with tables for the AI subsystem.
+
+ADD THESE TABLES:
+
+1. `ai_conversation_history`
+   - id (auto-increment primary key)
+   - user_id (FK to current user, indexed)
+   - role (text — values: "user" or "model")
+   - content (text)
+   - intent (text, nullable — values: "chat", "generate_page", "modify_page", "confirm", "explain")
+   - page_id (text, nullable — reference to generated_pages)
+   - created_at (timestamp, default now, indexed DESC)
+   - Index on (user_id, created_at DESC)
+
+2. `ai_cache`
+   - user_id (FK)
+   - query_hash (text — SHA-256 of user_id + prompt)
+   - response (json)
+   - created_at (timestamp)
+   - Composite PK: (user_id, query_hash)
+   - 1-hour TTL
+
+3. `generated_pages`
+   - page_id (text, primary key — UUID)
+   - user_id (FK, indexed)
+   - title (text)
+   - content_html (text)
+   - source_prompt (text)
+   - created_at (timestamp)
+   - updated_at (timestamp)
+   - Index on (user_id, updated_at DESC)
+
+4. `pending_skills`
+   - user_id (FK, primary key)
+   - step (integer — 1-4)
+   - data_json (json)
+   - updated_at (timestamp)
+
+5. `user_skills`
+   - id (auto-increment PK)
+   - user_id (FK, indexed)
+   - name (text)
+   - description (text)
+   - system_prompt (text)
+   - created_at (timestamp)
+   - Unique constraint on (user_id, name)
+
+EXTEND `bakalari_credentials.settings_json` default value:
+{
+  "theme": "auto",
+  "ai_enabled": true,
+  "ai_intent_routing": true,
+  "ai_auto_save_pages": true
+}
+
+SECURITY: All AI tables must be scoped strictly per user_id. Backend functions must always filter by current user's ID.
+
+This prompt only adds DB schema. No UI, no functions yet.
+
+#PROMPT 2 — Welcome landing page + onboarding wizard
+
+Build the public landing page and onboarding flow for Bakix.
+
+PUBLIC ROUTE `/welcome`:
+
+The welcome page must visually match the main app dashboard. Use the same design system (Space Mono font, CSS custom properties, panel components, accent color). It must FEEL like a continuation of the app — same fonts, same colors, same border radii, same panel style. No generic marketing aesthetics.
+
+LAYOUT (top to bottom):
+
+1. NAV BAR (fixed top, same as app header):
+   - Height 52px, background var(--bg2), border-bottom var(--border)
+   - Left: "Bakix" wordmark in Space Mono, font-size 18px, color var(--accent)
+   - Right: theme toggle icon (sun/moon), "Přihlásit se" link (.btn--secondary small), "Začít" button (.btn--primary small) → both link to /onboarding
+
+2. HERO SECTION (.hero):
+   - Full-width, centered, max-width 900px, padding-top 120px
+   - Pre-title (small monospace, color var(--text-muted)): "── Bakix v1.0 ──"
+   - Main title (h1, 56px desktop / 36px mobile, font-weight 700): "Bakaláři. Konečně použitelné."
+   - Subtitle (18px, var(--text-muted), max-width 600px, centered): "Rozvrh, známky, domácí úkoly a Komens — všechno na jednom místě. Rychle, čistě, na mobilu i na počítači."
+   - CTA row (flex, gap 12px, margin-top 32px):
+     - Primary button "Začít zdarma" → /onboarding
+     - Secondary button "Jak to funguje" → smooth scroll to #features
+   - Trust line below CTAs: "🔒 Open-source · Šifrované přihlašování · Bez reklam"
+
+3. DEMO PREVIEW SECTION (.demo-preview):
+   - Faux dashboard inside a styled browser frame panel
+   - Use real <Panel /> component, padding 24px
+   - Fake browser top bar: 3 dots left + URL pill "bakix.app/dashboard"
+   - Inside: static 2-column dash-grid with 4 real-styled cards:
+     - Timetable card: 3 fake .tt-row entries:
+       "8:00 — 8:45  Matematika  J. Novák  211"
+       "9:00 — 9:45  Čeština  K. Svoboda  205"
+       "10:00 — 10:45  AJ  M. Black  302  [badge: Změna, var(--warn)]"
+     - Marks card: 3 fake .marks-sum-row entries:
+       "Matematika  Ø 1.50  [badge .mv--1]"
+       "Čeština  Ø 2.00  [badge .mv--2]"
+       "Fyzika  Ø 1.75  [badge .mv--2]"
+     - Homeworks card: big number "3" (48px, var(--accent)) + "nesplněných DÚ"
+     - Komens card: 2 fake .msg-item--unread entries:
+       "Třídní učitel — Třídní schůzky"
+       "Jídelna — Změna jídelníčku"
+   - All elements use real design tokens — preview must look exactly like the real dashboard
+   - Single column under 768px
+
+4. FEATURES BENTO (#features, .bento-grid):
+   - 4-cell grid, 2×2 desktop, single column mobile
+   - Each cell: <Panel /> with SVG icon (32px, var(--accent)) + h3 + 1-sentence description
+   - Cells:
+     a) "📅 Čistý rozvrh" — "Dnešní hodiny, suplování i změny. Bez balastu."
+     b) "📊 Známky bez stresu" — "Vážený průměr automaticky. Rozbal předmět, uvidíš detail."
+     c) "📋 DÚ pod kontrolou" — "Vidíš, co tě čeká příštích 30 dní. Žádné překvapení."
+     d) "🤖 AI asistent (brzy)" — "Vysvětlí učivo, rozebere známky, připraví procvičování."
+
+5. HOW IT WORKS (.how-it-works):
+   - 3-step horizontal list (vertical on mobile), each step is numbered <Panel />
+   - "1. Zadáš URL školy" — "Najdeme tvoje Bakaláře a ověříme připojení."
+   - "2. Přihlásíš se" — "Stejnými údaji jako v Bakalářích. Token uložíme bezpečně na serveru."
+   - "3. Používáš Bakix" — "Dashboard, AI, mobil — všechno v jednom."
+
+6. CTA STRIPE (.cta-stripe):
+   - Full-width, background var(--bg2), padding 64px 0, centered
+   - "Připraven na lepší Bakaláře?"
+   - Big "Začít zdarma" button → /onboarding
+   - Note: "Funguje na všech školách, které používají Bakaláře v3 API."
+
+7. FOOTER (.footer):
+   - Background var(--bg2), border-top var(--border), padding 32px 0
+   - 3-column (stacks on mobile):
+     - Left: "Bakix" + "Bakaláři. Konečně použitelné." + "© 2026 Vojta Kučera"
+     - Middle: "Aplikace" — Přihlášení, Onboarding, Funkce
+     - Right: "Právo" — /cookies, /privacy, /tos
+   - Bottom bar: "Made with care in Písek 🇨🇿"
+
+DESIGN RULES:
+- ONLY tokens from Prompt 1's design system. No new colors.
+- var(--radius) = 12px on all cards.
+- Space Mono everywhere.
+- Hover on buttons: transform translateY(-1px) + box-shadow.
+- Smooth scroll behavior.
+- Dark mode via [data-theme] attribute.
+- No external images — CSS + SVG icons + text only.
+
+RESPONSIVE:
+- 768px: bento single column, hero font shrinks, CTAs stack
+- 480px: nav collapses to hamburger, hero title 32px, demo single column
+
+PUBLIC ACCESS: /welcome must NOT require Macaly auth.
+
+---
+
+ROUTE `/onboarding` — 3-step wizard:
+Macaly-authenticated users only (redirect to /welcome if not). After completion → redirect to /.
+
+Layout: centered card max-width 480px. Top stepper: 3 dots (.is-done, .is-active, default).
+
+STEP 1 — "Bezpečnost":
+Static info screen:
+  - "🔒 Tvoje heslo do Bakalářů se nikdy neukládá v plaintextu"
+  - "🛡️ Komunikace přes HTTPS"
+  - "🔐 Token uložený pouze na serveru, ne v prohlížeči"
+Button: "Pokračovat" → step 2
+
+STEP 2 — "Škola":
+Input "URL školy". Status indicator (.url-status--ok / .url-status--fail).
+On blur → backend function `validateSchoolUrl(url)`:
+  - Server-side fetch to `${url}/api/3` and `${url}/api`
+  - Returns true if "ApiVersion" in response JSON
+Buttons: "Zpět" / "Pokračovat" (disabled until validation OK)
+
+STEP 3 — "Přihlášení":
+Inputs: "Uživatelské jméno", "Heslo" (type=password). "Zapamatovat" checkbox (default true).
+Submit: "Přihlásit se"
+
+On submit → backend function `bakalariLogin(username, password, schoolUrl)`:
+  - Server-side fetch POST https://bakix-proxy.onrender.com/auth/login
+  - Body: { username, password, school_url: schoolUrl }
+  - If response has "access_token":
+    - Upsert into `bakalari_credentials`: school_url, bakalari_access_token, settings_json default
+    - Return { ok: true } — NEVER return token to frontend
+  - If error: return { ok: false, message: "Přihlášení selhalo. Zkontroluj údaje a URL školy." }
+
+On success → redirect to /.
+Error: .alert--error box.
+Loading: button opacity 0.6 + spinner.
+
+#PROMPT 3 — Dashboard skeleton + auth gate + 4 prázdné karty
+Build the main dashboard page at route `/` for Bakix.
+
+AUTH GATE:
+1. User logged in to Macaly? If not → /welcome
+2. Row in `bakalari_credentials` for current user? If not → /onboarding
+3. Otherwise render dashboard.
+
+LAYOUT:
+- <Header />: "Bakix" left, right side: settings cog icon (placeholder), AI sparkle icon (placeholder), theme toggle
+- <Container /> with dashboard grid below
+
+DASHBOARD GRID (.dash-grid):
+CSS grid, 2 columns desktop, 1 column under 768px, gap 16px.
+4 cards (each <Panel />):
+  1. Timetable — "Dnešní rozvrh"
+  2. Marks — "Známky" + "Posledních 100"
+  3. Homeworks — "Domácí úkoly" + "Nesplněné"
+  4. Komens — "Komens" + "Nepřečtené zprávy"
+
+Each card:
+- .card__title-row: title left, meta right (count badge or refresh icon)
+- Content area with <Skeleton /> placeholders (3 rows of .skeleton-row)
+
+"Refresh all" button in header — re-triggers data load for all cards (no-op for now, just a button).
+
+AI FAB: fixed bottom-right, 56px round button, background var(--accent), white sparkle icon. On click → shows toast "AI asistent — již brzy". (Will be replaced in Prompt 9.)
+
+Mobile-first responsive.
+
+#PROMPT 4 — Timetable karta (live data)
+Wire up the Timetable card on the dashboard.
+
+BACKEND FUNCTION `getTimetable()`:
+- Read current user's bakalari_credentials (bakalari_access_token, school_url)
+- If no credentials → return { error: "not_authenticated" }
+- Server-side fetch GET https://bakix-proxy.onrender.com/dashboard/timetable
+  Headers:
+    Authorization: Bearer <bakalari_access_token>
+    X-School-Url: <school_url>
+- Return parsed JSON
+- On HTTP error → return { error: "fetch_failed", status }
+- Cache in app_cache, key "timetable", TTL 5 minutes
+
+TIMETABLE DATA:
+- Days[] — each with Date and Atoms[]
+- Each Atom: HourId, SubjectId, TeacherId, RoomId, Change (null = normal)
+- Subjects[], Teachers[], Rooms[], Hours[] — lookup arrays (resolve IDs to names)
+- Atom with Change != null: check Change.ChangeType (cancelled / changed)
+
+FRONTEND:
+- Auto-select today's day (match Date to today). No match → "Dnes nemáš výuku 🎉"
+- Day switch buttons at top (Po/Út/St/Čt/Pá), active = var(--accent) background
+- List of .tt-row:
+  - .tt-row__time: "8:00 — 8:45"
+  - .tt-row__subject: subject full name
+  - .tt-row__meta: teacher abbreviation + room
+  - Cancelled: gray + strikethrough + badge "Zrušeno" (var(--red))
+  - Changed: badge "Změna" (var(--warn))
+- Empty day: "Žádné hodiny tento den"
+- Loading: skeleton from Prompt 3
+- Error: "Nepodařilo se načíst rozvrh" + retry button
+
+#PROMPT 5 — Marks karta (live data, rozbalovací řádky)
+Wire up the Marks card.
+
+BACKEND FUNCTION `getMarks()`:
+- Read bakalari_credentials
+- Server-side fetch GET https://bakix-proxy.onrender.com/dashboard/marks
+  Headers: Authorization: Bearer <token>, X-School-Url: <school_url>
+- Proxy returns: { marks: [{ subject, mark, caption, date, weight }] }
+- Cache key "marks", TTL 10 min.
+
+FRONTEND:
+Group by subject. For each subject:
+- .marks-sum-row (collapsible):
+  - Subject name left
+  - Weighted average (computed, 2 decimals, weight field, default 1)
+  - Last mark badge right (.mv .mv--{N} where N = 1-5)
+  - Chevron ▶ rotates 90° when open
+- On click → expand .marks-detail:
+  - All marks for subject, newest first
+  - .marks-detail-row: badge + caption + date (DD.MM.YYYY) + weight (e.g. "×2" if > 1)
+
+MARK BADGE PARSING:
+- mark field is string like "1", "2", "1-", "2+"
+- Extract leading digit (1-5) for color class .mv--{N}
+- Non-numeric (N, U) → .mv--other (gray)
+- Display full original mark text
+
+ANIMATION: smooth max-height transition 300ms ease on expand/collapse.
+
+Card header: total count (e.g. "47 známek").
+Empty: "Zatím žádné známky"
+Loading: skeleton 5 rows.
+Error: inline + retry.
+
+#PROMPT 6 — Homeworks karta
+Wire up the Homeworks card.
+
+BACKEND FUNCTION `getHomeworksCount()`:
+- Read bakalari_credentials
+- Server-side fetch GET https://bakix-proxy.onrender.com/dashboard/homeworks/count
+  Headers: Authorization: Bearer <token>, X-School-Url: <school_url>
+- Returns { count: number }
+- Cache key "homeworks_count", TTL 10 min.
+
+NOTE: Proxy returns count only, not full list. Display count only for now.
+Leave TODO comment: "// TODO: wire up full homework list once proxy has /dashboard/homeworks endpoint"
+
+FRONTEND:
+- Large number centered (48px, var(--accent))
+- Label: "nesplněných DÚ na příštích 30 dní"
+- count === 0 → 🎉 + "Žádné nesplněné úkoly!"
+- count >= 5 → .hw-item--urgent: left border var(--red), label color red
+
+Card title row: "Aktualizovat" link button right side.
+Loading: skeleton (1 big square + 2 lines).
+Error: inline + retry.
+
+#PROMPT 7 — Komens karta + message modal
+Wire up the Komens card.
+
+BACKEND FUNCTION `getUnreadMessages()`:
+- Read bakalari_credentials
+- Server-side fetch GET https://bakix-proxy.onrender.com/dashboard/messages/unread
+  Headers: Authorization: Bearer <token>, X-School-Url: <school_url>
+- Returns { count, messages: [...] }
+- Each message: Id, Title, Text (may contain HTML), Sender (object with Name), SentDate, Read
+- Cache key "komens", TTL 5 min.
+
+FRONTEND:
+Title row: "Komens" + count badge (var(--accent) background).
+
+.msg-item per message:
+- .msg-item--unread: left border var(--accent), bold title
+- Sender name (small muted) + title (semibold) + date (DD.MM., right-aligned)
+- Click → opens modal
+
+Empty: "Žádné nové zprávy"
+
+MESSAGE MODAL (.msg-modal):
+- Fixed full-screen overlay with backdrop blur
+- .msg-modal__panel slides up from bottom (translateY 250ms)
+- Header: sender name + close X
+- Title (large) + date (small muted)
+- Body: render Text as HTML — sanitize first (strip <script>, <iframe>, on* attributes)
+- Close button bottom
+- TODO comment: "// TODO: mark as read once proxy has that endpoint"
+
+Loading: skeleton 3 rows.
+Error: inline + retry.
+
+
+#PROMPT 8 — Settings drawer + logout
+Add a settings drawer opened from cog icon in header.
+
+UI: right-side drawer (.settings-panel), 380px desktop / full-width mobile.
+Slides from right via translateX 300ms. Backdrop (.settings-overlay) — click outside closes.
+Drawer header: "Nastavení" + close X.
+
+SECTIONS:
+
+1. "Účet"
+   - Display name input: loaded from bakalari_credentials.display_name.
+     On change (debounced 500ms) → backend `updateDisplayName(newName)` patches row.
+     Show .settings-status--ok "Uloženo ✓" for 2s on success.
+   - School URL: read-only (from bakalari_credentials.school_url)
+
+2. "Vzhled"
+   - Theme select: Auto / Světlý / Tmavý (radio group)
+   - On change → set <html data-theme="auto|light|dark"> AND backend `updateSetting('theme', value)`
+   - "auto" uses prefers-color-scheme media query
+
+3. "Notifikace"
+   - Disabled placeholder rows: "Večerní připomínka rozvrhu", "Týdenní souhrn"
+   - Both greyed out + "Brzy" badge
+   - Tooltip: "Push notifikace zatím nejsou dostupné v této verzi."
+
+4. "O aplikaci"
+   - Version: "Bakix v1.0 (Macaly)"
+   - Links to /privacy, /tos, /cookies (new tab)
+
+5. Bottom:
+   - "Odhlásit se" (.btn--secondary full-width, color var(--red))
+   - Confirm dialog: "Opravdu se chceš odhlásit?"
+   - On confirm → backend `logout()`:
+     - DELETE from bakalari_credentials for current user
+     - Log out from Macaly auth
+     - Redirect to /welcome
+
+Place drawer in root layout next to <Header /> so it's accessible from any page.
+
+#PROMPT 9 — AI chat sidebar (reálné volání AI)
+Replace the AI FAB placeholder with a fully functional AI chat sidebar connected to the Bakix proxy AI endpoint.
+
+UI: AI SIDEBAR (.ai-sidebar)
+
+Triggered from: AI sparkle icon in header + AI FAB bottom-right.
+
+Layout:
+- Fixed right side, width 420px (full-screen under 768px)
+- Slides in via translateX 300ms ease
+- Backdrop overlay (.ai-overlay) — click closes
+- Optional windowed mode: draggable by header to any position via CSS custom props --chat-x, --chat-y. Toggle via "⊟" icon. Position persists in localStorage key "bakix_ai_pos".
+
+Sidebar structure:
+1. Header: "AI Asistent" + mode toggle + close X + windowed toggle
+2. Mode toggle row (.chat-mode-btn):
+   - "💬 Chat" (default)
+   - "📄 Stránka" (forces generate_page intent)
+3. Chat thread (.ai-thread) — scrollable, flex column, gap 8px
+4. Suggestions row (.ai-suggestions) — only when thread is empty:
+   - "Rozeber moje známky"
+   - "Vysvětli mi tenhle DÚ"
+   - "Co mě čeká zítra?"
+   - "Procvič mě z matiky"
+5. Input row (.ai-input-row):
+   - Auto-resize textarea (max 4 lines)
+   - Send button (paper plane icon)
+   - "/" opens command palette (.ai-cmd-palette) above input:
+     /vysvětli, /procvič, /shrň, /upravit, /vygeneruj
+
+MESSAGE VARIANTS (.ai-msg):
+- .ai-msg--user: right-aligned, var(--accent) bg, white text, max-width 80%, radius 12px (small on bottom-right)
+- .ai-msg--model: left-aligned, var(--bg2) bg, var(--border) border
+- .ai-msg--thinking: left-aligned, animated 3-dot pulse, gray
+- .ai-msg--page-link: model message with button "Otevřít stránku →" → /pages/{page_id}
+- .ai-msg--exercise-block: interactive exercise (radio/checkbox/text inputs) + "Vyhodnotit" button
+
+ACTION BUTTONS after each model message (.ai-action-btn):
+- "📋 Kopírovat"
+- "🔄 Regenerovat"
+- "👍" / "👎" (store in DB, no action yet)
+
+BACKEND FUNCTIONS:
+
+`sendAiMessage(userMessage, mode, currentPageId?)`:
+1. Save user message to ai_conversation_history (role="user")
+2. Load last 20 turns from history for context
+3. Run classifyIntent(userMessage, lastAssistantMessage, currentPageId, mode) — from Prompt 11
+4. Call callAiProxy(userMessage, history, intent, currentPageContent?) — see below
+5. Save model response to history (role="model", intent, page_id if any)
+6. Return { text, intent, page_id?, awaiting_confirmation? }
+
+`callAiProxy(prompt, history, intent, currentPageContent?)`:
+// AI calls go through bakix-proxy.onrender.com/ai/ask → Gemini 2.0 Flash
+
+1. Build context string from last 10 turns of history:
+   "[Uživatel]: {content}" or "[Bakix AI]: {content}"
+   Join with newlines. Max 3000 chars — truncate oldest first.
+
+2. Build system string based on intent:
+
+   intent="chat":
+   "Jsi Bakix AI asistent pro české studenty. Pomáháš s Bakaláři,
+    školou a učivem. Odpovídej česky, stručně a přátelsky.
+    Pokud chce uživatel vygenerovat stránku nebo cvičení,
+    připoj na konec odpovědi přesně tento text: ::AWAITING_CONFIRMATION::"
+
+   intent="generate_page":
+   "Jsi Bakix AI asistent. Uživatel chce vygenerovat HTML stránku
+    (poznámky, shrnutí, cvičení). Vygeneruj kompletní HTML obsah
+    (pouze <body> obsah, bez <!DOCTYPE> a <html> tagu).
+    Používej <h1>-<h3>, <p>, <ul>, <ol>, <strong>, <em>, <code>, <blockquote>.
+    Obsah musí být v češtině, strukturovaný a užitečný pro studenta.
+    Vrať POUZE HTML, žádný markdown, žádné vysvětlení okolo."
+
+   intent="modify_page":
+   "Jsi Bakix AI asistent. Uživatel chce upravit existující HTML stránku.
+    Aktuální obsah stránky: ---\n{currentPageContent}\n---
+    Uprav obsah podle požadavku uživatele.
+    Vrať POUZE upravené HTML (<body> obsah), žádné vysvětlení."
+
+   intent="explain":
+   "Jsi Bakix AI asistent. Uživatel chce vysvětlení pojmu nebo konceptu.
+    Odpovídej česky, srozumitelně, s příklady. Max 3 odstavce."
+
+   intent="confirm":
+   "Jsi Bakix AI asistent. Uživatel odpovídá ano/ne na tvoji předchozí otázku.
+    Podle odpovědi buď proveď akci (generate_page) nebo zdvořile zruš."
+
+3. Server-side fetch POST https://bakix-proxy.onrender.com/ai/ask:
+   Headers: Content-Type: application/json
+   Body:
+   {
+     "prompt":  userMessage,
+     "context": <context from step 1>,
+     "system":  <system from step 2>,
+     "model":   "gemini-2.0-flash"
+   }
+
+4. Parse response:
+   - response.response → AI text
+   - Text ends with ::AWAITING_CONFIRMATION:: → awaiting_confirmation: true, strip sentinel from display
+   - intent="generate_page" or "modify_page":
+     - Response text IS the HTML content
+     - Create/update generated_pages row (content_html = response.response)
+     - Return { text: "Připravil jsem ti stránku.", intent, page_id, awaiting_confirmation: false }
+   - Otherwise → return { text: response.response, intent, awaiting_confirmation }
+
+5. Error handling:
+   - Proxy error or fetch fail → { text: "Nepodařilo se spojit s AI. Zkus to znovu.", intent: "chat", error: true }
+   - response_tokens > 900 → log warning, still return response
+
+`loadAiHistory()`:
+- Returns last 20 turns for current user, chronological (oldest first)
+- Frontend renders on sidebar open
+
+`clearAiHistory()`:
+- DELETE all from ai_conversation_history for current user
+- Triggered by "Vymazat konverzaci" in sidebar header dropdown
+
+`submitFeedback(message_id, vote)`:
+- Store thumbs up/down — log only for now
+
+FRONTEND STATE FLOW:
+1. Open sidebar → loadAiHistory() → render thread
+2. User submits → optimistic UI: append user message, show .ai-msg--thinking
+3. Wait for sendAiMessage → replace thinking with model response
+4. page_id present → render .ai-msg--page-link with "Otevřít stránku →"
+5. Action buttons appear under each model message
+
+EMPTY STATE:
+- Sparkle icon centered
+- "AI Asistent"
+- Muted note: "Zadej dotaz nebo vyber návrh níže."
+- Suggestions row
+
+KEYBOARD:
+- Enter sends (Shift+Enter = new line)
+- Esc closes sidebar
+- "/" opens command palette
+- Arrow up/down navigates palette, Enter selects
+
+PERSISTENCE:
+- Windowed position: localStorage "bakix_ai_pos"
+- Mode: localStorage "bakix_ai_mode"
+
+#PROMPT 10 — Generated pages systém
+Build the generated pages system.
+
+ROUTE `/pages` — list:
+- <Header /> + <Container />
+- Title: "Moje stránky"
+- Empty state: sparkle icon + "Zatím tu nic není. Vygeneruj stránku přes AI asistenta."
+- Grid of cards (.project-link):
+  - Page title (h3)
+  - Created date (small muted)
+  - Preview snippet (first 100 chars, HTML stripped)
+  - Hover: lift
+  - Click → /pages/{page_id}
+- Top-right: "+ Nová stránka" → opens AI sidebar in "Stránka" mode
+- Sort: newest first (updated_at DESC)
+- Each card "..." menu: Rename, Delete (with confirm)
+
+ROUTE `/pages/{page_id}`:
+- <Header />: ← back → /pages, inline-editable page title, toolbar
+- View mode toolbar: "✏️ Upravit", "🔄 Regenerovat", "💾 Stáhnout (HTML)"
+- Edit mode toolbar: "Zrušit", "Uložit změny"
+- Main content (.generated-content):
+  - View mode: render content_html in <Panel /> — sanitize (strip <script>, <iframe>, <object>, <embed>, on* attributes, javascript: URLs)
+  - Edit mode: contentEditable="true" with subtle outline
+- Footer sections:
+  a) NOTES (.page-notes):
+     - "Moje poznámky" textarea
+     - localStorage key "bakix_notes_{page_id}", debounced 500ms autosave
+     - "Uloženo ✓" indicator
+  b) REGEN (.page-regen):
+     - "Upravit stránku" title
+     - Input: "Co změnit? Např. 'přidej víc příkladů' nebo 'zkrať to'"
+     - Submit: "Aplikovat změny"
+     - On submit → regenerateGeneratedPage(page_id, modificationPrompt)
+     - Loading: spinner overlay on content
+     - Success: content_html replaced, smooth fade
+
+BACKEND FUNCTIONS:
+
+`listGeneratedPages()`:
+- SELECT from generated_pages WHERE user_id = current, ORDER BY updated_at DESC
+- Returns { pages: [{ page_id, title, created_at, updated_at, preview_snippet }] }
+- preview_snippet: strip HTML tags server-side, first 100 chars
+
+`getGeneratedPage(page_id)`:
+- SELECT WHERE page_id = ? AND user_id = current
+- Not found or user_id mismatch → { error: "not_found" }
+- Returns { page_id, title, content_html, created_at, updated_at, source_prompt }
+
+`updateGeneratedPage(page_id, { title?, content_html? })`:
+- UPDATE only allowed columns
+- Verify user_id matches FIRST
+- Update updated_at to now
+- Returns { ok: true }
+
+`deleteGeneratedPage(page_id)`:
+- DELETE WHERE page_id = ? AND user_id = current
+- Returns { ok: true }
+
+`regenerateGeneratedPage(page_id, modificationPrompt)`:
+- Load existing page (verify ownership)
+- Build system prompt:
+  "Jsi Bakix AI asistent. Uživatel chce upravit existující HTML stránku.
+   Aktuální obsah: ---\n{content_html}\n---
+   Uprav podle požadavku. Vrať POUZE upravené HTML (<body> obsah)."
+- Server-side fetch POST https://bakix-proxy.onrender.com/ai/ask:
+  Body:
+  {
+    "prompt":  modificationPrompt,
+    "system":  <system above>,
+    "model":   "gemini-2.0-flash"
+  }
+- On success:
+  - UPDATE generated_pages SET content_html = response.response, updated_at = now
+  - Save both turns to ai_conversation_history (intent="modify_page", page_id linked)
+  - Return { content_html: response.response, updated_at: <new> }
+- On error → { error: "AI volání selhalo. Zkus to znovu." }
+
+`downloadGeneratedPageHtml(page_id)`:
+- Returns downloadable HTML file with full <!DOCTYPE html>, embedded design tokens inline, content_html in <body>
+- Filename: "{slugified-title}.html"
+
+SECURITY:
+- Every function MUST verify user_id = current before read/write
+- HTML sanitization on every render — no exceptions
+
+CROSS-LINKING:
+- AI sidebar page generation → creates generated_pages row → .ai-msg--page-link "Otevřít stránku →" → /pages/{page_id}
+- Opening AI sidebar from /pages/{page_id} → auto-switches to "Stránka" mode with page as context
+
+Depends on Prompts 1B and 9.
+
+#PROMPT 11 — Intent classifier + routing
+Build the intent classification layer.
+
+INTENT VALUES:
+"chat" | "generate_page" | "modify_page" | "confirm" | "explain"
+
+KEYWORD SETS (case-insensitive substring match, Czech stem-style):
+
+GRADE_KEYWORDS = [
+  "známk", "průměr", "jednička", "dvojka", "trojka", "čtyřka", "pětka",
+  "ohodno", "klasifikac", "rozeber moje", "moje známk", "vážený průměr",
+  "matematik", "čeština", "angličt", "němčin", "fyzik", "chemi", "biolog",
+  "dějepis", "zeměpis", "informatik"
+]
+
+MODIFICATION_KEYWORDS = [
+  "změň", "uprav", "přidej", "odeber", "smaž", "doplň", "zkrať", "rozšiř",
+  "přepiš", "udělej to ", "místo toho", "spíš", "líp", "víc příkladů",
+  "víc vysvětlení", "stručněji"
+]
+
+CONFIRMATION_KEYWORDS_YES = [
+  "ano", "jo", "jasně", "ok", "okay", "určitě", "souhlasím",
+  "jdem na to", "dělej", "jo prosím", "yes"
+]
+
+CONFIRMATION_KEYWORDS_NO = [
+  "ne", "nechci", "raději ne", "zruš", "nech to být", "nope", "no"
+]
+
+EXPLANATION_TRIGGERS = [
+  "co je", "co znamená", "vysvětli", "vysvětlíš", "jak funguje", "rozdíl mezi"
+]
+
+GENERATE_PAGE_TRIGGERS = [
+  "vygeneruj", "vytvoř stránku", "udělej stránku", "připrav mi",
+  "naprogramuj", "vytvoř procvičování", "udělej kvíz",
+  "připrav cvičení", "shrň mi", "připrav poznámky"
+]
+
+CLASSIFIER FUNCTION `classifyIntent(userMessage, lastAssistantMessage, currentPageId, uiMode)`:
+
+Returns: { intent, confirmSubtype? }
+
+Priority order (first match wins):
+
+1. uiMode === "generate_page" → return { intent: "generate_page" }
+
+2. lastAssistantMessage contains "::AWAITING_CONFIRMATION::":
+   - YES keywords match → return { intent: "confirm", confirmSubtype: "yes" }
+   - NO keywords match → return { intent: "confirm", confirmSubtype: "no" }
+   - No match → fall through
+
+3. currentPageId present AND MODIFICATION_KEYWORDS match → return { intent: "modify_page" }
+
+4. GENERATE_PAGE_TRIGGERS match → return { intent: "generate_page" }
+
+5. EXPLANATION_TRIGGERS match → return { intent: "explain" }
+
+6. GRADE_KEYWORD match AND GENERATE_PAGE_TRIGGER match → return { intent: "generate_page" }
+
+7. GRADE_KEYWORD match alone → return { intent: "chat" }
+
+8. Default → return { intent: "chat" }
+
+All matching: lowercase userMessage first, use .includes() for substring.
+
+SENTINEL SYSTEM:
+- AI appends "::AWAITING_CONFIRMATION::" to response when asking yes/no
+- Frontend strips sentinel before displaying
+- Sentinel in last assistant message activates confirm intent on next turn
+
+INTEGRATION WITH PROMPT 9:
+- Replace placeholder intent detection in sendAiMessage() with classifyIntent()
+- Pass returned intent into callAiProxy()
+- Store intent on ai_conversation_history row
+
+AI PROXY CONTRACT:
+All AI calls: POST https://bakix-proxy.onrender.com/ai/ask
+Request: { prompt, context?, system?, model? }
+Response: { response, model, prompt_tokens, response_tokens, timestamp }
+Intent → system prompt mapping:
+  "chat" → conversational Czech assistant
+  "generate_page" → HTML generation (response IS the HTML)
+  "modify_page" → HTML modification with existing content injected
+  "explain" → explanation assistant
+  "confirm" → confirmation handler
+Never call /ai/ask from frontend directly — always server-side.
+
+DEBUG MODE:
+- localStorage "bakix_debug_intent" === "true" → show intent pill under each model message
+- Toggle via /?debug=intent URL param
+
+DEBUG PAGE `/debug/intent` (auth required, hidden from nav):
+- Textarea "User message"
+- Textarea "Last assistant message"
+- Checkbox "Has current page"
+- Select "UI mode: chat | generate_page"
+- "Classify" button → run classifyIntent → show result + which rule fired
+
+Depends on Prompts 1B, 9, 10.
