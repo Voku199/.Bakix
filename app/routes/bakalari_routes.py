@@ -237,6 +237,37 @@ def api_komens():
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
+@bakalari_bp.route("/api/3/absence/student", methods=["GET"])
+def api_absences():
+    try:
+        svc, token, user_id = _get_svc_and_token()
+        if not token:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        _hit = cache_get(user_id, "absences", ttl=300)
+        if _hit is not None:
+            return jsonify(_hit)
+
+        data = svc.get_absences(token)
+
+        if data.get("status_code") == 401:
+            token = svc.reauth(user_id)
+            if not token:
+                return jsonify({"error": "Not authenticated"}), 401
+            data = svc.get_absences(token)
+            if data.get("status_code") == 401:
+                return jsonify({"error": "Not authenticated"}), 401
+
+        if "error" in data:
+            return jsonify({"error": f"Nepodařilo se načíst absence ({data.get('status_code', '')})"}), 502
+
+        cache_set(user_id, "absences", data)
+        return jsonify(data)
+    except Exception:
+        log.exception("api_absences: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
 @bakalari_bp.route("/api/3/marks", methods=["GET"])
 def api_marks():
     try:
@@ -515,6 +546,16 @@ def api_dashboard_tomorrow():
     except Exception:
         log.exception("api_dashboard_tomorrow: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/api/cache/clear", methods=["POST"])
+def api_cache_clear():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import cache_clear
+    cleared = cache_clear(user_id)
+    return jsonify({"ok": True, "cleared": cleared})
 
 
 @bakalari_bp.route("/api/settings", methods=["GET"])

@@ -23,13 +23,24 @@ def start_scheduler(app) -> None:
         with app.app_context():
             _run_weekly_summaries()
 
+    @_scheduler.scheduled_job("cron", hour=4, minute=0, id="cache_cleanup")
+    def cache_cleanup_job():
+        with app.app_context():
+            _run_cache_cleanup()
+
     _scheduler.start()
-    log.info("scheduler: started (evening reminder 18:00, weekly summary Sun 08:00 Europe/Prague)")
+    log.info("scheduler: started (evening reminder 18:00, weekly summary Sun 08:00, cache cleanup 04:00 Europe/Prague)")
 
 
 def _run_weekly_summaries() -> None:
     from app.services.weekly_summary import run_weekly_summary_for_all
     run_weekly_summary_for_all()
+
+
+def _run_cache_cleanup() -> None:
+    from app.database.db import cache_cleanup_old
+    n = cache_cleanup_old(days=7)
+    log.info("scheduler: cache_cleanup deleted %d stale rows", n)
 
 
 def _send_evening_reminders() -> None:

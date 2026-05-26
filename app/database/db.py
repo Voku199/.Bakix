@@ -117,3 +117,24 @@ def cache_set(user_id: str, key: str, data) -> None:
             "    cached_at     = excluded.cached_at",
             (user_id, key, json.dumps(data, ensure_ascii=False)),
         )
+
+
+def cache_clear(user_id: str) -> int:
+    """Delete all cached API responses for one user. Returns number of rows deleted."""
+    with get_connection() as db:
+        cur = db.execute("DELETE FROM api_cache WHERE user_id = ?", (user_id,))
+    n = cur.rowcount
+    log.info("cache_clear: user=%.8s — %d rows deleted", user_id, n)
+    return n
+
+
+def cache_cleanup_old(days: int = 7) -> int:
+    """Delete cache entries older than `days` days across all users. Returns row count."""
+    with get_connection() as db:
+        cur = db.execute(
+            "DELETE FROM api_cache WHERE cached_at < datetime('now', ?)",
+            (f"-{days} days",),
+        )
+    n = cur.rowcount
+    log.info("cache_cleanup_old: deleted %d rows older than %d days", n, days)
+    return n
