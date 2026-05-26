@@ -15,6 +15,7 @@ class BakalariService:
     _HOMEWORKS = "/api/3/homeworks"
     _KOMENS    = "/api/3/komens/messages/received"
     _THEMES    = "/api/3/subjects/themes/{subject_id}"
+    _ABSENCE   = "/api/3/absence/student"
 
     def __init__(self, base_url: str = ""):
         self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
@@ -59,6 +60,29 @@ class BakalariService:
         log.info("reauth: forced reauth for user=%.8s", user_id)
         return self._reauth_from_db(user_id)
 
+    def _refresh_access_token(self, refresh_token: str) -> dict:
+        """Exchange a refresh_token for a new access_token (grant_type=refresh_token)."""
+        try:
+            response = requests.post(
+                f"{self._base}{self._LOGIN}",
+                data={
+                    "grant_type":    "refresh_token",
+                    "refresh_token": refresh_token,
+                    "client_id":     "ANDR",
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            return {"error": "Refresh request failed", "detail": str(exc)}
+        if not response.ok:
+            return {"error": "Token refresh failed", "status_code": response.status_code}
+        data = response.json()
+        return {
+            "access_token":  data.get("access_token"),
+            "refresh_token": data.get("refresh_token"),
+        }
+
     def _reauth_from_db(self, user_id: str) -> "str | None":
         from app.database.db import fetch_row, update_tokens
         from app.services.crypto import decrypt_json
@@ -67,6 +91,21 @@ class BakalariService:
         if not row:
             return None
 
+        # ── Attempt 1: silent token refresh (no password needed) ─────────────
+        stored_refresh = row.get("refresh_token")
+        if stored_refresh:
+            result = self._refresh_access_token(stored_refresh)
+            if "error" not in result and result.get("access_token"):
+                new_refresh = result.get("refresh_token") or stored_refresh
+                update_tokens(user_id, result["access_token"], new_refresh)
+                log.info("_reauth_from_db: refreshed via refresh_token for user=%.8s", user_id)
+                return result["access_token"]
+            log.info(
+                "_reauth_from_db: refresh_token failed (%s), falling back to full login for user=%.8s",
+                result.get("error"), user_id,
+            )
+
+        # ── Attempt 2: full re-login from encrypted credentials ───────────────
         try:
             creds = decrypt_json(row["enc_creds"])
         except Exception:
@@ -79,7 +118,7 @@ class BakalariService:
             return None
 
         update_tokens(user_id, result["access_token"], result.get("refresh_token"))
-        log.info("_reauth_from_db: tokens refreshed for user=%.8s", user_id)
+        log.info("_reauth_from_db: tokens refreshed via full login for user=%.8s", user_id)
         return result["access_token"]
 
     # ── Auth & API ───────────────────────────────────────────────────────────
@@ -199,6 +238,24 @@ class BakalariService:
             return response.json()
         except ValueError:
             log.exception("get_komens: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    def get_absences(self, access_token: str) -> dict:
+        try:
+            response = requests.get(
+                f"{self._base}{self._ABSENCE}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_absences: request failed")
+            return {"error": "Absence request failed"}
+        if not response.ok:
+            return {"error": "Failed to fetch absences", "status_code": response.status_code}
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_absences: non-JSON response (HTTP %s)", response.status_code)
             return {"error": "Invalid JSON response", "status_code": response.status_code}
 
     def get_subject_themes(self, access_token: str, subject_id: str) -> dict:
