@@ -9,13 +9,14 @@ log = logging.getLogger(__name__)
 
 class BakalariService:
 
-    _LOGIN     = "/api/login"
-    _MARKS     = "/api/3/marks"
-    _TIMETABLE = "/api/3/timetable/actual"
-    _HOMEWORKS = "/api/3/homeworks"
-    _KOMENS    = "/api/3/komens/messages/received"
-    _THEMES    = "/api/3/subjects/themes/{subject_id}"
-    _ABSENCE   = "/api/3/absence/student"
+    _LOGIN       = "/api/login"
+    _MARKS       = "/api/3/marks"
+    _TIMETABLE   = "/api/3/timetable/actual"
+    _HOMEWORKS   = "/api/3/homeworks"
+    _KOMENS      = "/api/3/komens/messages/received"
+    _KOMENS_READ = "/api/3/komens/messages/read"
+    _THEMES      = "/api/3/subjects/themes/{subject_id}"
+    _ABSENCE     = "/api/3/absence/student"
 
     def __init__(self, base_url: str = ""):
         self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
@@ -221,6 +222,31 @@ class BakalariService:
         except ValueError:
             log.exception("get_homeworks: non-JSON response (HTTP %s)", response.status_code)
             return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    def mark_message_read(self, access_token: str, message_id: str) -> dict:
+        """Mark a Komens message as read via POST /api/3/komens/messages/read.
+
+        Returns ``{"ok": True}`` on success (HTTP 200 or 204), or an error dict
+        with a ``status_code`` key on failure.
+        """
+        try:
+            response = requests.post(
+                f"{self._base}{self._KOMENS_READ}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type":  "application/json",
+                },
+                json={"Id": message_id, "Read": True},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("mark_message_read: request failed")
+            return {"error": "Mark-read request failed"}
+        if response.status_code in (200, 204):
+            return {"ok": True}
+        if response.status_code == 404:
+            return {"error": "Message not found", "status_code": 404}
+        return {"error": "Failed to mark as read", "status_code": response.status_code}
 
     def get_komens(self, access_token: str) -> dict:
         try:

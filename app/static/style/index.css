@@ -719,6 +719,7 @@ html, body {
   justify-content: center;
   box-shadow:      0 4px 16px rgba(0,0,0,.22);
   transition:      transform .2s ease, box-shadow .2s ease;
+  touch-action:    manipulation; /* prevent double-tap zoom on iOS */
 }
 .ai-fab:hover  { transform: scale(1.08); box-shadow: 0 6px 22px rgba(0,0,0,.28); }
 .ai-fab:active { transform: scale(0.95); }
@@ -885,6 +886,11 @@ html, body {
 }
 .ai-chat__input:focus { outline: none; border-color: var(--accent); }
 .ai-chat__send { font-size: 12px; padding: 6px 14px; flex-shrink: 0; }
+
+/* ── iOS Safari: prevent auto-zoom on input focus (< 16 px triggers zoom) */
+@media (hover: none) and (pointer: coarse) {
+  .ai-chat__input { font-size: 16px; }
+}
 .ai-msg--test {
   border-left:  3px solid var(--accent);
   background:   color-mix(in srgb, var(--accent) 8%, var(--bg));
@@ -1351,4 +1357,100 @@ html, body {
   text-overflow: ellipsis;
   white-space:   nowrap;
 }
+
+/* ── Grade average calculator ────────────────────────── */
+.calc-help-btn {
+  font-size:     11px;
+  font-weight:   700;
+  width:         22px;
+  height:        22px;
+  border-radius: 50%;
+  border:        1px solid var(--border);
+  transition:    background .15s, color .15s;
+}
+.calc-help-box {
+  background:    color-mix(in srgb, var(--accent) 8%, var(--bg));
+  border:        1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 8px;
+  padding:       0.65rem 0.85rem;
+  margin-bottom: 0.85rem;
+  font-size:     0.78rem;
+  line-height:   1.55;
+  color:         var(--text);
+}
+.calc-help-box p { margin: 0 0 0.4rem; }
+.calc-help-box p:last-child { margin: 0; }
+.calc-inputs {
+  display:     flex;
+  flex-wrap:   wrap;
+  gap:         0.6rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+.calc-field {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.25rem;
+  flex:           1 1 140px;
+}
+.calc-field > label {
+  font-size: 10px;
+  color:     var(--muted);
+}
+.calc-field select,
+.calc-field input[type="number"] {
+  padding:       0.4rem 0.55rem;
+  border:        1px solid var(--border);
+  border-radius: 6px;
+  background:    var(--bg);
+  color:         var(--text);
+  font-size:     0.82rem;
+  outline:       none;
+  transition:    border-color .15s;
+}
+.calc-field select:focus,
+.calc-field input[type="number"]:focus { border-color: var(--accent); }
+.calc-result { font-size: 0.82rem; }
+.calc-current {
+  color:         var(--muted);
+  margin-bottom: 0.5rem;
+}
+.calc-current strong { color: var(--text); }
+.calc-row-result {
+  display:       flex;
+  align-items:   center;
+  gap:           0.35rem;
+  padding:       0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap:     wrap;
+}
+.calc-row-result:last-child { border-bottom: none; }
+.calc-row-weight {
+  font-size:   10px;
+  color:       var(--muted);
+  min-width:   46px;
+  flex-shrink: 0;
+}
+.calc-grade-badge {
+  display:       inline-block;
+  min-width:     20px;
+  text-align:    center;
+  font-weight:   700;
+  padding:       1px 5px;
+  border-radius: 4px;
+  font-size:     0.85rem;
+}
+.calc-grade-badge.mv--1 { color: var(--green); }
+.calc-grade-badge.mv--2 { color: var(--text); }
+.calc-grade-badge.mv--3 { color: var(--accent); }
+.calc-grade-badge.mv--4 { color: var(--red); }
+.calc-grade-badge.mv--5 { color: var(--red); font-style: italic; }
+.calc-subhead {
+  font-size:     0.78rem;
+  color:         var(--muted);
+  margin-bottom: 0.4rem;
+}
+.calc-note { color: var(--muted); font-style: italic; }
+.calc-achieved { color: var(--muted); }
+.calc-achieved strong { color: var(--text); }
 

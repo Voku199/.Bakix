@@ -33,10 +33,12 @@ def create_app():
     from app.routes.auth_routes import auth_bp
     from app.routes.bakalari_routes import bakalari_bp
     from app.routes.login import login_bp
-    from app.routes.push import push_bp          # push.py — definitive blueprint
+    from app.routes.proxy_routes import proxy_bp  # PROXY_Bakix-mirrored endpoints
+    from app.routes.push import push_bp            # push.py — definitive blueprint
     app.register_blueprint(auth_bp)
     app.register_blueprint(bakalari_bp)
     app.register_blueprint(login_bp)
+    app.register_blueprint(proxy_bp)
     app.register_blueprint(push_bp)
 
     # ── Page routes ───────────────────────────────────────────────────────────
