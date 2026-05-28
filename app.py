@@ -42,10 +42,10 @@ if __name__ == "__main__":
         if not ssl_context:
             log.info("Dev server (HTTP): http://0.0.0.0:9994")
 
-        app.run(host="0.0.0.0", port=9994, debug=True, ssl_context=ssl_context)
+        app.run(host="0.0.0.0", port=9995, debug=True, ssl_context=ssl_context)
 
     else:
         # ── Produkce ──────────────────────────────────────────────────────
         from waitress import serve
         log.info("Production server (waitress): http://0.0.0.0:9994")
-        serve(app, host="0.0.0.0", port=9994, threads=4)
+        serve(app, host="0.0.0.0", port=9995, threads=4)

@@ -3,6 +3,9 @@ import os
 from urllib.parse import quote
 
 import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +23,8 @@ class BakalariService:
 
     def __init__(self, base_url: str = ""):
         self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
+        self._session = requests.Session()
+        self._session.verify = False
 
     # ── School validation ────────────────────────────────────────────────────
 
@@ -29,7 +34,7 @@ class BakalariService:
         base = base_url.rstrip("/")
         for path in ("/api/3", "/api"):
             try:
-                r = requests.get(f"{base}{path}", timeout=6)
+                r = requests.get(f"{base}{path}", timeout=6, verify=False)
                 data = r.json()
                 if isinstance(data, dict) and "ApiVersion" in data:
                     return True
@@ -64,7 +69,7 @@ class BakalariService:
     def _refresh_access_token(self, refresh_token: str) -> dict:
         """Exchange a refresh_token for a new access_token (grant_type=refresh_token)."""
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base}{self._LOGIN}",
                 data={
                     "grant_type":    "refresh_token",
@@ -126,7 +131,7 @@ class BakalariService:
 
     def login(self, username: str, password: str) -> dict:
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base}{self._LOGIN}",
                 data={
                     "grant_type": "password",
@@ -154,7 +159,7 @@ class BakalariService:
 
     def get_marks(self, access_token: str) -> dict:
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base}{self._MARKS}",
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=10,
@@ -172,7 +177,7 @@ class BakalariService:
 
     def get_timetable(self, access_token: str) -> dict:
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base}{self._TIMETABLE}",
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=10,
@@ -206,7 +211,7 @@ class BakalariService:
 
     def get_homeworks(self, access_token: str, from_date: str, to_date: str) -> dict:
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base}{self._HOMEWORKS}",
                 headers={"Authorization": f"Bearer {access_token}"},
                 params={"from": from_date, "to": to_date},
@@ -230,7 +235,7 @@ class BakalariService:
         with a ``status_code`` key on failure.
         """
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base}{self._KOMENS_READ}",
                 headers={
                     "Authorization": f"Bearer {access_token}",
@@ -250,7 +255,7 @@ class BakalariService:
 
     def get_komens(self, access_token: str) -> dict:
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self._base}{self._KOMENS}",
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=10,
@@ -268,7 +273,7 @@ class BakalariService:
 
     def get_absences(self, access_token: str) -> dict:
         try:
-            response = requests.get(
+            response = self._session.get(
                 f"{self._base}{self._ABSENCE}",
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=10,
@@ -293,7 +298,7 @@ class BakalariService:
         encoded = quote(subject_id, safe="")
         url = f"{self._base}{self._THEMES.format(subject_id=encoded)}"
         try:
-            response = requests.get(
+            response = self._session.get(
                 url,
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=10,
