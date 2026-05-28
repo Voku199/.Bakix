@@ -222,10 +222,12 @@ def api_komens():
             seen_ids     = set(cache_get(user_id, "push_seen_komens", ttl=_SEEN_TTL) or [])
             novel_unread = [m for m in result if str(m["Id"]) not in seen_ids and not m["Read"]]
             if novel_unread:
-                first   = novel_unread[0]
-                sender  = first["Sender"] or "škola"
-                title_t = (first["Title"] or "Zpráva")[:60]
-                _push_svc.send_to_user_async(user_id, "Nová zpráva v Bakixu", f"{sender}: {title_t}")
+                first        = novel_unread[0]
+                sender       = first["Sender"] or "škola"
+                title_t      = (first["Title"] or "Zpráva")[:60]
+                text_preview = (first["Text"] or "")[:80]
+                notif_body   = f"{sender}: {text_preview}" if text_preview else f"{sender}: {title_t}"
+                _push_svc.send_to_user_async(user_id, "Nová zpráva v Bakixu", notif_body)
             updated = seen_ids | msg_ids
             if updated != seen_ids:
                 cache_set(user_id, "push_seen_komens", list(updated))

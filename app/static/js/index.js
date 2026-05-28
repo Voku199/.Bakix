@@ -315,6 +315,129 @@
   window.showMarkThemes = show;
 })();
 
+/* ----- Grade average calculator ----- */
+(function () {
+  'use strict';
+
+  var _marksData = null; // set by initCalc() after marks load
+
+  window.initCalc = function (items) {
+    _marksData = items;
+    var card = document.getElementById('calc-card');
+    var sel  = document.getElementById('calc-subject');
+    if (!card || !sel) return;
+
+    sel.innerHTML = '';
+    var hasUsable = false;
+    items.forEach(function (s, i) {
+      var numericCount = (s.Marks || []).filter(function (m) {
+        var v = parseFloat(m.MarkText);
+        return !isNaN(v) && v >= 1 && v <= 5 && !m.IsPoints;
+      }).length;
+      if (!numericCount) return;
+      hasUsable = true;
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = (s.Subject && s.Subject.Name) || ('Předmět ' + (i + 1));
+      sel.appendChild(opt);
+    });
+
+    if (!hasUsable) return;
+    card.style.display = '';
+  };
+
+  function runCalc() {
+    var result = document.getElementById('calc-result');
+    var sel    = document.getElementById('calc-subject');
+    var inp    = document.getElementById('calc-target');
+    if (!result || !sel || !inp || !_marksData) return;
+
+    var idx    = parseInt(sel.value, 10);
+    var target = parseFloat(inp.value);
+
+    if (isNaN(idx) || idx < 0 || idx >= _marksData.length) {
+      result.innerHTML = '<span class="calc-note">Vyber předmět.</span>'; return;
+    }
+    if (isNaN(target) || target < 1 || target > 5) {
+      result.innerHTML = '<span class="calc-note">Zadej cílový průměr (1–5), např. 1.49 pro jedničku na vysvědčení.</span>'; return;
+    }
+
+    var marks        = _marksData[idx].Marks || [];
+    var subjectName  = (_marksData[idx].Subject && _marksData[idx].Subject.Name) || 'tohoto předmětu';
+    var wSum = 0, wTotal = 0;
+    (marks || []).forEach(function (m) {
+      var v = parseFloat(m.MarkText);
+      if (isNaN(v) || v < 1 || v > 5 || m.IsPoints) return;
+      var w  = m.Weight || 1;
+      wSum   += v * w;
+      wTotal += w;
+    });
+
+    if (wTotal === 0) {
+      result.innerHTML = '<span class="calc-note">Žádné číselné známky v tomto předmětu.</span>'; return;
+    }
+
+    var currentAvg = wSum / wTotal;
+    var html = '<div class="calc-current">Aktuální průměr z ' + subjectName +
+               ': <strong>' + currentAvg.toFixed(2) + '</strong></div>';
+
+    if (target >= currentAvg - 0.005) {
+      html += '<span class="calc-note">Průměr ' + currentAvg.toFixed(2) +
+              ' je již na cíli nebo lepší — není co zlepšovat.</span>';
+      result.innerHTML = html; return;
+    }
+
+    // target=1.00 is mathematically unreachable (infinite 1s needed)
+    if (target <= 1.005) {
+      html += '<p class="calc-note" style="margin:.5rem 0 0;">Průměr přesně 1,00 nelze nikdy dosáhnout — ' +
+              'jedničky průměr jen nekonečně přibližují k 1,00, ale nikdy na 1,00 nedorazí.<br>' +
+              '<strong>Tip:</strong> Zadej <strong>1,49</strong> — to obvykle stačí pro jedničku na vysvědčení.</p>';
+      result.innerHTML = html; return;
+    }
+
+    // n = ceil((wSum - target * wTotal) / (w * (target - 1)))
+    // = how many grade-1 tests (weight w) are needed to reach target
+    html += '<div class="calc-subhead">Kolik jedniček potřebuješ pro průměr ≤ ' + target.toFixed(2) + ':</div>';
+    html += '<div>';
+    [1, 2, 3].forEach(function (w) {
+      var rawN = (wSum - target * wTotal) / (w * (target - 1));
+      var n    = Math.ceil(Math.max(1, rawN));
+
+      html += '<div class="calc-row-result">';
+      html += '<span class="calc-row-weight">Váha ' + w + '</span>';
+
+      if (n > 30) {
+        html += '<span class="calc-note">Více než 30 jedniček — příliš daleko od cíle</span>';
+      } else {
+        var achieved = (wSum + n * w) / (wTotal + n * w);
+        var label    = n === 1 ? 'jednička' : n <= 4 ? 'jedničky' : 'jedniček';
+        html += '<strong>' + n + ' ' + label + '</strong>';
+        html += ' <span class="calc-achieved">→ průměr bude <strong>' + achieved.toFixed(2) + '</strong></span>';
+      }
+
+      html += '</div>';
+    });
+    html += '</div>';
+    result.innerHTML = html;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn     = document.getElementById('calc-btn');
+    var inp     = document.getElementById('calc-target');
+    var helpBtn = document.getElementById('calc-help-btn');
+    var helpBox = document.getElementById('calc-help-box');
+
+    if (btn)     btn.addEventListener('click', runCalc);
+    if (inp)     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') runCalc(); });
+    if (helpBtn) helpBtn.addEventListener('click', function () {
+      var open = helpBox.style.display === 'none';
+      helpBox.style.display = open ? '' : 'none';
+      helpBtn.style.background = open ? 'var(--accent)' : '';
+      helpBtn.style.color      = open ? '#fff' : '';
+    });
+  });
+})();
+
 /* ----- Dashboard data fetching (formerly index.js) ----- */
 document.addEventListener('DOMContentLoaded', function () {
   'use strict';
@@ -506,6 +629,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     const body = document.getElementById('marks-body');
     body.innerHTML = ''; body.appendChild(frag);
+    if (window.initCalc) window.initCalc(items);
   }
 
   function cardErr(id, msg) { setCard(id, '<p class="card-error">' + esc(msg) + '</p>'); }

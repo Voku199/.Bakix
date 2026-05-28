@@ -118,6 +118,32 @@
 
   </div>
 
+  {# ── Grade average calculator ────────────────────────────── #}
+  <section class="card" id="calc-card" style="display:none; margin-bottom:1.25rem;">
+    <div class="card__title-row">
+      <h2 class="card__title">Kalkulačka průměru</h2>
+      <button class="btn btn--icon calc-help-btn" id="calc-help-btn" title="Co to je?" aria-label="Nápověda">?</button>
+    </div>
+    <div id="calc-help-box" class="calc-help-box" style="display:none;">
+      <p><strong>K čemu to je?</strong> Řekneš předmět a průměr, který chceš mít, a kalkulačka ti spočítá kolik jedniček musíš dostat — a s jakou váhou testu.</p>
+      <p><strong>Příklad:</strong> Máš z Dějepisu průměr 1,60 a chceš 1,49 (jednička na vysvědčení). Kalkulačka řekne: váha 1 → 2 jedničky, váha 2 → 1 jednička, váha 3 → 1 jednička.</p>
+      <p><strong>Pro jedničku na vysvědčení</strong> zadej <strong>1,49</strong>. Pro dvojku zadej <strong>2,49</strong> atd. Průměr přesně 1,00 nelze dosáhnout — potřeboval bys nekonečně jedniček.</p>
+      <p><strong>Váha</strong> = důležitost testu. Malá písemka bývá váha 1, velká váha 2–3.</p>
+    </div>
+    <div class="calc-inputs">
+      <div class="calc-field">
+        <label for="calc-subject">Předmět</label>
+        <select id="calc-subject"></select>
+      </div>
+      <div class="calc-field" style="flex:0 1 150px;">
+        <label for="calc-target">Chci průměr (např. 1.49)</label>
+        <input id="calc-target" type="number" min="1.01" max="5" step="0.01" placeholder="1.49">
+      </div>
+      <button class="btn btn--primary" id="calc-btn">Spočítat</button>
+    </div>
+    <div id="calc-result" class="calc-result"></div>
+  </section>
+
   {# ── My Projects ─────────────────────────────────────────── #}
   <section class="card" id="my-projects-card" style="margin-bottom:1.25rem;">
     <div class="card__title-row">
