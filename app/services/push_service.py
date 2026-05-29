@@ -14,7 +14,15 @@ VAPID_MAILTO      = os.getenv("VAPID_MAILTO", "mailto:admin@example.com")
 class PushNotificationService:
     """Send web push notifications without needing a Flask request context."""
 
-    def send_to_user(self, user_id: str, title: str, body: str) -> int:
+    def send_to_user(
+        self,
+        user_id: str,
+        title: str,
+        body: str,
+        *,
+        url: str = "/",
+        tag: str = "bakix",
+    ) -> int:
         """Send to all subscriptions for user_id. Returns number actually sent."""
         if not VAPID_PRIVATE_KEY:
             log.warning("push_service: VAPID_PRIVATE_KEY not configured")
@@ -36,6 +44,7 @@ class PushNotificationService:
             log.error("push_service: pywebpush not installed")
             return 0
 
+        payload = json.dumps({"title": title, "body": body, "url": url, "tag": tag})
         sent = 0
         for row in rows:
             sub_info = {
@@ -48,7 +57,7 @@ class PushNotificationService:
             try:
                 webpush(
                     subscription_info=sub_info,
-                    data=json.dumps({"title": title, "body": body}),
+                    data=payload,
                     vapid_private_key=VAPID_PRIVATE_KEY,
                     vapid_claims={"sub": VAPID_MAILTO},
                     content_encoding="aes128gcm",
@@ -64,11 +73,20 @@ class PushNotificationService:
         log.info("push_service: user=%.8s sent=%d/%d", user_id, sent, len(rows))
         return sent
 
-    def send_to_user_async(self, user_id: str, title: str, body: str) -> None:
+    def send_to_user_async(
+        self,
+        user_id: str,
+        title: str,
+        body: str,
+        *,
+        url: str = "/",
+        tag: str = "bakix",
+    ) -> None:
         """Non-blocking send — dispatches to a daemon thread."""
         threading.Thread(
             target=self.send_to_user,
             args=(user_id, title, body),
+            kwargs={"url": url, "tag": tag},
             daemon=True,
         ).start()
 

@@ -1,0 +1,357 @@
+# English translations for Bakix
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgid "Bakix — Přihlášení"
+msgstr "Bakix — Sign In"
+
+msgid "Vítejte zpět"
+msgstr "Welcome back"
+
+msgid "Přihlaste se ke svému účtu Bakalářů"
+msgstr "Sign in to your Bakaláře account"
+
+msgid "Načítám školu…"
+msgstr "Loading school…"
+
+msgid "Změnit adresu školy"
+msgstr "Change school address"
+
+msgid "Změnit"
+msgstr "Change"
+
+msgid "URL školy"
+msgstr "School URL"
+
+msgid "Uživatelské jméno"
+msgstr "Username"
+
+msgid "Heslo"
+msgstr "Password"
+
+msgid "Zapamatovat přihlašovací jméno a školu"
+msgstr "Remember my username and school"
+
+msgid "Přihlásit se"
+msgstr "Sign in"
+
+msgid "Nový uživatel?"
+msgstr "New user?"
+
+msgid "Nastavit účet →"
+msgstr "Set up account →"
+
+msgid "Bezpečnost"
+msgstr "Security"
+
+msgid "Škola"
+msgstr "School"
+
+msgid "Jak Bakix zachází s vašimi daty"
+msgstr "How Bakix handles your data"
+
+msgid "Přihlašovací údaje šifrované"
+msgstr "Credentials encrypted"
+
+msgid "Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128) výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám."
+msgstr "Bakix stores your credentials in encrypted form (Fernet / AES-128) exclusively for automatic access renewal after token expiry. Your password is never logged or shared with third parties."
+
+msgid "Přihlašovací tokeny v session"
+msgstr "Session login tokens"
+
+msgid "Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný token platný 8 hodin. Po odhlášení je smazán."
+msgstr "Bakix works like the Bakaláře mobile app — it holds a temporary token valid for 8 hours. It is deleted on logout."
+
+msgid "Šifrované připojení"
+msgstr "Encrypted connection"
+
+msgid "Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i serverem školy."
+msgstr "All communication uses HTTPS — between your browser, Bakix, and the school server."
+
+msgid "Data přímo ze školy"
+msgstr "Data directly from school"
+
+msgid "Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí stranou."
+msgstr "Bakix calls your school Bakaláře API directly — data does not pass through any third party."
+
+msgid "Rozumím, pokračovat →"
+msgstr "Understood, continue →"
+
+msgid "Adresa školy"
+msgstr "School address"
+
+msgid "Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů."
+msgstr "Enter your school URL. Bakix will verify that a Bakaláře server is running there before asking for your credentials."
+
+msgid "Bez https:// — např. zstsobra.bakalari.cz"
+msgstr "Without https:// — e.g. zstsobra.bakalari.cz"
+
+msgid "← Zpět"
+msgstr "← Back"
+
+msgid "Ověřit a pokračovat →"
+msgstr "Verify and continue →"
+
+msgid "Přihlašovací údaje"
+msgstr "Login credentials"
+
+msgid "Stejné údaje jako do mobilní aplikace nebo webových Bakalářů."
+msgstr "Same credentials as the mobile app or web Bakaláře."
+
+msgid "Připojit se"
+msgstr "Connect"
+
+msgid "Přepnout téma"
+msgstr "Toggle theme"
+
+msgid "Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — přístupné, krásné, chytré."
+msgstr "A clean dashboard for Bakaláře. Grades, schedule, and substitutions — accessible, beautiful, smart."
+
+msgid "Začít zdarma"
+msgstr "Get started free"
+
+msgid "Zjistit více"
+msgstr "Learn more"
+
+msgid "Demo verze"
+msgstr "Demo version"
+
+msgid "Co Bakix umí"
+msgstr "What Bakix can do"
+
+msgid "Vše, co potřebujete."
+msgstr "Everything you need."
+
+msgid "Na jednom místě."
+msgstr "In one place."
+
+msgid "Výsledky"
+msgstr "Results"
+
+msgid "Přehled Známek"
+msgstr "Grade Overview"
+
+msgid "Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte přesně, kde stojíte a co vás čeká."
+msgstr "All subjects and averages at a glance. Trend development over time — you always know where you stand."
+
+msgid "AI asistent"
+msgstr "AI assistant"
+
+msgid "Chytrá Analýza"
+msgstr "Smart Analysis"
+
+msgid "Predikce průměrů, analýza trendů a personalizované rady — powered by AI."
+msgstr "Grade predictions, trend analysis and personalised advice — powered by AI."
+
+msgid "Aktuální Rozvrh"
+msgstr "Current Schedule"
+
+msgid "Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás čeká."
+msgstr "Schedule directly from Bakaláře. Substitutions clearly marked — you always know what to expect."
+
+msgid "Absence & Docházka"
+msgstr "Absence & Attendance"
+
+msgid "Přehled omluvených i neomluvených hodin. Žádné překvapení na konci pololetí."
+msgstr "Overview of excused and unexcused absences. No surprises at the end of term."
+
+msgid "Zdarma. Navždy."
+msgstr "Free. Forever."
+
+msgid "Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí přihlašovací údaje z Bakalářů — a jste uvnitř."
+msgstr "Core features are and will remain free. No registration — just your Bakaláře credentials and you are in."
+
+msgid "Připraveni začít?"
+msgstr "Ready to start?"
+
+msgid "Stačí přihlašovací údaje z Bakalářů."
+msgstr "All you need are your Bakaláře credentials."
+
+msgid "Žádná registrace, žádné heslo navíc."
+msgstr "No registration, no extra password."
+
+msgid "Kdo za tím stojí"
+msgstr "Who is behind this"
+
+msgid "Vytvořeno studenty"
+msgstr "Built by students"
+
+msgid "pro studenty."
+msgstr "for students."
+
+msgid "Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho školním datům — zdarma, navždy."
+msgstr "Bakix was born out of frustration with confusing school systems. Our goal is to give every student a clear, fast and beautiful access to their school data — free, forever."
+
+msgid "Podmínky použití"
+msgstr "Terms of Use"
+
+msgid "Ochrana soukromí"
+msgstr "Privacy Policy"
+
+msgid "Trend známek"
+msgstr "Grade trend"
+
+msgid "Předchozí předmět"
+msgstr "Previous subject"
+
+msgid "Další předmět"
+msgstr "Next subject"
+
+msgid "Výběr předmětu"
+msgstr "Select subject"
+
+msgid "Chyba přihlášení"
+msgstr "Login error"
+
+msgid "Dnes"
+msgstr "Today"
+
+msgid "Zítra"
+msgstr "Tomorrow"
+
+msgid "Úkoly"
+msgstr "Tasks"
+
+msgid "Zprávy"
+msgstr "Messages"
+
+msgid "Známky"
+msgstr "Grades"
+
+msgid "Kalkulačka průměru"
+msgstr "Grade average calculator"
+
+msgid "Co to je?"
+msgstr "What is this?"
+
+msgid "Předmět"
+msgstr "Subject"
+
+msgid "Chci průměr (např. 1.49)"
+msgstr "Target average (e.g. 1.49)"
+
+msgid "Spočítat"
+msgstr "Calculate"
+
+msgid "Moje projekty"
+msgstr "My projects"
+
+msgid "Zatím žádné projekty. Popros AI o vytvoření stránky!"
+msgstr "No projects yet. Ask AI to create a page!"
+
+msgid "Odhlásit se"
+msgstr "Sign out"
+
+msgid "Nastavení"
+msgstr "Settings"
+
+msgid "(vyplňte pro změnu)"
+msgstr "(fill in to change)"
+
+msgid "Zapamatovat heslo"
+msgstr "Remember password"
+
+msgid "Profil"
+msgstr "Profile"
+
+msgid "Zobrazované jméno"
+msgstr "Display name"
+
+msgid "Jak ti říkají?"
+msgstr "What do they call you?"
+
+msgid "Zobrazení"
+msgstr "Display"
+
+msgid "Téma"
+msgstr "Theme"
+
+msgid "Světlé"
+msgstr "Light"
+
+msgid "Tmavé"
+msgstr "Dark"
+
+msgid "Jazyk"
+msgstr "Language"
+
+msgid "Česky"
+msgstr "Czech"
+
+msgid "Notifikace"
+msgstr "Notifications"
+
+msgid "Kontrolovat každých"
+msgstr "Check every"
+
+msgid "1 minutu"
+msgstr "1 minute"
+
+msgid "5 minut"
+msgstr "5 minutes"
+
+msgid "15 minut"
+msgstr "15 minutes"
+
+msgid "30 minut"
+msgstr "30 minutes"
+
+msgid "1 hodinu"
+msgstr "1 hour"
+
+msgid "2 hodiny"
+msgstr "2 hours"
+
+msgid "Nové známky"
+msgstr "New grades"
+
+msgid "Změny rozvrhu"
+msgstr "Schedule changes"
+
+msgid "Denní shrnutí"
+msgstr "Daily summary"
+
+msgid "Absence"
+msgstr "Absences"
+
+msgid "Aplikace na plochu"
+msgstr "Add to home screen"
+
+msgid "Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci."
+msgstr "On desktop (Chrome/Edge) you can install Bakix as an app."
+
+msgid "Nainstalovat aplikaci"
+msgstr "Install app"
+
+msgid "Zrušit"
+msgstr "Cancel"
+
+msgid "Uložit"
+msgstr "Save"
+
+msgid "Zavřít"
+msgstr "Close"
+
+msgid "Jazyk se mění…"
+msgstr "Switching language…"
+
+msgid "Dnes máš volno, užij si den! ✦"
+msgstr "No classes today, enjoy your day! ✦"
+
+msgid "Žádné úkoly — skvělá práce! ✓"
+msgstr "No tasks — great work! ✓"
+
+msgid "Žádné nové zprávy. Klid a pohoda."
+msgstr "No new messages. All quiet."
+
+msgid "Žádné předměty."
+msgstr "No subjects."
+
+msgid "Síťová chyba."
+msgstr "Network error."
+
+msgid "Zakladatel & Dev"
+msgstr "Founder & Dev"

@@ -14,666 +14,19 @@
     })();
   </script>
 
-  <style>
-    /* ── Reset & Tokens ───────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      /* Bakix light palette */
-      --bg:         #f0ebe3;
-      --bg2:        #e8e2d9;
-      --border:     #cec7bc;
-      --border-hi:  #b0a89e;
-      --text:       #1c1917;
-      --muted:      #6b6560;
-      --accent:     #b5451b;
-      --green:      #2d6a4f;
-      --red:        #922b21;
-
-      /* derived */
-      --text-2:     #6b6560;
-      --text-3:     rgba(28,25,23,0.28);
-      --grad:       linear-gradient(135deg, #b5451b, #922b21);
-      --grad-text:  linear-gradient(175deg, #1c1917 25%, rgba(28,25,23,0.45) 100%);
-      --glass-bg:   rgba(245,240,234,0.82);
-      --glass-br:   rgba(206,199,188,0.95);
-      --nav-bg:     rgba(240,235,227,0.84);
-      --dot:        rgba(28,25,23,0.04);
-      --aurora-a:   rgba(181,69,27,.1);
-      --aurora-b:   rgba(146,43,33,.16);
-      --aurora-c:   rgba(45,106,79,.07);
-      --cta-glow:   rgba(181,69,27,.18);
-
-      --font:       'Space Mono', 'Courier New', monospace;
-      --r:          12px;
-    }
-
-    [data-theme="dark"] {
-      --bg:         #1a1612;
-      --bg2:        #211e19;
-      --border:     #3a342c;
-      --border-hi:  #5a5248;
-      --text:       #e8e2d9;
-      --muted:      #8a8078;
-      --accent:     #d4622a;
-      --green:      #4a9470;
-      --red:        #c0403a;
-
-      --text-2:     #8a8078;
-      --text-3:     rgba(232,226,217,0.28);
-      --grad:       linear-gradient(135deg, #d4622a, #c0403a);
-      --grad-text:  linear-gradient(175deg, #e8e2d9 25%, rgba(232,226,217,0.45) 100%);
-      --glass-bg:   rgba(26,22,18,0.82);
-      --glass-br:   rgba(58,52,44,0.95);
-      --nav-bg:     rgba(26,22,18,0.84);
-      --dot:        rgba(232,226,217,0.028);
-      --aurora-a:   rgba(212,98,42,.12);
-      --aurora-b:   rgba(192,64,58,.18);
-      --aurora-c:   rgba(74,148,112,.08);
-      --cta-glow:   rgba(212,98,42,.22);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --bg:         #1a1612;
-        --bg2:        #211e19;
-        --border:     #3a342c;
-        --border-hi:  #5a5248;
-        --text:       #e8e2d9;
-        --muted:      #8a8078;
-        --accent:     #d4622a;
-        --green:      #4a9470;
-        --red:        #c0403a;
-        --text-2:     #8a8078;
-        --text-3:     rgba(232,226,217,0.28);
-        --grad:       linear-gradient(135deg, #d4622a, #c0403a);
-        --grad-text:  linear-gradient(175deg, #e8e2d9 25%, rgba(232,226,217,0.45) 100%);
-        --glass-bg:   rgba(26,22,18,0.82);
-        --glass-br:   rgba(58,52,44,0.95);
-        --nav-bg:     rgba(26,22,18,0.84);
-        --dot:        rgba(232,226,217,0.028);
-        --aurora-a:   rgba(212,98,42,.12);
-        --aurora-b:   rgba(192,64,58,.18);
-        --aurora-c:   rgba(74,148,112,.08);
-        --cta-glow:   rgba(212,98,42,.22);
-      }
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family:  var(--font);
-      background:   var(--bg);
-      color:        var(--text);
-      min-height:   100vh;
-      overflow-x:   hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* subtle grid texture */
-    body::before {
-      content:    '';
-      position:   fixed;
-      inset:      0;
-      background: radial-gradient(var(--dot) 1px, transparent 1px);
-      background-size: 36px 36px;
-      pointer-events: none;
-      z-index:    0;
-    }
-
-    /* ── Nav ──────────────────────────────────────────────── */
-    .nav {
-      position:   fixed;
-      inset:      0 0 auto;
-      z-index:    200;
-      height:     58px;
-      display:    flex;
-      align-items: center;
-      justify-content: space-between;
-      padding:    0 2rem;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: var(--nav-bg);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .nav__logo {
-      display:     flex;
-      align-items: center;
-      gap:         0.55rem;
-      text-decoration: none;
-      color:       var(--text);
-    }
-
-    .nav__logo img {
-      height:     26px;
-      filter:     brightness(1.1);
-    }
-
-    .nav__logo-text {
-      font-size:   15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-    }
-
-    .nav__actions {
-      display:    flex;
-      align-items: center;
-      gap:        0.6rem;
-    }
-
-    .btn--theme {
-      background:  transparent;
-      border:      1px solid var(--border);
-      color:       var(--text-2);
-      padding:     6px 10px;
-      font-size:   13px;
-      border-radius: 100px;
-      cursor:      pointer;
-      font-family: var(--font);
-      transition:  border-color .2s, color .2s;
-      line-height: 1;
-    }
-    .btn--theme:hover { border-color: var(--border-hi); color: var(--text); }
-
-    /* ── Button system ────────────────────────────────────── */
-    .btn {
-      display:     inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap:         0.4rem;
-      padding:     9px 20px;
-      border-radius: 100px;
-      font-family: var(--font);
-      font-size:   13px;
-      font-weight: 600;
-      cursor:      pointer;
-      border:      none;
-      text-decoration: none;
-      transition:  opacity .2s, transform .15s;
-      white-space: nowrap;
-      will-change: transform;
-    }
-    .btn:active { transform: scale(0.97); }
-
-    .btn--ghost {
-      background:   transparent;
-      color:        var(--text-2);
-      border:       1px solid var(--border);
-    }
-    .btn--ghost:hover { color: var(--text); border-color: var(--border-hi); }
-
-    /* Gradient-border CTA */
-    .btn--cta {
-      position:   relative;
-      background: var(--bg);
-      color:      var(--text);
-      padding:    12px 30px;
-      font-size:  15px;
-      font-weight: 700;
-      z-index:    0;
-      transition: box-shadow .25s, transform .15s cubic-bezier(.23,1,.32,1);
-    }
-    .btn--cta::before {
-      content:    '';
-      position:   absolute;
-      inset:      -1.5px;
-      border-radius: inherit;
-      background: var(--grad);
-      z-index:    -1;
-    }
-    .btn--cta::after {
-      content:    '';
-      position:   absolute;
-      inset:      1px;
-      border-radius: inherit;
-      background: var(--bg);
-      z-index:    -1;
-    }
-    .btn--cta:hover {
-      box-shadow: 0 0 40px rgba(181,69,27,.32), 0 0 14px rgba(146,43,33,.22);
-    }
-
-    /* Magnetic wrapper keeps transform for the spring-back */
-    .mag { display: inline-block; will-change: transform; }
-
-    /* ── Hero ─────────────────────────────────────────────── */
-    .hero {
-      position:   relative;
-      height:     100vh;
-      min-height: 600px;
-      display:    flex;
-      align-items: center;
-      justify-content: center;
-      overflow:   hidden;
-    }
-
-    #three-canvas {
-      position:   absolute;
-      inset:      0;
-      width:      100%;
-      height:     100%;
-      z-index:    0;
-    }
-
-    .hero-aurora {
-      position:   absolute;
-      top:        -35%;
-      left:       50%;
-      transform:  translateX(-50%);
-      width:      900px;
-      height:     600px;
-      background: conic-gradient(from 190deg,
-        var(--aurora-a), var(--aurora-b),
-        var(--aurora-c), var(--aurora-a));
-      filter:     blur(90px);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index:    0;
-      animation:  aurora 22s linear infinite;
-    }
-
-    @keyframes aurora {
-      to { transform: translateX(-50%) rotate(360deg); }
-    }
-
-    .hero-content {
-      position:   relative;
-      z-index:    1;
-      text-align: center;
-      padding:    0 1.5rem;
-      max-width:  680px;
-      width:      100%;
-    }
-
-    /* Glassmorphism card */
-    .glass {
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      background:  var(--glass-bg);
-      border:      1px solid var(--glass-br);
-      border-radius: var(--r);
-      padding:     3.25rem 3.5rem 4rem;
-    }
-
-    @media (max-width: 600px) {
-      .glass { padding: 2.25rem 1.75rem 3rem; }
-    }
-
-    .hero-eyebrow {
-      display:      inline-flex;
-      align-items:  center;
-      gap:          0.45rem;
-      font-size:    11px;
-      font-weight:  700;
-      letter-spacing: 3.5px;
-      text-transform: uppercase;
-      background:   var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 1.35rem;
-    }
-
-    .hero-headline {
-      font-size:   clamp(2.4rem, 6.5vw, 4.2rem);
-      font-weight: 800;
-      line-height: 1.08;
-      letter-spacing: -2.5px;
-      background:  var(--grad-text);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 1.25rem;
-    }
-
-    .hero-sub {
-      font-size:   1rem;
-      font-weight: 400;
-      color:       var(--text-2);
-      line-height: 1.75;
-      max-width:   440px;
-      margin:      0 auto 2.75rem;
-    }
-
-    .hero-actions {
-      display:         flex;
-      gap:             0.875rem;
-      justify-content: center;
-      flex-wrap:       wrap;
-    }
-
-    .scroll-hint {
-      position:    absolute;
-      bottom:      2rem;
-      left:        50%;
-      transform:   translateX(-50%);
-      font-size:   10px;
-      font-weight: 500;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color:       var(--text-3);
-      text-decoration: none;
-      z-index:     1;
-      animation:   bounce 2.4s ease-in-out infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% { transform: translateX(-50%) translateY(0); }
-      50%       { transform: translateX(-50%) translateY(5px); }
-    }
-
-    /* ── Section scaffolding ──────────────────────────────── */
-    .section {
-      position:   relative;
-      z-index:    1;
-      max-width:  1060px;
-      margin:     0 auto;
-      padding:    7rem 2rem;
-    }
-
-    @media (max-width: 640px) {
-      .section { padding: 4.5rem 1.25rem; }
-    }
-
-    .section-eye {
-      font-size:   10px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      color:       var(--text-3);
-      text-align:  center;
-      margin-bottom: 0.6rem;
-    }
-
-    .section-title {
-      font-size:   clamp(1.7rem, 4vw, 2.6rem);
-      font-weight: 800;
-      letter-spacing: -1.5px;
-      line-height: 1.12;
-      text-align:  center;
-      margin-bottom: 3.5rem;
-    }
-
-    .section-title span {
-      background:  var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    /* ── Bento grid ───────────────────────────────────────── */
-    .bento {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows:    auto auto;
-      gap:     1rem;
-    }
-
-    @media (max-width: 900px) {
-      .bento { grid-template-columns: 1fr 1fr; }
-      .bento-card--wide { grid-column: span 2; }
-    }
-
-    @media (max-width: 560px) {
-      .bento { grid-template-columns: 1fr; }
-      .bento-card--wide { grid-column: span 1; }
-    }
-
-    .bento-card {
-      background:    var(--bg2);
-      border:        1px solid var(--border);
-      border-radius: var(--r);
-      padding:       2rem 2rem 2.25rem;
-      position:      relative;
-      overflow:      hidden;
-      transition:    border-color .25s, transform .25s, box-shadow .25s;
-      will-change:   transform;
-    }
-
-    /* inner glow on hover */
-    .bento-card::after {
-      content:    '';
-      position:   absolute;
-      inset:      0;
-      border-radius: inherit;
-      background: var(--grad);
-      opacity:    0;
-      transition: opacity .3s;
-      pointer-events: none;
-    }
-
-    .bento-card:hover {
-      border-color: var(--accent);
-      transform:    translateY(-4px);
-      box-shadow:   0 24px 64px rgba(181,69,27,.1),
-                    0 0 0 1px rgba(181,69,27,.18);
-    }
-
-    .bento-card:hover::after { opacity: .04; }
-
-    /* Wider card across 2 columns */
-    .bento-card--wide { grid-column: span 2; }
-
-    /* Accent variant */
-    .bento-card--accent {
-      background:   linear-gradient(145deg, var(--bg2), var(--bg));
-      border-color: rgba(181,69,27,.25);
-    }
-
-    .bento-card__icon {
-      font-size:     2rem;
-      margin-bottom: 1.35rem;
-      display:       block;
-      line-height:   1;
-    }
-
-    .bento-card__tag {
-      display:      inline-block;
-      font-size:    9px;
-      font-weight:  700;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      background:   var(--grad);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.55rem;
-      opacity:      .85;
-    }
-
-    .bento-card__title {
-      font-size:     1.05rem;
-      font-weight:   700;
-      letter-spacing: -0.4px;
-      margin-bottom: 0.6rem;
-      color:         var(--text);
-    }
-
-    .bento-card__desc {
-      font-size:   0.82rem;
-      color:       var(--text-2);
-      line-height: 1.68;
-    }
-
-    /* mini decorative chart inside Grades card */
-    .mini-chart {
-      display:         flex;
-      align-items:     flex-end;
-      gap:             5px;
-      height:          40px;
-      margin-top:      1.25rem;
-    }
-
-    .mini-chart__bar {
-      flex:          1;
-      border-radius: 3px 3px 0 0;
-      background:    var(--grad);
-      opacity:       .55;
-      transition:    opacity .3s;
-    }
-
-    .bento-card:hover .mini-chart__bar { opacity: .85; }
-
-    /* ── Final CTA ─────────────────────────────────────────── */
-    .cta-section {
-      position:   relative;
-      z-index:    1;
-      text-align: center;
-      padding:    7rem 1.5rem 9rem;
-      overflow:   hidden;
-    }
-
-    .cta-glow {
-      position:   absolute;
-      bottom:     -10%;
-      left:       50%;
-      transform:  translateX(-50%);
-      width:      700px;
-      height:     380px;
-      background: radial-gradient(ellipse at 50% 80%,
-        var(--cta-glow) 0%,
-        transparent 65%);
-      pointer-events: none;
-    }
-
-    .cta-title {
-      font-size:   clamp(2rem, 5.5vw, 3.5rem);
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1.1;
-      margin-bottom: 1.1rem;
-      background:  var(--grad-text);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .cta-sub {
-      font-size:   0.92rem;
-      color:       var(--text-2);
-      line-height: 1.75;
-      max-width:   380px;
-      margin:      0 auto 2.75rem;
-    }
-
-    /* ── Divider ──────────────────────────────────────────── */
-    .gradient-divider {
-      height:     1px;
-      background: linear-gradient(90deg,
-        transparent, var(--border), transparent);
-      margin:     0;
-    }
-
-    /* ── Mission statement ────────────────────────────────── */
-    .mission {
-      max-width:   560px;
-      margin:      0 auto 4rem;
-      text-align:  center;
-      font-size:   0.92rem;
-      color:       var(--text-2);
-      line-height: 1.8;
-    }
-
-    /* ── Team grid ────────────────────────────────────────── */
-    .team-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:     1rem;
-    }
-
-    @media (max-width: 780px) {
-      .team-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .team-card {
-      background:    var(--bg2);
-      border:        1px solid var(--border);
-      border-radius: var(--r);
-      padding:       1.75rem 1rem 2rem;
-      text-align:    center;
-      transition:    border-color .25s, transform .25s, box-shadow .25s;
-    }
-
-    .team-card:hover {
-      border-color: var(--accent);
-      transform:    translateY(-4px);
-      box-shadow:   0 16px 40px rgba(181,69,27,.08),
-                    0 0 0 1px rgba(181,69,27,.14);
-    }
-
-    .team-card__avatar {
-      width:          52px;
-      height:         52px;
-      border-radius:  50%;
-      background:     var(--grad);
-      display:        flex;
-      align-items:    center;
-      justify-content: center;
-      margin:         0 auto 1rem;
-      font-size:      1.15rem;
-      font-weight:    700;
-      color:          #f0ebe3;
-      flex-shrink:    0;
-    }
-
-    .team-card__name {
-      font-size:      0.9rem;
-      font-weight:    700;
-      letter-spacing: -0.3px;
-      margin-bottom:  0.3rem;
-      color:          var(--text);
-    }
-
-    .team-card__role {
-      font-size:      9px;
-      font-weight:    700;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color:          var(--text-3);
-    }
-
-    /* ── Footer ───────────────────────────────────────────── */
-    .site-footer {
-      position:        relative;
-      z-index:         1;
-      border-top:      1px solid var(--border);
-      padding:         2rem 2.5rem;
-      display:         flex;
-      align-items:     center;
-      justify-content: space-between;
-      flex-wrap:       wrap;
-      gap:             0.75rem;
-    }
-
-    .footer__copy {
-      font-size:      10px;
-      letter-spacing: 0.8px;
-      color:          var(--text-3);
-    }
-
-    .footer__links {
-      display: flex;
-      gap:     1.75rem;
-    }
-
-    .footer__link {
-      font-size:      10px;
-      letter-spacing: 0.5px;
-      color:          var(--muted);
-      text-decoration: none;
-      transition:     color .15s;
-    }
-
-    .footer__link:hover { color: var(--accent); }
-
-    @media (max-width: 500px) {
-      .site-footer { justify-content: center; text-align: center; }
-      .footer__links { gap: 1.25rem; }
-    }
-
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/welcome.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='welcome_mobile.css') }}">
+  <style>
+    .lang-switch{display:flex;gap:2px;align-items:center}
+    .btn--lang{background:transparent;border:1px solid var(--border,#cec7bc);color:var(--muted,#6b6560);padding:4px 9px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s,background .15s;line-height:1;letter-spacing:.3px}
+    .btn--lang:hover{border-color:var(--border-hi,#b0a89e);color:var(--text,#1c1917)}
+    .btn--lang--active{background:var(--accent,#b5451b);border-color:var(--accent,#b5451b) !important;color:#fff !important}
+  </style>
+  <script>
+    window._t = {
+      lang_switching: "{{ _('Jazyk se mění…') }}"
+    };
+  </script>
 </head>
 
 <body>
@@ -685,10 +38,14 @@
       <span class="nav__logo-text">Bakix</span>
     </a>
     <div class="nav__actions">
-      <button class="btn--theme" id="theme-btn" aria-label="Přepnout motiv">◐</button>
+      <div class="lang-switch" role="group" aria-label="{{ _('Jazyk') }}">
+        <button class="btn--lang{% if session.get('language','cs') == 'cs' %} btn--lang--active{% endif %}" onclick="switchLanguage('cs')" title="Česky">CS</button>
+        <button class="btn--lang{% if session.get('language','cs') == 'en' %} btn--lang--active{% endif %}" onclick="switchLanguage('en')" title="English">EN</button>
+      </div>
+      <button class="btn--theme" id="theme-btn" aria-label="{{ _('Přepnout téma') }}">◐</button>
       <div class="mag">
         <a href="{{ url_for('login.login') }}" class="btn btn--ghost">
-          Přihlásit se
+          {{ _('Přihlásit se') }}
         </a>
       </div>
     </div>
@@ -704,16 +61,16 @@
         <p class="hero-eyebrow">✦ &nbsp; Bakix &nbsp; ✦</p>
         <h1 class="hero-headline">The Future<br>of Schooling.</h1>
         <p class="hero-sub">
-          Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh
-          a suplování — přístupné, krásné, chytré.
+          {{ _('Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — přístupné, krásné, chytré.') }}
         </p>
         <div class="hero-actions">
           <div class="mag">
             <a href="{{ url_for('auth.onboarding') }}" class="btn btn--cta">
-              Začít zdarma &nbsp;→
+              {{ _('Začít zdarma') }} &nbsp;→
             </a>
           </div>
-          <a href="#features" class="btn btn--ghost">Zjistit více</a>
+          <a href="{{ url_for('login.login_demo') }}" class="btn btn--ghost">{{ _('Demo verze') }}</a>
+          <a href="#features" class="btn btn--ghost">{{ _('Zjistit více') }}</a>
         </div>
       </div>
     </div>
@@ -725,19 +82,18 @@
 
   <!-- ── Bento features ───────────────────────────────────── -->
   <section class="section" id="features">
-    <p class="section-eye">Co Bakix umí</p>
-    <h2 class="section-title">Vše, co potřebujete.<br><span>Na jednom místě.</span></h2>
+    <p class="section-eye">{{ _('Co Bakix umí') }}</p>
+    <h2 class="section-title">{{ _('Vše, co potřebujete.') }}<br><span>{{ _('Na jednom místě.') }}</span></h2>
 
     <div class="bento">
 
       <!-- Grades -->
       <div class="bento-card bento-card--wide">
         <span class="bento-card__icon">◆</span>
-        <span class="bento-card__tag">Výsledky</span>
-        <h3 class="bento-card__title">Přehled Známek</h3>
+        <span class="bento-card__tag">{{ _('Výsledky') }}</span>
+        <h3 class="bento-card__title">{{ _('Přehled Známek') }}</h3>
         <p class="bento-card__desc">
-          Všechny předměty a průměry na první pohled. Trendy vývoje
-          v čase — víte přesně, kde stojíte a co vás čeká.
+          {{ _('Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte přesně, kde stojíte a co vás čeká.') }}
         </p>
         <div class="mini-chart" aria-hidden="true">
           <div class="mini-chart__bar" style="height:30%"></div>
@@ -754,11 +110,10 @@
       <!-- AI -->
       <div class="bento-card bento-card--accent">
         <span class="bento-card__icon">✦</span>
-        <span class="bento-card__tag">AI asistent</span>
-        <h3 class="bento-card__title">Chytrá Analýza</h3>
+        <span class="bento-card__tag">{{ _('AI asistent') }}</span>
+        <h3 class="bento-card__title">{{ _('Chytrá Analýza') }}</h3>
         <p class="bento-card__desc">
-          Predikce průměrů, analýza trendů a personalizované rady
-          — powered by AI.
+          {{ _('Predikce průměrů, analýza trendů a personalizované rady — powered by AI.') }}
         </p>
       </div>
 
@@ -766,32 +121,29 @@
       <div class="bento-card">
         <span class="bento-card__icon">◎</span>
         <span class="bento-card__tag">Rozvrh</span>
-        <h3 class="bento-card__title">Aktuální Rozvrh</h3>
+        <h3 class="bento-card__title">{{ _('Aktuální Rozvrh') }}</h3>
         <p class="bento-card__desc">
-          Rozvrh přímo z Bakalářů. Suplování přehledně označené —
-          vždy víte, co vás čeká.
+          {{ _('Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás čeká.') }}
         </p>
       </div>
 
       <!-- Absence -->
       <div class="bento-card">
         <span class="bento-card__icon">△</span>
-        <span class="bento-card__tag">Absence</span>
-        <h3 class="bento-card__title">Absence & Docházka</h3>
+        <span class="bento-card__tag">{{ _('Absence') }}</span>
+        <h3 class="bento-card__title">{{ _('Absence & Docházka') }}</h3>
         <p class="bento-card__desc">
-          Přehled omluvených i neomluvených hodin.
-          Žádné překvapení na konci pololetí.
+          {{ _('Přehled omluvených i neomluvených hodin. Žádné překvapení na konci pololetí.') }}
         </p>
       </div>
 
       <!-- Free + open -->
       <div class="bento-card bento-card--wide">
         <span class="bento-card__icon">○</span>
-        <span class="bento-card__tag">Open & Free</span>
-        <h3 class="bento-card__title">Zdarma. Navždy.</h3>
+        <span class="bento-card__tag">Open &amp; Free</span>
+        <h3 class="bento-card__title">{{ _('Zdarma. Navždy.') }}</h3>
         <p class="bento-card__desc">
-          Základní funkce jsou a zůstanou zdarma. Žádná registrace,
-          stačí přihlašovací údaje z Bakalářů — a jste uvnitř.
+          {{ _('Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí přihlašovací údaje z Bakalářů — a jste uvnitř.') }}
         </p>
       </div>
 
@@ -803,14 +155,14 @@
   <!-- ── Final CTA ─────────────────────────────────────────── -->
   <section class="cta-section">
     <div class="cta-glow"></div>
-    <h2 class="cta-title">Připraveni začít?</h2>
+    <h2 class="cta-title">{{ _('Připraveni začít?') }}</h2>
     <p class="cta-sub">
-      Stačí přihlašovací údaje z Bakalářů.<br>
-      Žádná registrace, žádné heslo navíc.
+      {{ _('Stačí přihlašovací údaje z Bakalářů.') }}<br>
+      {{ _('Žádná registrace, žádné heslo navíc.') }}
     </p>
     <div class="mag">
       <a href="{{ url_for('auth.onboarding') }}" class="btn btn--cta">
-        Začít zdarma &nbsp;→
+        {{ _('Začít zdarma') }} &nbsp;→
       </a>
     </div>
   </section>
@@ -819,30 +171,28 @@
 
   <!-- ── About / Team ─────────────────────────────────────── -->
   <section class="section" id="about">
-    <p class="section-eye">Kdo za tím stojí</p>
-    <h2 class="section-title">Vytvořeno studenty<br><span>pro studenty.</span></h2>
+    <p class="section-eye">{{ _('Kdo za tím stojí') }}</p>
+    <h2 class="section-title">{{ _('Vytvořeno studenty') }}<br><span>{{ _('pro studenty.') }}</span></h2>
 
     <p class="mission">
-      Bakix vznikl z frustrace z nepřehledných školních systémů.
-      Naším cílem je poskytnout každému studentu přehledný,
-      rychlý a krásný přístup k jeho školním datům — zdarma, navždy.
+      {{ _('Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho školním datům — zdarma, navždy.') }}
     </p>
 
     <div class="team-grid">
       <div class="team-card">
         <div class="team-card__avatar">V</div>
         <div class="team-card__name">Voku</div>
-        <div class="team-card__role">Zakladatel &amp; Dev</div>
+        <div class="team-card__role">{{ _('Zakladatel & Dev') }}</div>
       </div>
       <div class="team-card">
         <div class="team-card__avatar">D</div>
         <div class="team-card__name">Damian</div>
-        <div class="team-card__role">Backend</div>
+        <div class="team-card__role">Designer</div>
       </div>
       <div class="team-card">
         <div class="team-card__avatar">A</div>
         <div class="team-card__name">Alex</div>
-        <div class="team-card__role">Design</div>
+        <div class="team-card__role">Tester</div>
       </div>
       <div class="team-card">
         <div class="team-card__avatar">L</div>
@@ -859,8 +209,8 @@
     <span class="footer__copy">© 2026 Bakix — All rights reserved</span>
     <nav class="footer__links" aria-label="Právní informace">
       <a href="/cookies" class="footer__link">Cookies</a>
-      <a href="/tos"     class="footer__link">Podmínky použití</a>
-      <a href="/privacy" class="footer__link">Ochrana soukromí</a>
+      <a href="/tos"     class="footer__link">{{ _('Podmínky použití') }}</a>
+      <a href="/privacy" class="footer__link">{{ _('Ochrana soukromí') }}</a>
     </nav>
   </footer>
 
@@ -870,241 +220,8 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 
   <!-- ── Three.js scene ───────────────────────────────────── -->
-  <script>
-  (function () {
-    const canvas = document.getElementById('three-canvas');
-    if (!canvas || !window.THREE) return;
-
-    const isMobile = window.innerWidth < 768;
-    const DPR = Math.min(window.devicePixelRatio, isMobile ? 1 : 2);
-
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
-    renderer.setPixelRatio(DPR);
-    renderer.setClearColor(0x000000, 0);
-
-    const W = () => canvas.clientWidth;
-    const H = () => canvas.clientHeight;
-    renderer.setSize(W(), H(), false);
-
-    const scene  = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, W() / H(), 0.1, 100);
-    camera.position.z = isMobile ? 8 : 6;
-
-    /* ── Iridescent shader ─────────────────────────────────── */
-    const vert = `
-      varying vec3 vNormal;
-      varying vec3 vWorldPos;
-      void main() {
-        vNormal   = normalize(normalMatrix * normal);
-        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-        gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPos, 1.0);
-      }`;
-
-    const frag = `
-      uniform float uTime;
-      varying vec3 vNormal;
-      varying vec3 vWorldPos;
-      vec3 hue(float h) {
-        return clamp(abs(mod(h*6.0+vec3(0,4,2),6.0)-3.0)-1.0, 0.0, 1.0);
-      }
-      void main() {
-        vec3 view    = normalize(cameraPosition - vWorldPos);
-        float fresnel = pow(1.0 - abs(dot(vNormal, view)), 1.9);
-        float shift   = fresnel * 0.65 + uTime * 0.055
-                      + vWorldPos.y * 0.07 + vWorldPos.x * 0.04;
-        vec3 col     = mix(vec3(0.12,0.06,0.03), hue(fract(shift)),
-                           fresnel * 0.82 + 0.18);
-        gl_FragColor = vec4(col, 0.82 + fresnel * 0.15);
-      }`;
-
-    const geo  = new THREE.TorusKnotGeometry(1.25, 0.4, isMobile ? 128 : 280, 28, 2, 3);
-    const mat  = new THREE.ShaderMaterial({
-      vertexShader: vert, fragmentShader: frag,
-      uniforms:     { uTime: { value: 0 } },
-      transparent:  true,
-      side:         THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    scene.add(mesh);
-
-    /* ── Particles ─────────────────────────────────────────── */
-    if (!isMobile) {
-      const pGeo  = new THREE.BufferGeometry();
-      const count = 320;
-      const pos   = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) {
-        pos[i*3]   = (Math.random() - 0.5) * 12;
-        pos[i*3+1] = (Math.random() - 0.5) * 12;
-        pos[i*3+2] = (Math.random() - 0.5) * 12;
-      }
-      pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const pMat = new THREE.PointsMaterial({
-        color: 0xb5451b, size: 0.022, transparent: true, opacity: 0.5,
-      });
-      const pts = new THREE.Points(pGeo, pMat);
-      scene.add(pts);
-      mesh.userData.pts = pts;
-    }
-
-    /* ── Mouse parallax ────────────────────────────────────── */
-    let tx = 0, ty = 0, mx = 0, my = 0;
-    if (!isMobile) {
-      document.addEventListener('mousemove', e => {
-        mx = (e.clientX / innerWidth  - 0.5) * 2;
-        my = -(e.clientY / innerHeight - 0.5) * 2;
-      });
-    }
-
-    /* ── Resize ─────────────────────────────────────────────── */
-    window.addEventListener('resize', () => {
-      camera.aspect = W() / H();
-      camera.updateProjectionMatrix();
-      renderer.setSize(W(), H(), false);
-    });
-
-    /* ── Loop ──────────────────────────────────────────────── */
-    let t = 0;
-    (function loop() {
-      requestAnimationFrame(loop);
-      t += 0.011;
-      mat.uniforms.uTime.value = t;
-      mesh.rotation.x = t * 0.14;
-      mesh.rotation.y = t * 0.21;
-      mesh.rotation.z = t * 0.06;
-      if (mesh.userData.pts) {
-        mesh.userData.pts.rotation.y = t * 0.035;
-        mesh.userData.pts.rotation.x = t * 0.018;
-      }
-      tx += (mx * 0.45 - tx) * 0.045;
-      ty += (my * 0.28 - ty) * 0.045;
-      camera.position.x = tx;
-      camera.position.y = ty;
-      camera.lookAt(0, 0, 0);
-      renderer.render(scene, camera);
-    })();
-  })();
-  </script>
-
-  <!-- ── GSAP reveal animations ───────────────────────────── -->
-  <script>
-  (function () {
-    if (!window.gsap) return;
-    gsap.registerPlugin(ScrollTrigger);
-
-    /* Hero — staggered entrance */
-    const heroItems = ['.hero-eyebrow', '.hero-headline', '.hero-sub', '.hero-actions'];
-    gsap.set(heroItems, { opacity: 0, y: 22 });
-    gsap.to(heroItems, {
-      opacity:  1, y: 0,
-      duration: 0.95,
-      stagger:  0.16,
-      ease:     'power3.out',
-      delay:    0.25,
-    });
-
-    /* Section titles */
-    gsap.set(['.section-eye', '.section-title'], { opacity: 0, y: 28 });
-    gsap.to(['.section-eye', '.section-title'], {
-      opacity:  1, y: 0,
-      duration: 0.85,
-      stagger:  0.12,
-      ease:     'power3.out',
-      scrollTrigger: { trigger: '#features', start: 'top 72%' },
-    });
-
-    /* Bento cards */
-    gsap.set('.bento-card', { opacity: 0, y: 36, scale: 0.97 });
-    gsap.to('.bento-card', {
-      opacity:  1, y: 0, scale: 1,
-      duration: 0.75,
-      stagger:  0.08,
-      ease:     'power3.out',
-      scrollTrigger: { trigger: '.bento', start: 'top 76%' },
-    });
-
-    /* Final CTA */
-    gsap.set(['.cta-title', '.cta-sub', '.cta-section .mag'], { opacity: 0, y: 28 });
-    gsap.to(['.cta-title', '.cta-sub', '.cta-section .mag'], {
-      opacity:  1, y: 0,
-      duration: 0.85,
-      stagger:  0.14,
-      ease:     'power3.out',
-      scrollTrigger: { trigger: '.cta-section', start: 'top 76%' },
-    });
-
-    /* About — mission + team cards */
-    gsap.set(['.mission'], { opacity: 0, y: 24 });
-    gsap.to('.mission', {
-      opacity:  1, y: 0,
-      duration: 0.8,
-      ease:     'power3.out',
-      scrollTrigger: { trigger: '#about', start: 'top 74%' },
-    });
-
-    gsap.set('.team-card', { opacity: 0, y: 32, scale: 0.96 });
-    gsap.to('.team-card', {
-      opacity:  1, y: 0, scale: 1,
-      duration: 0.7,
-      stagger:  0.1,
-      ease:     'power3.out',
-      scrollTrigger: { trigger: '.team-grid', start: 'top 78%' },
-    });
-  })();
-  </script>
-
-  <!-- ── Theme toggle ────────────────────────────────────── -->
-  <script>
-  (function () {
-    const THEMES = ['auto', 'light', 'dark'];
-    const ICONS  = { auto: '◐', light: '○', dark: '●' };
-    const btn    = document.getElementById('theme-btn');
-    if (!btn) return;
-
-    function apply(t) {
-      document.documentElement.setAttribute('data-theme', t);
-      btn.textContent = ICONS[t];
-      localStorage.setItem('bakix-theme', t);
-    }
-
-    const saved = localStorage.getItem('bakix-theme') || 'auto';
-    apply(saved);
-
-    btn.addEventListener('click', () => {
-      const cur  = localStorage.getItem('bakix-theme') || 'auto';
-      const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
-      apply(next);
-    });
-  })();
-  </script>
-
-  <!-- ── Magnetic hover ───────────────────────────────────── -->
-  <script>
-  (function () {
-    document.querySelectorAll('.mag').forEach(wrap => {
-      const inner = wrap.children[0];
-      if (!inner) return;
-
-      wrap.addEventListener('mousemove', e => {
-        const r  = wrap.getBoundingClientRect();
-        const dx = (e.clientX - r.left - r.width  / 2) * 0.32;
-        const dy = (e.clientY - r.top  - r.height / 2) * 0.32;
-        if (window.gsap) {
-          gsap.to(wrap, { x: dx, y: dy, duration: 0.38, ease: 'power3.out' });
-        } else {
-          wrap.style.transform = `translate(${dx}px,${dy}px)`;
-        }
-      });
-
-      wrap.addEventListener('mouseleave', () => {
-        if (window.gsap) {
-          gsap.to(wrap, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1,0.55)' });
-        } else {
-          wrap.style.transform = 'translate(0,0)';
-        }
-      });
-    });
-  })();
-  </script>
+  <script src="{{ url_for('static', filename='js/welcome.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
 
 </body>
 </html>

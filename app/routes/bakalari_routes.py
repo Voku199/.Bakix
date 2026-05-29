@@ -14,6 +14,7 @@ from app.services.bakalari import BakalariService
 from app.services.crypto import encrypt_json
 from app.services.gemini_service import GeminiService, has_pending_skill
 from app.services.push_service import PushNotificationService
+from app.services import demo_data as _demo
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,42 @@ _SEEN_TTL = 2_592_000
 
 _push_svc = PushNotificationService()
 
+_SUB_LABELS = {
+    'Cancelled':     'Odpadlo',
+    'Substitution':  'Suplování',
+    'TeacherChange': 'Náhradník',
+    'RoomChange':    'Jiná učebna',
+    'Absent':        'Absence',
+}
+
+
+def _notify_substitutions(user_id: str, items: list, date_str: str) -> None:
+    """Send push notification for newly-detected substitutions on date_str."""
+    prefs = _db_get_settings(user_id)
+    if prefs.get("notifications_subs") is False:
+        return
+    changed = [i for i in items if i.get('status') and i['status'] != 'OK']
+    if not changed:
+        return
+    sub_ids  = {f"{date_str}:{i['hour']}:{i['status']}" for i in changed}
+    seen_ids = set(cache_get(user_id, "push_seen_subs", ttl=_SEEN_TTL) or [])
+    novel    = [i for i in changed if f"{date_str}:{i['hour']}:{i['status']}" not in seen_ids]
+    updated  = seen_ids | sub_ids
+    if updated != seen_ids:
+        cache_set(user_id, "push_seen_subs", list(updated))
+    if not novel:
+        return
+    first = novel[0]
+    count = len(novel)
+    label = _SUB_LABELS.get(first['status'], 'Změna')
+    when  = "dnes" if date_str == datetime.date.today().isoformat() else "zítra"
+    body  = (
+        f"{label} {when}: {first['subject']} ({first['time']})"
+        if count == 1 else
+        f"{count} změn v rozvrhu {when} (první: {first['subject']})"
+    )
+    _push_svc.send_to_user_async(user_id, "Změna v rozvrhu", body, tag="bakix-subs")
+
 
 def _fire_push_if_new(user_id: str, seen_key: str, current_ids: set, title: str, body: str) -> None:
     """Push only for IDs not in the persisted seen-set; update the seen-set afterwards.
@@ -103,6 +140,8 @@ def _get_svc_and_token():
 
 @bakalari_bp.route("/api/3/homeworks", methods=["GET"])
 def api_homeworks():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_HOMEWORKS)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -147,7 +186,7 @@ def api_homeworks():
         if hw_ids:
             seen_ids  = set(cache_get(user_id, "push_seen_hw", ttl=_SEEN_TTL) or [])
             novel_ids = hw_ids - seen_ids
-            if novel_ids:
+            if novel_ids and _db_get_settings(user_id).get("notifications_homeworks") is not False:
                 # Classify topic for the first new homework in a background thread
                 first_new = next((h for h in homeworks if str(h["ID"]) in novel_ids), None)
                 def _send_hw_push(hw=first_new, count=len(novel_ids)):
@@ -159,7 +198,7 @@ def api_homeworks():
                         body = f"{topic} z {subject} – odevzdat do {due}"
                     else:
                         body = f"Máš {count} nových úkolů"
-                    _push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body)
+                    _push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body, tag="bakix-hw")
                 threading.Thread(target=_send_hw_push, daemon=True).start()
             cache_set(user_id, "push_seen_hw", list(hw_ids | seen_ids))
 
@@ -172,6 +211,8 @@ def api_homeworks():
 
 @bakalari_bp.route("/api/3/komens/messages/received", methods=["POST"])
 def api_komens():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_KOMENS)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -227,7 +268,8 @@ def api_komens():
                 title_t      = (first["Title"] or "Zpráva")[:60]
                 text_preview = (first["Text"] or "")[:80]
                 notif_body   = f"{sender}: {text_preview}" if text_preview else f"{sender}: {title_t}"
-                _push_svc.send_to_user_async(user_id, "Nová zpráva v Bakixu", notif_body)
+                if _db_get_settings(user_id).get("notifications_messages") is not False:
+                    _push_svc.send_to_user_async(user_id, "Nová zpráva v Bakixu", notif_body, tag="bakix-komens")
             updated = seen_ids | msg_ids
             if updated != seen_ids:
                 cache_set(user_id, "push_seen_komens", list(updated))
@@ -241,6 +283,8 @@ def api_komens():
 
 @bakalari_bp.route("/api/3/absence/student", methods=["GET"])
 def api_absences():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_ABSENCES)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -272,6 +316,8 @@ def api_absences():
 
 @bakalari_bp.route("/api/3/marks", methods=["GET"])
 def api_marks():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_MARKS_API)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -334,7 +380,8 @@ def api_marks():
                     f"{mark_txt} z {subj_nm}" if count == 1
                     else f"{count} nových známek (první: {mark_txt} z {subj_nm})"
                 )
-                _push_svc.send_to_user_async(user_id, "Nová známka v Bakixu", body)
+                if _db_get_settings(user_id).get("notifications_marks") is not False:
+                    _push_svc.send_to_user_async(user_id, "Nová známka v Bakixu", body, tag="bakix-marks")
                 cache_set(user_id, "push_seen_marks", list(seen_ids | mark_ids))
 
         cache_set(user_id, "marks", subjects)
@@ -414,6 +461,8 @@ def get_today_timetable():
 
 @bakalari_bp.route("/api/dashboard/today", methods=["GET"])
 def api_dashboard_today():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_TIMETABLE_TODAY)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -477,6 +526,7 @@ def api_dashboard_today():
             })
 
         result.sort(key=lambda x: x["hour"] or 0)
+        _notify_substitutions(user_id, result, today)
         cache_set(user_id, "tt_today", result)
         return jsonify(result)
     except Exception:
@@ -486,6 +536,8 @@ def api_dashboard_today():
 
 @bakalari_bp.route("/api/dashboard/tomorrow", methods=["GET"])
 def api_dashboard_tomorrow():
+    if session.get("is_demo"):
+        return jsonify(_demo.DEMO_TIMETABLE_TOMORROW)
     try:
         svc, token, user_id = _get_svc_and_token()
         if not token:
@@ -543,6 +595,7 @@ def api_dashboard_tomorrow():
             })
 
         result.sort(key=lambda x: x["hour"] or 0)
+        _notify_substitutions(user_id, result, tomorrow)
         cache_set(user_id, "tt_tomorrow", result)
         return jsonify(result)
     except Exception:
@@ -1143,6 +1196,20 @@ def index():
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("welcome"))
+
+    if session.get("is_demo"):
+        chart_datasets = _build_chart_datasets(_demo.DEMO_SUBJECTS_RAW)
+        return render_template(
+            "index.html",
+            error=None,
+            subjects=_demo.DEMO_SUBJECTS_RAW,
+            marks_error=None,
+            substitutions=None,
+            subs_error=None,
+            chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
+            user_projects=[],
+            display_name="Demo uživatel",
+        )
 
     row = fetch_row(user_id)
     if not row:

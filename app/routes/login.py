@@ -107,6 +107,17 @@ def login_now():
     return redirect(url_for("bakalari.index"))
 
 
+DEMO_USER_ID = "demo"
+
+
+@login_bp.route("/login-demo")
+def login_demo():
+    session.permanent = True
+    session["user_id"] = DEMO_USER_ID
+    session["is_demo"] = True
+    return redirect(url_for("bakalari.index"))
+
+
 @login_bp.route("/logout")
 def logout():
     session.clear()

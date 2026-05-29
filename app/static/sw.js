@@ -39,12 +39,13 @@ self.addEventListener('push', function (e) {
 
   var title   = data.title || 'Bakix';
   var options = {
-    body: data.body || '',
-    icon: '/static/bakix.svg',
-    badge: '/static/bakix.svg',
-    tag: 'pwa-notification',   // replaces previous unread notification instead of stacking
+    body:     data.body || '',
+    icon:     '/static/bakix.svg',
+    badge:    '/static/bakix.svg',
+    tag:      data.tag || 'bakix',   // per-category — different types stack independently
     renotify: true,
-    data: { url: data.url || '/' },
+    vibrate:  [180, 90, 180],
+    data:     { url: data.url || '/' },
   };
 
   e.waitUntil(self.registration.showNotification(title, options));
