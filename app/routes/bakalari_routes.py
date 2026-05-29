@@ -1153,8 +1153,10 @@ def index():
     svc   = BakalariService(base_url=row["school_url"])
     token = svc.get_token(user_id)
     if not token:
-        session.clear()
-        return redirect(url_for("welcome"))
+        # Credentials couldn't be refreshed — ask the user to log in again
+        # without destroying the session cookie (preserves user_id for UX).
+        log.warning("index: get_token returned None for user=%.8s, redirecting to login", user_id)
+        return redirect(url_for("login.login"))
 
     marks_data = svc.get_marks(token)
 
@@ -1163,13 +1165,14 @@ def index():
         log.info("index: token expired for user=%.8s, reauthenticating", user_id)
         token = svc.reauth(user_id)
         if not token:
-            session.clear()
-            return redirect(url_for("welcome"))
+            log.warning("index: reauth failed for user=%.8s, redirecting to login", user_id)
+            return redirect(url_for("login.login"))
         marks_data = svc.get_marks(token)
         if marks_data.get("status_code") == 401:
-            log.warning("index: reauth still returned 401 for user=%.8s", user_id)
+            # Password likely changed in Bakaláři — need fresh credentials
+            log.warning("index: reauth still returned 401 for user=%.8s, redirecting to login", user_id)
             session.clear()
-            return redirect(url_for("welcome"))
+            return redirect(url_for("login.login"))
 
     if "error" in marks_data:
         subjects    = None
