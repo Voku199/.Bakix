@@ -1,6 +1,8 @@
 import logging
 import os
+import secrets
 from datetime import timedelta
+from pathlib import Path
 from flask import Flask, redirect, render_template, request, session, url_for
 
 log = logging.getLogger(__name__)
@@ -13,12 +15,30 @@ _AUTH_EXEMPT = frozenset({
 })
 
 
+def _load_secret_key() -> str:
+    """Return SECRET_KEY from env, or generate-and-persist one in the instance folder.
+
+    Using os.urandom() as the default means a new key on every restart, which
+    invalidates all existing sessions. Instead we generate the key once and
+    store it in instance/secret_key so it survives restarts.
+    """
+    if key := os.getenv("SECRET_KEY"):
+        return key
+    key_path = Path(__file__).parent.parent / "instance" / "secret_key"
+    key_path.parent.mkdir(exist_ok=True)
+    if key_path.exists():
+        return key_path.read_text().strip()
+    new_key = secrets.token_hex(32)
+    key_path.write_text(new_key)
+    return new_key
+
+
 def create_app():
     app = Flask(__name__)
 
     app.config.update(
-        SECRET_KEY=os.getenv("SECRET_KEY", os.urandom(32).hex()),
-        PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+        SECRET_KEY=_load_secret_key(),
+        PERMANENT_SESSION_LIFETIME=timedelta(days=30),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("FLASK_ENV") == "production",
@@ -104,5 +124,7 @@ def create_app():
             return None
         if not session.get("user_id"):
             return redirect(url_for("welcome"))
+        # Renew permanent flag on every request so the 30-day TTL keeps sliding.
+        session.permanent = True
 
     return app
