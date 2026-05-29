@@ -15,12 +15,19 @@
         document.getElementById('s-remember').checked         = !!d.remember_password;
         document.getElementById('s-theme').value              = d.theme    || localStorage.getItem('bakix-theme') || 'auto';
         document.getElementById('s-language').value           = d.language || 'cs';
-        document.getElementById('s-notif-messages').checked   = !!d.notifications_messages;
-        document.getElementById('s-notif-homeworks').checked  = !!d.notifications_homeworks;
-        document.getElementById('s-notif-marks').checked      = !!d.notifications_marks;
-        document.getElementById('s-notif-subs').checked       = !!d.notifications_subs;
-        document.getElementById('s-notif-daily').checked      = !!d.notifications_daily;
-        document.getElementById('s-notif-absences').checked   = !!d.notifications_absences;
+        const pollSel = document.getElementById('s-poll-interval');
+        if (pollSel) {
+          pollSel.value = String(d.poll_interval_minutes || 30);
+          if (!pollSel.value || !pollSel.querySelector('option[value="' + pollSel.value + '"]')) {
+            pollSel.value = '30';
+          }
+        }
+        document.getElementById('s-notif-messages').checked   = d.notifications_messages  !== false;
+        document.getElementById('s-notif-homeworks').checked  = d.notifications_homeworks !== false;
+        document.getElementById('s-notif-marks').checked      = d.notifications_marks     !== false;
+        document.getElementById('s-notif-subs').checked       = d.notifications_subs      !== false;
+        document.getElementById('s-notif-daily').checked      = d.notifications_daily     !== false;
+        document.getElementById('s-notif-absences').checked   = d.notifications_absences  !== false;
         status.textContent = '';
         status.className   = 'settings-status';
         overlay.classList.add('open');
@@ -43,6 +50,7 @@
       remember_password:      document.getElementById('s-remember').checked,
       theme:                  document.getElementById('s-theme').value,
       language:               document.getElementById('s-language').value,
+      poll_interval_minutes:   parseInt(document.getElementById('s-poll-interval')?.value || '30', 10),
       notifications_messages:  document.getElementById('s-notif-messages').checked,
       notifications_homeworks: document.getElementById('s-notif-homeworks').checked,
       notifications_marks:     document.getElementById('s-notif-marks').checked,
@@ -467,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   function renderTimetable(items) {
-    if (!items.length) { setCard('events-body', '<p class="empty">Dnes máš volno, užij si den! ✦</p>'); return; }
+    if (!items.length) { setCard('events-body', '<p class="empty">' + ((window._t && window._t.today_empty) || 'Dnes máš volno, užij si den! ✦') + '</p>'); return; }
     const frag = document.createDocumentFragment();
     items.forEach(function (h) {
       const isCancelled = h.status === 'Cancelled';
@@ -522,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function renderHomeworks(items) {
-    if (!items.length) { setCard('homeworks-body', '<p class="empty">Žádné úkoly — skvělá práce! ✓</p>'); return; }
+    if (!items.length) { setCard('homeworks-body', '<p class="empty">' + ((window._t && window._t.hw_empty) || 'Žádné úkoly — skvělá práce! ✓') + '</p>'); return; }
     const frag = document.createDocumentFragment();
     items.forEach(function (hw) {
       const div = document.createElement('div');
@@ -548,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function renderKomens(items) {
-    if (!items.length) { setCard('komens-body', '<p class="empty">Žádné nové zprávy. Klid a pohoda.</p>'); return; }
+    if (!items.length) { setCard('komens-body', '<p class="empty">' + ((window._t && window._t.komens_empty) || 'Žádné nové zprávy. Klid a pohoda.') + '</p>'); return; }
     const frag = document.createDocumentFragment();
     items.forEach(function (m) {
       const div = document.createElement('div');
@@ -570,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function renderMarks(items) {
-    if (!items.length) { setCard('marks-body', '<p class="empty">Žádné předměty.</p>'); return; }
+    if (!items.length) { setCard('marks-body', '<p class="empty">' + ((window._t && window._t.marks_empty) || 'Žádné předměty.') + '</p>'); return; }
     const frag = document.createDocumentFragment();
     items.forEach(function (s) {
       const row = document.createElement('div');
@@ -652,10 +660,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   Promise.all([
-    fetch('/api/dashboard/today').then(function (r) { return r.json(); }).catch(function () { return { error: 'Síťová chyba.' }; }),
-    fetch('/api/3/homeworks').then(function (r) { return r.json(); }).catch(function () { return { error: 'Síťová chyba.' }; }),
-    fetch('/api/3/komens/messages/received', { method: 'POST' }).then(function (r) { return r.json(); }).catch(function () { return { error: 'Síťová chyba.' }; }),
-    fetch('/api/3/marks').then(function (r) { return r.json(); }).catch(function () { return { error: 'Síťová chyba.' }; }),
+    fetch('/api/dashboard/today').then(function (r) { return r.json(); }).catch(function () { return { error: (window._t && window._t.net_error) || 'Síťová chyba.' }; }),
+    fetch('/api/3/homeworks').then(function (r) { return r.json(); }).catch(function () { return { error: (window._t && window._t.net_error) || 'Síťová chyba.' }; }),
+    fetch('/api/3/komens/messages/received', { method: 'POST' }).then(function (r) { return r.json(); }).catch(function () { return { error: (window._t && window._t.net_error) || 'Síťová chyba.' }; }),
+    fetch('/api/3/marks').then(function (r) { return r.json(); }).catch(function () { return { error: (window._t && window._t.net_error) || 'Síťová chyba.' }; }),
   ]).then(function (results) {
     const events    = results[0];
     const homeworks = results[1];
@@ -676,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function () {
       setCard('events-body', '<div class="skel-rows"><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div>');
       fetch(url).then(function (r) { return r.json(); })
         .then(renderTimetable)
-        .catch(function () { cardErr('events-body', 'Síťová chyba.'); });
+        .catch(function () { cardErr('events-body', (window._t && window._t.net_error) || 'Síťová chyba.'); });
     });
   });
 });

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Bakix — Přihlášení{% endblock %}
+{% block title %}{{ _('Bakix — Přihlášení') }}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style/onboarding.css') }}">
@@ -14,15 +14,15 @@
     <div class="stepper" id="stepper">
       <div class="stepper__item is-active" data-step="0">
         <div class="stepper__dot">1</div>
-        <div class="stepper__label">Bezpečnost</div>
+        <div class="stepper__label">{{ _('Bezpečnost') }}</div>
       </div>
       <div class="stepper__item" data-step="1">
         <div class="stepper__dot">2</div>
-        <div class="stepper__label">Škola</div>
+        <div class="stepper__label">{{ _('Škola') }}</div>
       </div>
       <div class="stepper__item" data-step="2">
         <div class="stepper__dot">3</div>
-        <div class="stepper__label">Přihlášení</div>
+        <div class="stepper__label">{{ _('Přihlašovací údaje') }}</div>
       </div>
     </div>
 
@@ -31,47 +31,42 @@
 
       {# ── Step 1: Security intro ──────────────────────────────── #}
       <div class="step is-active panel" id="step-0">
-        <div class="panel__title">Jak Bakix zachází s vašimi daty</div>
+        <div class="panel__title">{{ _('Jak Bakix zachází s vašimi daty') }}</div>
 
         <ul class="security-list">
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">Přihlašovací údaje šifrované</div>
+              <div class="security-item__title">{{ _('Přihlašovací údaje šifrované') }}</div>
               <div class="security-item__desc">
-                Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128)
-                výhradně pro automatické obnovení přístupu po vypršení tokenu.
-                Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám.
+                {{ _('Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128) výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám.') }}
               </div>
             </div>
           </li>
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">Přihlašovací tokeny v session</div>
+              <div class="security-item__title">{{ _('Přihlašovací tokeny v session') }}</div>
               <div class="security-item__desc">
-                Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává
-                dočasný token platný 8 hodin. Po odhlášení je smazán.
+                {{ _('Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný token platný 8 hodin. Po odhlášení je smazán.') }}
               </div>
             </div>
           </li>
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">Šifrované připojení</div>
+              <div class="security-item__title">{{ _('Šifrované připojení') }}</div>
               <div class="security-item__desc">
-                Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem,
-                Bakixem i serverem školy.
+                {{ _('Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i serverem školy.') }}
               </div>
             </div>
           </li>
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">Data přímo ze školy</div>
+              <div class="security-item__title">{{ _('Data přímo ze školy') }}</div>
               <div class="security-item__desc">
-                Bakix volá přímo Bakaláře API vaší školy — data neprocházejí
-                žádnou třetí stranou.
+                {{ _('Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí stranou.') }}
               </div>
             </div>
           </li>
@@ -79,25 +74,24 @@
 
         <div class="step-nav step-nav--end">
           <button type="button" class="btn btn--primary" onclick="goTo(1)">
-            Rozumím, pokračovat →
+            {{ _('Rozumím, pokračovat →') }}
           </button>
         </div>
       </div>
 
       {# ── Step 2: School URL + validation ─────────────────────── #}
       <div class="step panel" id="step-1">
-        <div class="panel__title">Adresa školy</div>
+        <div class="panel__title">{{ _('Adresa školy') }}</div>
         <p style="font-size:.81rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.7;">
-          Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře,
-          a teprve poté vás vyzve k zadání přihlašovacích údajů.
+          {{ _('Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů.') }}
         </p>
 
         <div class="field">
-          <label class="field__label" for="school-url-input">URL školy</label>
+          <label class="field__label" for="school-url-input">{{ _('URL školy') }}</label>
           <input type="text" id="school-url-input" class="field__input"
                  placeholder="zstsobra.bakalari.cz"
                  autocomplete="off" spellcheck="false" inputmode="url">
-          <div class="field__hint">Bez https:// — např. zstsobra.bakalari.cz</div>
+          <div class="field__hint">{{ _('Bez https:// — např. zstsobra.bakalari.cz') }}</div>
           <div class="url-status" id="url-status" aria-live="polite" style="display:none;"></div>
         </div>
 
@@ -105,40 +99,40 @@
         <input type="hidden" id="school_url" name="school_url">
 
         <div class="step-nav">
-          <button type="button" class="btn btn--secondary" onclick="goTo(0)">← Zpět</button>
+          <button type="button" class="btn btn--secondary" onclick="goTo(0)">{{ _('← Zpět') }}</button>
           <button type="button" class="btn btn--primary" id="btn-validate">
-            Ověřit a pokračovat →
+            {{ _('Ověřit a pokračovat →') }}
           </button>
         </div>
       </div>
 
       {# ── Step 3: Credentials ─────────────────────────────────── #}
       <div class="step panel" id="step-2">
-        <div class="panel__title">Přihlašovací údaje</div>
+        <div class="panel__title">{{ _('Přihlašovací údaje') }}</div>
         <p style="font-size:.81rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.7;">
-          Stejné údaje jako do mobilní aplikace nebo webových Bakalářů.
+          {{ _('Stejné údaje jako do mobilní aplikace nebo webových Bakalářů.') }}
         </p>
 
         <div id="login-error" class="alert alert--error"></div>
 
         <div class="field">
-          <label class="field__label" for="username">Uživatelské jméno</label>
+          <label class="field__label" for="username">{{ _('Uživatelské jméno') }}</label>
           <input type="text" id="username" name="username" class="field__input"
                  placeholder="např. Novak12345"
                  autocomplete="username" required>
         </div>
 
         <div class="field">
-          <label class="field__label" for="password">Heslo</label>
+          <label class="field__label" for="password">{{ _('Heslo') }}</label>
           <input type="password" id="password" name="password" class="field__input"
                  placeholder="••••••••"
                  autocomplete="current-password" required>
         </div>
 
         <div class="step-nav">
-          <button type="button" class="btn btn--secondary" onclick="goTo(1)">← Zpět</button>
+          <button type="button" class="btn btn--secondary" onclick="goTo(1)">{{ _('← Zpět') }}</button>
           <button type="submit" class="btn btn--primary" id="btn-connect">
-            Připojit se
+            {{ _('Připojit se') }}
           </button>
         </div>
       </div>

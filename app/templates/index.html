@@ -10,9 +10,9 @@
 
 
 {% block header_actions %}
-  <a href="/logout" class="btn btn--icon" title="Odhlásit se" aria-label="Odhlásit se">↩</a>
+  <a href="/logout" class="btn btn--icon" title="{{ _('Odhlásit se') }}" aria-label="{{ _('Odhlásit se') }}">↩</a>
   <button class="btn btn--icon" id="header-notif-btn" style="display:none;" aria-label="Notifikace">🔔</button>
-  <button class="btn btn--icon" id="settings-open" title="Nastavení" aria-label="Nastavení">⚙</button>
+  <button class="btn btn--icon" id="settings-open" title="{{ _('Nastavení') }}" aria-label="{{ _('Nastavení') }}">⚙</button>
 {% endblock %}
 
 {% block content %}
@@ -21,12 +21,12 @@
   {% if chart_data_json is defined and chart_data_json != '[]' %}
   <div class="panel chart-panel" style="margin-bottom:1.25rem;">
     <div class="chart-panel__header">
-      <div class="panel__title">Trend známek</div>
+      <div class="panel__title">{{ _('Trend známek') }}</div>
     </div>
     <div class="chart-nav">
-      <button class="btn btn--icon chart-nav__arrow" id="chart-prev" aria-label="Předchozí předmět">‹</button>
+      <button class="btn btn--icon chart-nav__arrow" id="chart-prev" aria-label="{{ _('Předchozí předmět') }}">‹</button>
       <span class="chart-subject-label" id="chart-subject-label" aria-live="polite"></span>
-      <button class="btn btn--icon chart-nav__arrow" id="chart-next" aria-label="Další předmět">›</button>
+      <button class="btn btn--icon chart-nav__arrow" id="chart-next" aria-label="{{ _('Další předmět') }}">›</button>
     </div>
     <div style="position:relative; height:210px;">
       <canvas id="gradeChart"></canvas>
@@ -34,14 +34,14 @@
     <div class="chart-progress" aria-hidden="true">
       <div class="chart-progress__bar" id="chart-progress-bar"></div>
     </div>
-    <div class="chart-dots" id="chart-dots" role="group" aria-label="Výběr předmětu"></div>
+    <div class="chart-dots" id="chart-dots" role="group" aria-label="{{ _('Výběr předmětu') }}"></div>
   </div>
   {% endif %}
 
   {# ── Fatal auth error ────────────────────────────────────── #}
   {% if error %}
     <div class="alert alert--error">
-      <strong>Chyba přihlášení</strong> — {{ error }}
+      <strong>{{ _('Chyba přihlášení') }}</strong> — {{ error }}
     </div>
 
   {% else %}
@@ -84,7 +84,7 @@
     <div class="ai-summary__actions">
       <button class="btn btn--secondary"
               onclick="window.openAiWithMessage('Chci pomoc s učením')">Chci pomoc</button>
-      <button class="btn btn--icon" id="ai-summary-dismiss" title="Zavřít" aria-label="Zavřít">×</button>
+      <button class="btn btn--icon" id="ai-summary-dismiss" title="{{ _('Zavřít') }}" aria-label="{{ _('Zavřít') }}">×</button>
     </div>
   </div>
 
@@ -94,25 +94,25 @@
       <div class="card__title-row">
         <h2 class="card__title">Rozvrh</h2>
         <div class="tt-day-switch">
-          <button class="btn btn--icon tt-day-btn tt-day-btn--active" data-day="today">Dnes</button>
-          <button class="btn btn--icon tt-day-btn" data-day="tomorrow">Zítra</button>
+          <button class="btn btn--icon tt-day-btn tt-day-btn--active" data-day="today">{{ _('Dnes') }}</button>
+          <button class="btn btn--icon tt-day-btn" data-day="tomorrow">{{ _('Zítra') }}</button>
         </div>
       </div>
       <div id="events-body"><div class="skel-rows"><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div><div class="skel-row"><div class="skel skel-sq"></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div></div>
     </section>
 
     <section class="card">
-      <h2 class="card__title">Úkoly</h2>
+      <h2 class="card__title">{{ _('Úkoly') }}</h2>
       <div id="homeworks-body"><div class="skel-rows"><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line--short"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--xshort"></div></div></div></div>
     </section>
 
     <section class="card">
-      <h2 class="card__title">Zprávy</h2>
+      <h2 class="card__title">{{ _('Zprávy') }}</h2>
       <div id="komens-body"><div class="skel-rows"><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div><div class="skel-col"><div class="skel skel-line--short"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div></div>
     </section>
 
     <section class="card">
-      <h2 class="card__title">Známky</h2>
+      <h2 class="card__title">{{ _('Známky') }}</h2>
       <div id="marks-body"><div class="skel-rows"><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line--short"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line--short"></div></div><div class="skel skel-badge"></div></div><div class="skel-row"><div class="skel-col"><div class="skel skel-line"></div></div><div class="skel skel-badge"></div></div></div></div>
     </section>
 
@@ -121,8 +121,8 @@
   {# ── Grade average calculator ────────────────────────────── #}
   <section class="card" id="calc-card" style="display:none; margin-bottom:1.25rem;">
     <div class="card__title-row">
-      <h2 class="card__title">Kalkulačka průměru</h2>
-      <button class="btn btn--icon calc-help-btn" id="calc-help-btn" title="Co to je?" aria-label="Nápověda">?</button>
+      <h2 class="card__title">{{ _('Kalkulačka průměru') }}</h2>
+      <button class="btn btn--icon calc-help-btn" id="calc-help-btn" title="{{ _('Co to je?') }}" aria-label="Nápověda">?</button>
     </div>
     <div id="calc-help-box" class="calc-help-box" style="display:none;">
       <p><strong>K čemu to je?</strong> Řekneš předmět a průměr, který chceš mít, a kalkulačka ti spočítá kolik jedniček musíš dostat — a s jakou váhou testu.</p>
@@ -132,14 +132,14 @@
     </div>
     <div class="calc-inputs">
       <div class="calc-field">
-        <label for="calc-subject">Předmět</label>
+        <label for="calc-subject">{{ _('Předmět') }}</label>
         <select id="calc-subject"></select>
       </div>
       <div class="calc-field" style="flex:0 1 150px;">
-        <label for="calc-target">Chci průměr (např. 1.49)</label>
+        <label for="calc-target">{{ _('Chci průměr (např. 1.49)') }}</label>
         <input id="calc-target" type="number" min="1.01" max="5" step="0.01" placeholder="1.49">
       </div>
-      <button class="btn btn--primary" id="calc-btn">Spočítat</button>
+      <button class="btn btn--primary" id="calc-btn">{{ _('Spočítat') }}</button>
     </div>
     <div id="calc-result" class="calc-result"></div>
   </section>
@@ -147,7 +147,7 @@
   {# ── My Projects ─────────────────────────────────────────── #}
   <section class="card" id="my-projects-card" style="margin-bottom:1.25rem;">
     <div class="card__title-row">
-      <h2 class="card__title">Moje projekty</h2>
+      <h2 class="card__title">{{ _('Moje projekty') }}</h2>
       <button class="btn btn--secondary" style="font-size:10px;padding:3px 8px;"
               onclick="window.openAiWithMessage && window.openAiWithMessage('Vytvoř mi nový AI projekt')">+ Nový</button>
     </div>
@@ -159,7 +159,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <p class="empty">Zatím žádné projekty. Popros AI o vytvoření stránky!</p>
+        <p class="empty">{{ _('Zatím žádné projekty. Popros AI o vytvoření stránky!') }}</p>
       {% endif %}
     </div>
   </section>
@@ -187,70 +187,81 @@
   {% endif %}
 
   {# ── Settings overlay ────────────────────────────────────── #}
-  <div id="settings-overlay" class="settings-overlay" role="dialog" aria-modal="true" aria-label="Nastavení">
+  <div id="settings-overlay" class="settings-overlay" role="dialog" aria-modal="true" aria-label="{{ _('Nastavení') }}">
     <div id="settings-panel" class="settings-panel">
 
       <div class="settings-header">
-        <span class="settings-title">Nastavení</span>
-        <button class="btn btn--icon" id="settings-close" aria-label="Zavřít">×</button>
+        <span class="settings-title">{{ _('Nastavení') }}</span>
+        <button class="btn btn--icon" id="settings-close" aria-label="{{ _('Zavřít') }}">×</button>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-label">Přihlašovací údaje</div>
+        <div class="settings-section-label">{{ _('Přihlašovací údaje') }}</div>
         <div class="settings-field">
-          <label for="s-school-url">URL školy</label>
+          <label for="s-school-url">{{ _('URL školy') }}</label>
           <input id="s-school-url" type="url" autocomplete="url">
         </div>
         <div class="settings-field">
-          <label for="s-username">Přihlašovací jméno</label>
+          <label for="s-username">{{ _('Uživatelské jméno') }}</label>
           <input id="s-username" type="text" autocomplete="username">
         </div>
         <div class="settings-field">
           <label for="s-password">
-            Heslo <span style="font-size:9px;color:var(--muted);">(vyplňte pro změnu)</span>
+            {{ _('Heslo') }} <span style="font-size:9px;color:var(--muted);">{{ _('(vyplňte pro změnu)') }}</span>
           </label>
           <input id="s-password" type="password" placeholder="••••••••" autocomplete="current-password">
         </div>
         <label class="settings-check">
           <input id="s-remember" type="checkbox">
-          Zapamatovat heslo
+          {{ _('Zapamatovat heslo') }}
         </label>
         <div class="settings-links">
           <a href="/cookies">Cookies</a> &nbsp;·&nbsp;
-          <a href="/tos">Podmínky použití</a> &nbsp;·&nbsp;
-          <a href="/privacy">Ochrana soukromí</a>
+          <a href="/tos">{{ _('Podmínky použití') }}</a> &nbsp;·&nbsp;
+          <a href="/privacy">{{ _('Ochrana soukromí') }}</a>
         </div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-label">Profil</div>
+        <div class="settings-section-label">{{ _('Profil') }}</div>
         <div class="settings-field">
-          <label for="s-display-name">Zobrazované jméno</label>
-          <input id="s-display-name" type="text" maxlength="80" autocomplete="nickname" placeholder="Jak ti říkají?">
+          <label for="s-display-name">{{ _('Zobrazované jméno') }}</label>
+          <input id="s-display-name" type="text" maxlength="80" autocomplete="nickname" placeholder="{{ _('Jak ti říkají?') }}">
         </div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-label">Zobrazení</div>
+        <div class="settings-section-label">{{ _('Zobrazení') }}</div>
         <div class="settings-row">
-          <span>Téma</span>
+          <span>{{ _('Téma') }}</span>
           <select id="s-theme">
             <option value="auto">Auto</option>
-            <option value="light">Světlé</option>
-            <option value="dark">Tmavé</option>
+            <option value="light">{{ _('Světlé') }}</option>
+            <option value="dark">{{ _('Tmavé') }}</option>
           </select>
         </div>
         <div class="settings-row">
-          <span>Jazyk</span>
+          <span>{{ _('Jazyk') }}</span>
           <select id="s-language">
-            <option value="cs">Česky</option>
+            <option value="cs">{{ _('Česky') }}</option>
             <option value="en">English</option>
           </select>
         </div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-label">Notifikace</div>
+        <div class="settings-section-label">{{ _('Notifikace') }}</div>
+        <div class="settings-row">
+          <span>{{ _('Kontrolovat každých') }}</span>
+          <select id="s-poll-interval">
+            <option value="1">{{ _('1 minutu') }}</option>
+            <option value="5">{{ _('5 minut') }}</option>
+            <option value="15">{{ _('15 minut') }}</option>
+            <option value="30">{{ _('30 minut') }}</option>
+            <option value="60">{{ _('1 hodinu') }}</option>
+            <option value="120">{{ _('2 hodiny') }}</option>
+          </select>
+        </div>
         {# notif-wrap shown by notifications.js when Push API is available #}
         <div id="notif-wrap" style="display:none; margin-bottom:.65rem;">
           <button class="btn btn--secondary" id="notif-enable-btn" style="width:100%; display:none;">Zapnout notifikace</button>
@@ -258,45 +269,45 @@
         </div>
         <label class="settings-check">
           <input id="s-notif-messages" type="checkbox" data-notif="messages">
-          Zprávy
+          {{ _('Zprávy') }}
         </label>
         <label class="settings-check">
           <input id="s-notif-homeworks" type="checkbox" data-notif="homeworks">
-          Úkoly
+          {{ _('Úkoly') }}
         </label>
         <label class="settings-check">
           <input id="s-notif-marks" type="checkbox" data-notif="marks">
-          Nové známky
+          {{ _('Nové známky') }}
         </label>
         <label class="settings-check">
           <input id="s-notif-subs" type="checkbox" data-notif="subs">
-          Změny rozvrhu
+          {{ _('Změny rozvrhu') }}
         </label>
         <label class="settings-check">
           <input id="s-notif-daily" type="checkbox" data-notif="daily">
-          Denní shrnutí
+          {{ _('Denní shrnutí') }}
         </label>
         <label class="settings-check">
           <input id="s-notif-absences" type="checkbox" data-notif="absences">
-          Absence
+          {{ _('Absence') }}
         </label>
         {# notif-test-btn: kept hidden — notifications.js requires it in the DOM #}
         <button id="notif-test-btn" style="display:none;" aria-hidden="true" tabindex="-1"></button>
       </div>
 
       <div class="settings-section" id="pwa-install-section">
-        <div class="settings-section-label">Aplikace na plochu</div>
-        <p class="pwa-install-help">Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci.</p>
+        <div class="settings-section-label">{{ _('Aplikace na plochu') }}</div>
+        <p class="pwa-install-help">{{ _('Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci.') }}</p>
         <button class="btn btn--secondary" id="pwa-install-btn" style="width:100%;" disabled>
-          Nainstalovat aplikaci
+          {{ _('Nainstalovat aplikaci') }}
         </button>
         <div id="pwa-install-status" class="pwa-install-status"></div>
       </div>
 
       <div id="settings-status" class="settings-status"></div>
       <div class="settings-actions">
-        <button class="btn btn--secondary" id="settings-cancel">Zrušit</button>
-        <button class="btn btn--primary"   id="settings-save">Uložit</button>
+        <button class="btn btn--secondary" id="settings-cancel">{{ _('Zrušit') }}</button>
+        <button class="btn btn--primary"   id="settings-save">{{ _('Uložit') }}</button>
       </div>
 
     </div>
@@ -318,7 +329,7 @@
         <button class="chat-mode-btn"                       data-mode="general" title="Obecný chat">Chat</button>
       </div>
       <button class="btn btn--icon" id="ai-popout-btn" title="Okenní režim" aria-label="Přepnout do okenního režimu">⊞</button>
-      <button class="btn btn--icon" id="ai-sidebar-close" aria-label="Zavřít">×</button>
+      <button class="btn btn--icon" id="ai-sidebar-close" aria-label="{{ _('Zavřít') }}">×</button>
     </div>
     <div class="ai-sidebar__thread" id="ai-thread"></div>
     <div class="ai-sidebar__footer">
@@ -342,7 +353,7 @@
           <div class="msg-modal__title" id="msg-modal-title"></div>
           <div class="msg-modal__meta"  id="msg-modal-meta"></div>
         </div>
-        <button class="msg-modal__close" id="msg-modal-close" aria-label="Zavřít">×</button>
+        <button class="msg-modal__close" id="msg-modal-close" aria-label="{{ _('Zavřít') }}">×</button>
       </div>
       <div class="msg-modal__body" id="msg-modal-body"></div>
     </div>

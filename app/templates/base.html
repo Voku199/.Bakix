@@ -10,7 +10,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='style/base.css') }}">
+  <style>
+    .lang-switch{display:flex;gap:2px;align-items:center}
+    .btn--lang{background:transparent;border:1px solid var(--border,#cec7bc);color:var(--muted,#6b6560);padding:4px 9px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s,background .15s;line-height:1;letter-spacing:.3px}
+    .btn--lang:hover{border-color:var(--border-hi,#b0a89e);color:var(--text,#1c1917)}
+    .btn--lang--active{background:var(--accent,#b5451b);border-color:var(--accent,#b5451b) !important;color:#fff !important}
+  </style>
   {% block extra_head %}{% endblock %}
+  <script>
+    window._t = {
+      lang_switching: "{{ _('Jazyk se mění…') }}",
+      today_empty:    "{{ _('Dnes máš volno, užij si den! ✦') }}",
+      hw_empty:       "{{ _('Žádné úkoly — skvělá práce! ✓') }}",
+      komens_empty:   "{{ _('Žádné nové zprávy. Klid a pohoda.') }}",
+      marks_empty:    "{{ _('Žádné předměty.') }}",
+      net_error:      "{{ _('Síťová chyba.') }}"
+    };
+  </script>
 </head>
 <body>
 
@@ -21,7 +37,11 @@
     </a>
     <div class="header__actions">
       {% block header_actions %}{% endblock %}
-      <button class="btn btn--icon" id="theme-toggle" title="Přepnout téma" aria-label="Přepnout téma">
+      <div class="lang-switch" role="group" aria-label="{{ _('Jazyk') }}">
+        <button class="btn--lang{% if session.get('language','cs') == 'cs' %} btn--lang--active{% endif %}" onclick="switchLanguage('cs')" title="Česky">CS</button>
+        <button class="btn--lang{% if session.get('language','cs') == 'en' %} btn--lang--active{% endif %}" onclick="switchLanguage('en')" title="English">EN</button>
+      </div>
+      <button class="btn btn--icon" id="theme-toggle" title="{{ _('Přepnout téma') }}" aria-label="{{ _('Přepnout téma') }}">
         <span id="theme-icon">◐</span>
       </button>
     </div>
@@ -32,6 +52,7 @@
   </main>
 
   <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
 
   {% block scripts %}{% endblock %}
 

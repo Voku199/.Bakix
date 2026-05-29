@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Bakix — Přihlášení{% endblock %}
+{% block title %}{{ _('Bakix — Přihlášení') }}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style/login.css') }}">
@@ -15,8 +15,8 @@
       <div class="login-header__icon">
         <img src="{{ url_for('static', filename='bakix.svg') }}" alt="Bakix">
       </div>
-      <div class="login-header__title">Vítejte zpět</div>
-      <div class="login-header__sub">Přihlaste se ke svému účtu Bakalářů</div>
+      <div class="login-header__title">{{ _('Vítejte zpět') }}</div>
+      <div class="login-header__sub">{{ _('Přihlaste se ke svému účtu Bakalářů') }}</div>
     </div>
 
     {# ── Flash messages ───────────────────────────────────────── #}
@@ -40,15 +40,15 @@
 
         {# ── School URL ──────────────────────────────────────── #}
         <div class="school-row" id="school-row" role="button" tabindex="0"
-             aria-label="Změnit adresu školy">
+             aria-label="{{ _('Změnit adresu školy') }}">
           <span class="school-row__dot"></span>
-          <span class="school-row__label" id="school-display">Načítám školu…</span>
-          <span class="school-row__change">Změnit</span>
+          <span class="school-row__label" id="school-display">{{ _('Načítám školu…') }}</span>
+          <span class="school-row__change">{{ _('Změnit') }}</span>
         </div>
 
         <div class="school-expand" id="school-expand">
           <div class="field" style="margin-bottom:.75rem;">
-            <label class="field__label" for="school_url">URL školy</label>
+            <label class="field__label" for="school_url">{{ _('URL školy') }}</label>
             <input type="text" id="school_url" name="school_url" class="field__input"
                    placeholder="zstsobra.bakalari.cz"
                    autocomplete="off" spellcheck="false" inputmode="url">
@@ -57,14 +57,14 @@
 
         {# ── Credentials ─────────────────────────────────────── #}
         <div class="field">
-          <label class="field__label" for="username">Uživatelské jméno</label>
+          <label class="field__label" for="username">{{ _('Uživatelské jméno') }}</label>
           <input type="text" id="username" name="username" class="field__input"
                  placeholder="např. Novak12345"
                  autocomplete="username" required>
         </div>
 
         <div class="field">
-          <label class="field__label" for="password">Heslo</label>
+          <label class="field__label" for="password">{{ _('Heslo') }}</label>
           <input type="password" id="password" name="password" class="field__input"
                  placeholder="••••••••"
                  autocomplete="current-password" required>
@@ -73,18 +73,18 @@
         {# ── Remember me ─────────────────────────────────────── #}
         <label class="remember-row">
           <input type="checkbox" id="remember-me" checked>
-          <span class="remember-row__label">Zapamatovat přihlašovací jméno a školu</span>
+          <span class="remember-row__label">{{ _('Zapamatovat přihlašovací jméno a školu') }}</span>
         </label>
 
         <button type="submit" class="btn btn--primary btn--login" id="btn-submit">
-          Přihlásit se
+          {{ _('Přihlásit se') }}
         </button>
 
       </form>
     </div>
 
     <p class="login-footer">
-      Nový uživatel? <a href="{{ url_for('auth.onboarding') }}">Nastavit účet →</a>
+      {{ _('Nový uživatel?') }} <a href="{{ url_for('auth.onboarding') }}">{{ _('Nastavit účet →') }}</a>
     </p>
 
   </div>

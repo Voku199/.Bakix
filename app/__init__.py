@@ -4,13 +4,14 @@ import secrets
 from datetime import timedelta
 from pathlib import Path
 from flask import Flask, redirect, render_template, request, session, url_for
+from flask_babel import Babel, _
 
 log = logging.getLogger(__name__)
 
 # Paths that must never be intercepted by the auth gate (avoids redirect loops).
 _AUTH_EXEMPT = frozenset({
     "/welcome", "/onboarding",
-    "/login", "/login/now", "/logout",
+    "/login", "/login/now", "/login-demo", "/logout",
     "/cookies", "/privacy", "/tos",
 })
 
@@ -33,6 +34,25 @@ def _load_secret_key() -> str:
     return new_key
 
 
+def _compile_translations(app) -> None:
+    from pathlib import Path
+    translations_dir = Path(app.root_path).parent / "translations"
+    for po_path in translations_dir.glob("*/LC_MESSAGES/messages.po"):
+        mo_path = po_path.with_suffix(".mo")
+        if mo_path.exists() and mo_path.stat().st_mtime >= po_path.stat().st_mtime:
+            continue
+        try:
+            from babel.messages.pofile import read_po
+            from babel.messages.mofile import write_mo
+            with open(po_path, "rb") as f:
+                catalog = read_po(f)
+            with open(mo_path, "wb") as f:
+                write_mo(f, catalog)
+            log.info("Compiled %s", mo_path)
+        except Exception as exc:
+            log.warning("Could not compile %s: %s", po_path, exc)
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -43,6 +63,16 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("FLASK_ENV") == "production",
     )
+
+    babel = Babel()
+    app.config["BABEL_TRANSLATION_DIRECTORIES"] = str(Path(app.root_path).parent / "translations")
+    def _get_locale():
+        lang = session.get("language")
+        if lang in ("cs", "en"):
+            return lang
+        return request.accept_languages.best_match(["cs", "en"], default="cs")
+    babel.init_app(app, locale_selector=_get_locale)
+    _compile_translations(app)
 
     from app.database.schema import init_db
     init_db()
@@ -88,6 +118,13 @@ def create_app():
     def tos():
         return render_template("terms.html")
 
+    @app.route("/set-language/<lang>")
+    def set_language(lang):
+        if lang in ("cs", "en"):
+            session["language"] = lang
+            session.modified = True
+        return redirect(request.referrer or url_for("welcome"))
+
     @app.route("/prompt")
     def prompt():
         txt_path = os.path.join(app.static_folder, "macaly.txt")
@@ -120,7 +157,8 @@ def create_app():
     def _check_auth():
         if (request.path in _AUTH_EXEMPT
                 or request.path.startswith("/static/")
-                or request.path.startswith("/api/")):
+                or request.path.startswith("/api/")
+                or request.path.startswith("/set-language/")):
             return None
         if not session.get("user_id"):
             return redirect(url_for("welcome"))

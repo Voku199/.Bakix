@@ -6,3 +6,4 @@ google-genai
 pywebpush
 APScheduler
 waitress
+Flask-Babel
