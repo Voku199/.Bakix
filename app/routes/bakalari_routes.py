@@ -50,7 +50,7 @@ def _build_chart_datasets(subjects):
 _HTML_TAG_RE   = re.compile(r'<[^>]+>')
 _HTML_ENTITY_RE = re.compile(r'&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);')
 
-# ── SVG / interactive HTML in chat messages ───────────────────────────────────
+# ── SVG / interactive HTML in chat messages ───────────────────────────────────────────────
 _SVG_DETECT_RE = re.compile(r'<(svg|canvas|figure|table)\b', re.I)
 _SCRIPT_RE     = re.compile(r'<script\b[^>]*>.*?</script>', re.I | re.S)
 _EVENT_ATTR_RE = re.compile(r'\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\')', re.I)
@@ -440,7 +440,7 @@ def api_dashboard_today():
             log.error("api_dashboard_today: unexpected timetable shape: %s", type(data))
             return jsonify({"error": "Neočekávaná odpověď serveru"}), 502
 
-        # ── Build O(1) lookup dicts from the top-level helper arrays ──────────
+        # ── Build O(1) lookup dicts from the top-level helper arrays ────────────────────
         subjects = {s["Id"]: s["Name"]   for s in (data.get("Subjects") or []) if s.get("Id")}
         teachers = {t["Id"]: t["Name"]   for t in (data.get("Teachers") or []) if t.get("Id")}
         rooms    = {r["Id"]: r["Abbrev"] for r in (data.get("Rooms")    or []) if r.get("Id")}
@@ -450,7 +450,7 @@ def api_dashboard_today():
             if h.get("Id") and h.get("BeginTime") and h.get("EndTime")
         }
 
-        # ── Locate today's day block ──────────────────────────────────────────
+        # ── Locate today's day block ──────────────────────────────────────────────────────
         today = datetime.date.today().isoformat()
         today_day = next(
             (d for d in (data.get("Days") or []) if (d.get("Date") or "").startswith(today)),
@@ -459,7 +459,7 @@ def api_dashboard_today():
         if not today_day:
             return jsonify([])
 
-        # ── Map atoms to output records ───────────────────────────────────────
+        # ── Map atoms to output records ──────────────────────────────────────────────────────
         result = []
         for atom in (today_day.get("Atoms") or []):
             change      = atom.get("Change")     # dict or None
@@ -682,7 +682,7 @@ def api_gemini_chat():
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
-# ── Generated-page helpers ────────────────────────────────────────────────────
+# ── Generated-page helpers ────────────────────────────────────────────────────────────────
 
 def _gen_dir() -> str:
     return os.path.join(current_app.instance_path, "generated")
@@ -1153,8 +1153,10 @@ def index():
     svc   = BakalariService(base_url=row["school_url"])
     token = svc.get_token(user_id)
     if not token:
-        session.clear()
-        return redirect(url_for("welcome"))
+        # Credentials couldn't be refreshed — ask the user to log in again
+        # without destroying the session cookie (preserves user_id for UX).
+        log.warning("index: get_token returned None for user=%.8s, redirecting to login", user_id)
+        return redirect(url_for("login.login"))
 
     marks_data = svc.get_marks(token)
 
@@ -1163,13 +1165,14 @@ def index():
         log.info("index: token expired for user=%.8s, reauthenticating", user_id)
         token = svc.reauth(user_id)
         if not token:
-            session.clear()
-            return redirect(url_for("welcome"))
+            log.warning("index: reauth failed for user=%.8s, redirecting to login", user_id)
+            return redirect(url_for("login.login"))
         marks_data = svc.get_marks(token)
         if marks_data.get("status_code") == 401:
-            log.warning("index: reauth still returned 401 for user=%.8s", user_id)
+            # Password likely changed in Bakaláři — need fresh credentials
+            log.warning("index: reauth still returned 401 for user=%.8s, redirecting to login", user_id)
             session.clear()
-            return redirect(url_for("welcome"))
+            return redirect(url_for("login.login"))
 
     if "error" in marks_data:
         subjects    = None
