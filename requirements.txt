@@ -7,3 +7,8 @@ pywebpush
 APScheduler
 waitress
 Flask-Babel
+Flask-WTF
+Flask-Limiter
+nh3
+ddgs
+stripe

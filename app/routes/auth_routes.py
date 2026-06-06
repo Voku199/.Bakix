@@ -3,6 +3,7 @@ import logging
 import requests as _http
 from flask import Blueprint, request, jsonify
 
+from app.extensions import limiter
 from app.services.bakalari import BakalariService
 
 log = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ _SCHOOLS_API = "https://sluzby.bakalari.cz/api/v1/school/"
 # ── School search & validation ────────────────────────────────────────────────
 
 @auth_bp.route("/api/schools/search")
+@limiter.limit("30 per minute")
 def schools_search():
     query = request.args.get("q", "").strip()
     if len(query) < 2:
@@ -40,6 +42,7 @@ def schools_search():
 
 
 @auth_bp.route("/api/validate-school")
+@limiter.limit("30 per minute")
 def validate_school():
     url = request.args.get("url", "").strip()
     if not url:

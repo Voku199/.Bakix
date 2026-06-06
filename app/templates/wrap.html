@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+{% block title %}Bakix Wrap{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Break out of container ───────────────────────────────── */
+main.container {
+  padding: 0 !important;
+  max-width: none !important;
+}
+
+/* ── Root experience ──────────────────────────────────────── */
+.wx {
+  position: relative;
+  width: 100%;
+  height: calc(100svh - var(--header-h));
+  overflow: hidden;
+  background: #0d0d0d;
+  font-family: var(--font);
+  touch-action: none; /* handle all touch manually */
+}
+
+/* ── Instagram-style progress bars ───────────────────────── */
+.wx-bars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  gap: 3px;
+  padding: 10px 12px;
+  pointer-events: none;
+}
+
+.wx-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,.22);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wx-bar__fill {
+  height: 100%;
+  background: #fff;
+  width: 0;
+  border-radius: 2px;
+}
+
+.wx-bar--done .wx-bar__fill {
+  width: 100% !important;
+  transition: none !important;
+}
+
+.wx-bar--active .wx-bar__fill {
+  animation: wxbar var(--dur, 5s) linear forwards;
+}
+
+.wx-bar--paused .wx-bar__fill {
+  animation-play-state: paused;
+}
+
+@keyframes wxbar { to { width: 100%; } }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.wx-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2.5rem 3rem;
+  text-align: center;
+  transform: translateX(100%);
+  transition: transform .4s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
+}
+
+.wx-card--active { transform: translateX(0); }
+.wx-card--past   { transform: translateX(-100%); }
+
+/* ── Themes ───────────────────────────────────────────────── */
+.wx-card--intro  { background: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
+.wx-card--blue   { background: linear-gradient(150deg,#1a4a7a 0%,#060f22 100%); }
+.wx-card--green  { background: linear-gradient(150deg,#155f3e 0%,#032215 100%); }
+.wx-card--purple { background: linear-gradient(150deg,#4e2880 0%,#1a0838 100%); }
+.wx-card--gold   { background: linear-gradient(150deg,#7d4f0e 0%,#2a1600 100%); }
+.wx-card--teal   { background: linear-gradient(150deg,#0f6565 0%,#022222 100%); }
+.wx-card--outro  { background: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
+
+/* Soft radial light at center */
+.wx-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 55% at 50% 35%,
+    rgba(255,255,255,.09) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* ── Content elements — all start invisible ───────────────── */
+.wx-emoji {
+  font-size: 3.25rem;
+  line-height: 1;
+  margin-bottom: 1.4rem;
+  display: block;
+  opacity: 0;
+  transform: scale(.3) translateY(10px);
+  transition:
+    opacity  .45s  .05s cubic-bezier(.34,1.56,.64,1),
+    transform .55s .05s cubic-bezier(.34,1.56,.64,1);
+}
+
+.wx-number {
+  font-size: clamp(4rem, 19vw, 7.5rem);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -4px;
+  margin-bottom: .55rem;
+  text-shadow: 0 4px 28px rgba(0,0,0,.5);
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .4s .2s, transform .5s .2s cubic-bezier(.4,0,.2,1);
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.6);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 1.15rem;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .38s .42s, transform .42s .42s;
+}
+
+.wx-context {
+  font-size: .79rem;
+  color: rgba(255,255,255,.42);
+  max-width: 250px;
+  line-height: 1.65;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .38s .65s, transform .42s .65s;
+}
+
+/* ── Activate: reveal all ─────────────────────────────────── */
+.wx-card--active .wx-emoji,
+.wx-card--active .wx-number,
+.wx-card--active .wx-label,
+.wx-card--active .wx-context {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Intro card extras ────────────────────────────────────── */
+.wx-intro-eyebrow {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.4);
+  margin-bottom: .9rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .38s .05s, transform .42s .05s;
+}
+.wx-card--active .wx-intro-eyebrow { opacity: 1; transform: none; }
+
+.wx-intro-title {
+  font-size: clamp(2.2rem, 11vw, 3.8rem);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.05;
+  letter-spacing: -2.5px;
+  margin-bottom: .8rem;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .45s .15s, transform .55s .15s cubic-bezier(.4,0,.2,1);
+}
+.wx-card--active .wx-intro-title { opacity: 1; transform: none; }
+
+.wx-intro-period {
+  font-size: .7rem;
+  color: rgba(255,255,255,.35);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .38s .4s, transform .42s .4s;
+}
+.wx-card--active .wx-intro-period { opacity: 1; transform: none; }
+
+.wx-intro-cta {
+  position: absolute;
+  bottom: 2.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: .65rem;
+  color: rgba(255,255,255,.35);
+  letter-spacing: .5px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .4s .85s;
+  pointer-events: none;
+}
+.wx-card--active .wx-intro-cta { opacity: 1; }
+
+.wx-intro-cta__arrow {
+  display: inline-block;
+  animation: wx-nudge 1.4s ease-in-out infinite;
+}
+@keyframes wx-nudge {
+  0%,100% { transform: translateX(0); }
+  50%      { transform: translateX(5px); }
+}
+
+/* ── Outro extras ─────────────────────────────────────────── */
+.wx-outro-btn {
+  display: inline-block;
+  margin-top: 1.6rem;
+  padding: .65rem 1.6rem;
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 100px;
+  color: #fff;
+  font-family: var(--font);
+  font-size: .73rem;
+  text-decoration: none;
+  letter-spacing: .5px;
+  opacity: 0;
+  transform: translateY(10px) scale(.97);
+  transition: opacity .38s .75s, transform .45s .75s, background .15s;
+}
+.wx-card--active .wx-outro-btn { opacity: 1; transform: none; }
+.wx-outro-btn:hover { background: rgba(255,255,255,.25); }
+
+/* ── Tap zones (left/right) ───────────────────────────────── */
+.wx-tap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  z-index: 40;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wx-tap--prev { left:  0; }
+.wx-tap--next { right: 0; }
+
+/* ── Loading / error ──────────────────────────────────────── */
+.wx-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  background: #0d0d0d;
+  z-index: 60;
+}
+.wx-loading__ring {
+  width: 30px; height: 30px;
+  border: 2.5px solid rgba(255,255,255,.15);
+  border-top-color: rgba(255,255,255,.7);
+  border-radius: 50%;
+  animation: wxspin .75s linear infinite;
+}
+@keyframes wxspin { to { transform: rotate(360deg); } }
+.wx-loading__text { font-size: .75rem; color: rgba(255,255,255,.3); letter-spacing: .5px; }
+
+.wx-error {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.wx-error__msg { font-size: .8rem; color: rgba(255,80,80,.8); }
+.wx-error__back {
+  padding: .5rem 1.2rem;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 100px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .72rem;
+  font-family: var(--font);
+}
+</style>
+{% endblock %}
+
+{% block header_actions %}
+  <a href="/" class="btn btn--icon" title="{{ _('Zpět') }}" aria-label="{{ _('Zpět') }}">←</a>
+{% endblock %}
+
+{% block content %}
+<div class="wx" id="wx" aria-label="Bakix Wrap">
+
+  {# Loading state #}
+  <div class="wx-loading" id="wx-loading">
+    <div class="wx-loading__ring"></div>
+    <span class="wx-loading__text">Načítám statistiky…</span>
+    <div class="wx-error" id="wx-error">
+      <span class="wx-error__msg">Nepodařilo se načíst data.</span>
+      <a href="/" class="wx-error__back">← Zpět</a>
+    </div>
+  </div>
+
+  {# Progress bars (filled by JS) #}
+  <div class="wx-bars" id="wx-bars"></div>
+
+  {# Cards container #}
+  <div id="wx-cards"></div>
+
+  {# Tap zones #}
+  <div class="wx-tap wx-tap--prev" id="wx-prev" role="button" aria-label="Předchozí" tabindex="0"></div>
+  <div class="wx-tap wx-tap--next" id="wx-next" role="button" aria-label="Další"     tabindex="0"></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+'use strict';
+
+var CARD_DURATION = 5500; // ms per card
+var COUNT_DURATION = 1100; // ms for number counter
+
+var barsEl   = document.getElementById('wx-bars');
+var cardsEl  = document.getElementById('wx-cards');
+var loadEl   = document.getElementById('wx-loading');
+var errorEl  = document.getElementById('wx-error');
+var prevBtn  = document.getElementById('wx-prev');
+var nextBtn  = document.getElementById('wx-next');
+
+var cards   = [];
+var current = 0;
+var timer   = null;
+var paused  = false;
+var barFillEls = []; // refs to each bar's fill div
+var barStartTime = null; // when current bar animation started
+var barElapsed   = 0;    // ms elapsed before last pause
+
+// ── Context copy ─────────────────────────────────────────────────────────────
+var CTX = {
+  ai: function(n) {
+    if (n === 0)   return 'Začni chatovat — AI je tady pro tebe!';
+    if (n < 10)    return 'Dobrý začátek. AI čeká na každou otázku.';
+    if (n < 50)    return 'Máš to v ruce. Každá otázka se počítá.';
+    if (n < 200)   return 'Fakt to využíváš naplno. Respect!';
+    return 'Legenda. AI tu mluví hlavně kvůli tobě.';
+  },
+  days: function(n) {
+    if (n === 0)   return 'Zkus Bakix víc — víš, kde nás najít.';
+    if (n < 7)     return 'Solidní start. Pravidelnost je základ.';
+    if (n < 30)    return 'Skoro každý týden. Dobrá práce!';
+    if (n < 90)    return 'Bakix je tvůj spolehlivý parťák.';
+    return 'Bakix je součástí tvého každodenního života.';
+  },
+  hour: function(h) {
+    if (h < 6)               return 'Noční sova. Bakix nekouká na hodiny.';
+    if (h >= 6  && h < 9)    return 'Ranní ptáče dál doskáče!';
+    if (h >= 9  && h < 12)   return 'Dopoledne — mozek na plný výkon.';
+    if (h >= 12 && h < 15)   return 'Oběd a studium. Efektivní kombinace.';
+    if (h >= 15 && h < 18)   return 'Odpolední blok — klasika.';
+    if (h >= 18 && h < 22)   return 'Večerní student. Škola nikdy nespí.';
+    return 'Pozdní večer. Nebo brzy ráno. Jedno z toho.';
+  },
+  feature: function(name) {
+    var m = {
+      'Známky': 'Sledovat průměr je první krok k jedničce!',
+      'Úkoly':   'Organizovaný student = úspěšný student.',
+      'Zprávy':  'Nikdy tě nepřekvapí zpráva od učitele.',
+    };
+    return m[name] || 'Dobrá volba!';
+  }
+};
+
+// ── Build card definitions from API data ──────────────────────────────────────
+function buildDefs(d) {
+  var defs = [
+    {
+      id: 'intro', theme: 'intro',
+      year: d.year, period: d.period_label
+    },
+    {
+      id: 'ai', theme: 'blue',
+      emoji: '✦',
+      number: d.total_ai_messages,
+      isNum: true,
+      label: 'AI zpráv odesláno',
+      ctx: CTX.ai(d.total_ai_messages)
+    },
+    {
+      id: 'days', theme: 'green',
+      emoji: '📅',
+      number: d.active_days,
+      isNum: true,
+      label: 'aktivních dní',
+      ctx: CTX.days(d.active_days)
+    }
+  ];
+
+  if (d.most_active_hour !== null && d.most_active_hour !== undefined) {
+    defs.push({
+      id: 'hour', theme: 'purple',
+      emoji: '⏰',
+      number: d.most_active_hour_label || (pad(d.most_active_hour) + ':00'),
+      isNum: false,
+      label: 'nejaktivnější hodina',
+      ctx: CTX.hour(d.most_active_hour)
+    });
+  }
+
+  defs.push({
+    id: 'feature', theme: 'gold',
+    emoji: '⭐',
+    number: d.top_feature,
+    isNum: false,
+    label: 'nejoblibenejší funkce',
+    ctx: CTX.feature(d.top_feature)
+  });
+
+  if (d.most_active_weekday) {
+    defs.push({
+      id: 'weekday', theme: 'teal',
+      emoji: '📆',
+      number: d.most_active_weekday,
+      isNum: false,
+      label: 'nejoblibenejší den',
+      ctx: 'V tento den jsi byl(a) nejproduktivnější.'
+    });
+  }
+
+  defs.push({ id: 'outro', theme: 'outro' });
+
+  return defs;
+}
+
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+// ── Render all cards + bars into DOM ──────────────────────────────────────────
+function render(defs) {
+  cardsEl.innerHTML = '';
+  barsEl.innerHTML  = '';
+  cards = [];
+  barFillEls = [];
+
+  defs.forEach(function (def, i) {
+    // card
+    var card = document.createElement('div');
+    card.className = 'wx-card wx-card--' + def.theme;
+    card.setAttribute('aria-hidden', 'true');
+    card.innerHTML = cardHTML(def);
+    cardsEl.appendChild(card);
+    cards.push({ el: card, def: def });
+
+    // bar
+    var bar  = document.createElement('div');
+    bar.className = 'wx-bar';
+    var fill = document.createElement('div');
+    fill.className = 'wx-bar__fill';
+    bar.appendChild(fill);
+    barsEl.appendChild(bar);
+    barFillEls.push({ bar: bar, fill: fill });
+  });
+
+  goTo(0, false);
+}
+
+function cardHTML(def) {
+  if (def.id === 'intro') {
+    return (
+      '<span class="wx-intro-eyebrow">Bakix &bull; ' + def.year + '</span>' +
+      '<h1 class="wx-intro-title">Bakix<br>Wrap</h1>' +
+      '<p class="wx-intro-period">' + escH(def.period) + '</p>' +
+      '<span class="wx-intro-cta">Klepni doprava <span class="wx-intro-cta__arrow">&#8594;</span></span>'
+    );
+  }
+  if (def.id === 'outro') {
+    return (
+      '<span class="wx-emoji">🎉</span>' +
+      '<p class="wx-number" style="font-size:clamp(1.6rem,8vw,2.8rem);letter-spacing:-1px;">To je vše!</p>' +
+      '<p class="wx-label">Děkujeme, že používáš Bakix</p>' +
+      '<p class="wx-context">Těšíme se na příští Wrap!</p>' +
+      '<a href="/" class="wx-outro-btn">← Zpět na dashboard</a>'
+    );
+  }
+  return (
+    '<span class="wx-emoji">' + def.emoji + '</span>' +
+    '<span class="wx-number" id="wxn-' + def.id + '">' + escH('' + def.number) + '</span>' +
+    '<span class="wx-label">'   + escH(def.label) + '</span>' +
+    '<span class="wx-context">' + escH(def.ctx)   + '</span>'
+  );
+}
+
+function escH(s) {
+  return ('' + s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Goto a card index ──────────────────────────────────────────────────────────
+function goTo(idx, animate) {
+  if (animate === undefined) animate = true;
+
+  clearTimer();
+
+  // Update card classes
+  cards.forEach(function (c, i) {
+    c.el.classList.remove('wx-card--active', 'wx-card--past');
+    c.el.setAttribute('aria-hidden', 'true');
+    if (i < idx) {
+      c.el.classList.add('wx-card--past');
+    } else if (i === idx) {
+      c.el.classList.add('wx-card--active');
+      c.el.setAttribute('aria-hidden', 'false');
+    }
+  });
+
+  // Update bars
+  barFillEls.forEach(function (b, i) {
+    b.bar.classList.remove('wx-bar--done', 'wx-bar--active', 'wx-bar--paused');
+    b.fill.style.animation = 'none';
+    b.fill.style.width     = '0';
+    if (i < idx) {
+      b.bar.classList.add('wx-bar--done');
+    } else if (i === idx) {
+      // force reflow, then start animation
+      void b.fill.offsetWidth;
+      b.fill.style.animation = '';
+      b.bar.classList.add('wx-bar--active');
+      b.fill.style.setProperty('--dur', (CARD_DURATION / 1000) + 's');
+    }
+  });
+
+  current = idx;
+  barStartTime = Date.now();
+  barElapsed   = 0;
+  paused       = false;
+
+  // Animate number if applicable
+  var def = cards[idx].def;
+  if (def.isNum && animate) {
+    var el = document.getElementById('wxn-' + def.id);
+    if (el) {
+      el.textContent = '0';
+      setTimeout(function () {
+        animateCount(el, def.number, COUNT_DURATION);
+      }, 350);
+    }
+  }
+
+  // Auto-advance (skip for last card)
+  if (idx < cards.length - 1) {
+    timer = setTimeout(function () {
+      if (!paused) next();
+    }, CARD_DURATION);
+  }
+}
+
+// ── Counter animation ──────────────────────────────────────────────────────────
+function animateCount(el, target, duration) {
+  var start = performance.now();
+  function tick(now) {
+    var t = Math.min((now - start) / duration, 1);
+    var ease = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(target * ease);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function next() {
+  if (current < cards.length - 1) goTo(current + 1);
+}
+
+function prev() {
+  if (current > 0) goTo(current - 1);
+}
+
+function clearTimer() {
+  if (timer) { clearTimeout(timer); timer = null; }
+}
+
+// ── Pause / resume ─────────────────────────────────────────────────────────────
+function pauseBar() {
+  if (paused) return;
+  paused = true;
+  clearTimer();
+  barElapsed += Date.now() - barStartTime;
+  var b = barFillEls[current];
+  if (b) b.bar.classList.add('wx-bar--paused');
+}
+
+function resumeBar() {
+  if (!paused) return;
+  paused = false;
+  barStartTime = Date.now();
+  var b = barFillEls[current];
+  if (b) b.bar.classList.remove('wx-bar--paused');
+  var remaining = CARD_DURATION - barElapsed;
+  if (remaining > 0 && current < cards.length - 1) {
+    timer = setTimeout(function () { if (!paused) next(); }, remaining);
+  }
+}
+
+// ── Input handling ─────────────────────────────────────────────────────────────
+var _touchStartX  = null;
+var _touchStartY  = null;
+var _touchHold    = null;
+var _didSwipe     = false;
+
+var wxEl = document.getElementById('wx');
+
+// Touch
+wxEl.addEventListener('touchstart', function (e) {
+  _touchStartX = e.touches[0].clientX;
+  _touchStartY = e.touches[0].clientY;
+  _didSwipe    = false;
+  _touchHold   = setTimeout(function () { pauseBar(); }, 120);
+}, { passive: true });
+
+wxEl.addEventListener('touchmove', function (e) {
+  if (_touchStartX === null) return;
+  var dx = Math.abs(e.touches[0].clientX - _touchStartX);
+  var dy = Math.abs(e.touches[0].clientY - _touchStartY);
+  if (dx > 10 || dy > 10) _didSwipe = true;
+}, { passive: true });
+
+wxEl.addEventListener('touchend', function (e) {
+  if (_touchHold) { clearTimeout(_touchHold); _touchHold = null; }
+  if (paused) { resumeBar(); return; }
+  if (_didSwipe) { return; }
+
+  var x   = e.changedTouches[0].clientX;
+  var w   = wxEl.offsetWidth;
+  if (x < w * 0.3) prev();
+  else              next();
+}, { passive: true });
+
+// Mouse (desktop)
+prevBtn.addEventListener('click', prev);
+nextBtn.addEventListener('click', next);
+
+// Keyboard
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowRight' || e.key === ' ')  { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft')                    { e.preventDefault(); prev(); }
+});
+
+// ── Fetch and boot ──────────────────────────────────────────────────────────────
+fetch('/api/wrap/data')
+  .then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function (data) {
+    loadEl.style.display = 'none';
+    render(buildDefs(data));
+  })
+  .catch(function () {
+    loadEl.querySelector('.wx-loading__ring').style.display = 'none';
+    loadEl.querySelector('.wx-loading__text').style.display = 'none';
+    errorEl.style.display = 'flex';
+  });
+
+})();
+</script>
+{% endblock %}

@@ -3,11 +3,18 @@ import os
 from urllib.parse import quote
 
 import requests
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 log = logging.getLogger(__name__)
+
+# TLS certificate verification is ON by default. Credentials, passwords and
+# bearer tokens travel over this connection, so disabling verification (the old
+# behaviour) was a man-in-the-middle hole. Set BAKALARI_INSECURE_SSL=true only
+# for a local box with a self-signed cert.
+_VERIFY_SSL = os.getenv("BAKALARI_INSECURE_SSL", "").strip().lower() not in ("1", "true", "yes")
+if not _VERIFY_SSL:
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    log.warning("BAKALARI_INSECURE_SSL is set — TLS verification DISABLED (dev only)")
 
 
 class BakalariService:
@@ -16,15 +23,17 @@ class BakalariService:
     _MARKS       = "/api/3/marks"
     _TIMETABLE   = "/api/3/timetable/actual"
     _HOMEWORKS   = "/api/3/homeworks"
-    _KOMENS      = "/api/3/komens/messages/received"
-    _KOMENS_READ = "/api/3/komens/messages/read"
+    _KOMENS       = "/api/3/komens/messages/received"
+    _KOMENS_READ  = "/api/3/komens/messages/read"
+    _KOMENS_SEND  = "/api/3/komens/message"
+    _KOMENS_TYPES = "/api/3/komens/message-types"
     _THEMES      = "/api/3/subjects/themes/{subject_id}"
     _ABSENCE     = "/api/3/absence/student"
 
     def __init__(self, base_url: str = ""):
         self._base = (base_url or os.getenv("BAKALARI_URL", "")).rstrip("/")
         self._session = requests.Session()
-        self._session.verify = False
+        self._session.verify = _VERIFY_SSL
 
     # ── School validation ────────────────────────────────────────────────────
 
@@ -34,7 +43,7 @@ class BakalariService:
         base = base_url.rstrip("/")
         for path in ("/api/3", "/api"):
             try:
-                r = requests.get(f"{base}{path}", timeout=6, verify=False)
+                r = requests.get(f"{base}{path}", timeout=6, verify=_VERIFY_SSL)
                 data = r.json()
                 if isinstance(data, dict) and "ApiVersion" in data:
                     return True
@@ -253,6 +262,63 @@ class BakalariService:
             return {"error": "Message not found", "status_code": 404}
         return {"error": "Failed to mark as read", "status_code": response.status_code}
 
+    def send_komens_message(
+        self,
+        access_token: str,
+        recipient_id: str,
+        subject: str,
+        content: str,
+        recipient_type: str = "U",
+    ) -> dict:
+        """Send a Komens message to a single recipient.
+
+        recipient_type: "U" = student/user (default), see komens_message-types for others.
+        Returns {"ok": True} on success, or {"error": ..., "status_code": ...} on failure.
+        """
+        payload = {
+            "MessageType":        "OBECNA",
+            "Title":              subject,
+            "Text":               content,
+            "RecipientType":      recipient_type,
+            "Recipients":         [recipient_id],
+            "Lifetime":           None,
+            "DateFrom":           None,
+            "DateTo":             None,
+            "PreviousMessageId":  None,
+            "CopyForClassTeacher": False,
+            "CopyForParent":      False,
+            "EmailNotification":  False,
+            "SendAsDirector":     False,
+            "RequireConfirmation": False,
+            "TypeOfRatingId":     None,
+            "Scale":              None,
+            "Attachments":        [],
+            "DraftDate":          None,
+        }
+        try:
+            response = self._session.post(
+                f"{self._base}{self._KOMENS_SEND}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type":  "application/json; charset=utf-8",
+                },
+                json=payload,
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("send_komens_message: request failed")
+            return {"error": "Send-message request failed"}
+        if response.status_code == 401:
+            log.warning("send_komens_message: unauthorized (token expired?)")
+            return {"error": "Unauthorized", "status_code": 401}
+        if not response.ok:
+            log.warning(
+                "send_komens_message: HTTP %s for recipient=%.8s",
+                response.status_code, recipient_id,
+            )
+            return {"error": "Failed to send message", "status_code": response.status_code}
+        return {"ok": True}
+
     def get_komens(self, access_token: str) -> dict:
         try:
             response = self._session.post(
@@ -269,6 +335,25 @@ class BakalariService:
             return response.json()
         except ValueError:
             log.exception("get_komens: non-JSON response (HTTP %s)", response.status_code)
+            return {"error": "Invalid JSON response", "status_code": response.status_code}
+
+    def get_message_types(self, access_token: str) -> dict:
+        """Fetch the list of available recipients for Komens messages."""
+        try:
+            response = self._session.get(
+                f"{self._base}{self._KOMENS_TYPES}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
+        except requests.RequestException:
+            log.exception("get_message_types: request failed")
+            return {"error": "Message-types request failed"}
+        if not response.ok:
+            return {"error": "Failed to fetch message types", "status_code": response.status_code}
+        try:
+            return response.json()
+        except ValueError:
+            log.exception("get_message_types: non-JSON response (HTTP %s)", response.status_code)
             return {"error": "Invalid JSON response", "status_code": response.status_code}
 
     def get_absences(self, access_token: str) -> dict:

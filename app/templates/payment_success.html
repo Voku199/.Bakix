@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Platba — Bakix{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:460px;margin:3rem auto;text-align:center;padding:2rem 1.5rem;">
+  {% if error %}
+    <div style="font-size:2.6rem;line-height:1;margin-bottom:.75rem;">⚠️</div>
+    <h1 style="font-size:1.25rem;margin:0 0 .5rem;">{{ _('Něco se nepovedlo') }}</h1>
+    <p style="color:var(--muted);margin:0 0 1.5rem;">{{ error }}</p>
+  {% elif paid %}
+    <div style="font-size:2.6rem;line-height:1;margin-bottom:.75rem;">✦</div>
+    <h1 style="font-size:1.25rem;margin:0 0 .5rem;">{{ _('Premium aktivováno!') }}</h1>
+    <p style="color:var(--muted);margin:0 0 .35rem;">
+      {{ _('Děkujeme za podporu. Máš teď 50 AI dotazů denně.') }}
+    </p>
+    {% if expires_at %}
+    <p style="color:var(--muted);font-size:.85rem;margin:0 0 1.5rem;">
+      {{ _('Platí do') }}: <strong>{{ expires_at }}</strong> (UTC)
+    </p>
+    {% endif %}
+  {% else %}
+    <div style="font-size:2.6rem;line-height:1;margin-bottom:.75rem;">⌛</div>
+    <h1 style="font-size:1.25rem;margin:0 0 .5rem;">{{ _('Platba se zpracovává') }}</h1>
+    <p style="color:var(--muted);margin:0 0 1.5rem;">
+      {{ _('Jakmile platbu potvrdíme, Premium se ti aktivuje automaticky.') }}
+    </p>
+  {% endif %}
+  <a href="/" class="btn btn--primary" style="text-decoration:none;">{{ _('Zpět do aplikace') }}</a>
+</div>
+{% endblock %}

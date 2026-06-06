@@ -1,10 +1,11 @@
 import logging
 import os
-import secrets
 from datetime import timedelta
 from pathlib import Path
 from flask import Flask, redirect, render_template, request, session, url_for
 from flask_babel import Babel, _
+
+from app.secret import get_secret_key
 
 log = logging.getLogger(__name__)
 
@@ -14,24 +15,6 @@ _AUTH_EXEMPT = frozenset({
     "/login", "/login/now", "/login-demo", "/logout",
     "/cookies", "/privacy", "/tos",
 })
-
-
-def _load_secret_key() -> str:
-    """Return SECRET_KEY from env, or generate-and-persist one in the instance folder.
-
-    Using os.urandom() as the default means a new key on every restart, which
-    invalidates all existing sessions. Instead we generate the key once and
-    store it in instance/secret_key so it survives restarts.
-    """
-    if key := os.getenv("SECRET_KEY"):
-        return key
-    key_path = Path(__file__).parent.parent / "instance" / "secret_key"
-    key_path.parent.mkdir(exist_ok=True)
-    if key_path.exists():
-        return key_path.read_text().strip()
-    new_key = secrets.token_hex(32)
-    key_path.write_text(new_key)
-    return new_key
 
 
 def _compile_translations(app) -> None:
@@ -56,13 +39,24 @@ def _compile_translations(app) -> None:
 def create_app():
     app = Flask(__name__)
 
+    _debug = os.getenv("DEBUG", "False").strip().lower() in ("1", "true", "yes")
+
     app.config.update(
-        SECRET_KEY=_load_secret_key(),
+        SECRET_KEY=get_secret_key(),
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=os.getenv("FLASK_ENV") == "production",
+        # Secure cookies everywhere except local debug (single DEBUG switch,
+        # no separate FLASK_ENV to keep in sync).
+        SESSION_COOKIE_SECURE=not _debug,
+        # CSRF tokens are tied to the session, which slides for 30 days — so the
+        # token must not expire sooner than the session it belongs to.
+        WTF_CSRF_TIME_LIMIT=None,
     )
+
+    from app.extensions import csrf, limiter
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     babel = Babel()
     app.config["BABEL_TRANSLATION_DIRECTORIES"] = str(Path(app.root_path).parent / "translations")
@@ -85,11 +79,17 @@ def create_app():
     from app.routes.login import login_bp
     from app.routes.proxy_routes import proxy_bp  # PROXY_Bakix-mirrored endpoints
     from app.routes.push import push_bp            # push.py — definitive blueprint
+    from app.routes.payment_routes import payment_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(bakalari_bp)
     app.register_blueprint(login_bp)
     app.register_blueprint(proxy_bp)
     app.register_blueprint(push_bp)
+    app.register_blueprint(payment_bp)
+
+    # The Stripe webhook is a server-to-server POST with no session cookie and
+    # its own HMAC signature check — CSRF would only ever reject it.
+    csrf.exempt(app.view_functions["payment.webhook"])
 
     # ── Page routes ──────────────────────────────────────────────────────────
     # Endpoints are "welcome" / "onboarding" so url_for("welcome") works in

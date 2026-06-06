@@ -1,4 +1,19 @@
-.pyc
+# Python bytecode
+*.pyc
+__pycache__/
+
+# Secrets & local config
 .env
-__pycache__
-.certs
+.certs/
+
+# Flask instance folder (SQLite DB, session data)
+instance/
+
+# Babel extraction temp file (generated, not source)
+messages.pot
+
+# Test runner cache
+.pytest_cache/
+
+# Reference docs (not source code)
+bakalari-api-v3-master/

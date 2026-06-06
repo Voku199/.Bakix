@@ -17,12 +17,13 @@ Bakix se přihlásí do Bakalářů za tebe, stáhne tvoje data (známky, rozvrh
 | Oblast | Co umí |
 |--------|--------|
 | **Bakaláři** | Přihlášení, známky, rozvrh, domácí úkoly, Komens zprávy, suplování |
-| **AI chat** | Google Gemini (fallback na OpenRouter), perzistentní historie konverzace |
-| **Studijní stránky** | AI generuje self-contained HTML stránky s kvízem a poznámkami pro slabé předměty |
+| **AI chat** | Google Gemini (fallback na OpenRouter), více oddělených chatů s historií (✚ nový chat, 🗂 přepínání), perzistentní napříč reloadem |
+| **Studijní stránky** | AI generuje self-contained HTML stránky s kvízem, poznámkami a matematikou v LaTeXu (vykreslení přes KaTeX) pro slabé předměty |
 | **Push notifikace** | Večerní připomínka rozvrhu (každý den 18:00), týdenní AI shrnutí (neděle 8:00) |
 | **Skilly** | Vlastní AI persony — vytvoříš je chatovým příkazem `/skill create` |
 | **Cache** | AI odpovědi se cachují v SQLite (TTL 1 hodina), žádné zbytečné volání API |
 | **HTTPS** | Volitelné HTTPS přes vlastní certifikát |
+| **Premium** | Odemyká: 50 AI dotazů/den (free 5), režim Přemýšlení, Pro modely (Gemini 3.x), neomezené chaty (free 3), studijní stránky (free 3) a skilly (free 1) |
 
 ---
 
@@ -118,8 +119,9 @@ openssl req -x509 -newkey rsa:4096 -keyout .certs/dev-key.pem \
 | `AUTO_LOGIN_URL` | URL školy pro automatické přihlášení v debug módu |
 | `AUTO_LOGIN_USER` | Uživatelské jméno pro auto-login |
 | `GEMINI_API_KEY` | Google Gemini API klíč |
-| `GEMINI_MODEL` | Model (výchozí `gemini-2.0-flash`) |
+| `GEMINI_MODEL` | Výchozí Gemini model (default `gemini-3.1-flash-lite`); konkrétní model lze přepnout i per-request z UI, viz registr `_MODELS` v `gemini_service.py` |
 | `OPENROUTER_API_KEY` | Fallback API klíč pro OpenRouter |
+| `BAKALARI_INSECURE_SSL` | `true` vypne ověřování TLS certifikátu Bakalářů — **jen pro lokální dev** se self-signed certem; v produkci nechat nenastavené |
 | `VAPID_PRIVATE_KEY` | VAPID privátní klíč (base64url) pro Web Push |
 | `VAPID_PUBLIC_KEY` | VAPID veřejný klíč |
 | `VAPID_MAILTO` | Kontaktní e-mail pro VAPID |
@@ -133,12 +135,16 @@ SQLite soubor se vytvoří automaticky v `instance/` při prvním spuštění.
 | Tabulka | Co ukládá |
 |---------|-----------|
 | `saved_credentials` | Šifrované přihlašovací údaje + tokeny |
-| `conversation_history` | Chat historie (max 40 turns na uživatele) |
+| `conversations` | Seznam chatů uživatele (více oddělených konverzací, jako v ChatGPT) |
+| `conversation_history` | Chat historie (max 40 turns na konverzaci, sloupec `conversation_id`) |
 | `gemini_cache` | Cachované AI odpovědi (1 hodina TTL) |
 | `push_subscriptions` | Web Push endpointy a VAPID klíče |
 | `skills` | Vlastní AI persony uživatelů |
 | `pending_skills` | Stav průvodce tvorbou skilu |
 | `api_cache` | Obecná API cache |
+| `generated_pages` | AI vygenerované studijní stránky (dřív soubory v `instance/generated/`, migrují se automaticky při startu) |
+| `payments` | Audit trail Stripe plateb (idempotentní fulfilment) |
+| `ai_usage_log` | Záznamy AI requestů pro rate-limit účtování |
 
 ---
 
@@ -152,4 +158,11 @@ python-dotenv
 google-genai
 pywebpush
 APScheduler
+waitress
+Flask-Babel
+Flask-WTF        # CSRF ochrana
+Flask-Limiter    # rate-limiting
+nh3
+ddgs
+stripe
 ```

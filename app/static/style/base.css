@@ -158,6 +158,13 @@ body {
   border:     1px solid var(--border);
 }
 
+.btn--danger {
+  background: transparent;
+  color:      #e53935;
+  border:     1px solid #e53935;
+}
+.btn--danger:hover { background: #e53935; color: #fff; }
+
 .btn--icon {
   padding:        6px 8px;
   background:     transparent;

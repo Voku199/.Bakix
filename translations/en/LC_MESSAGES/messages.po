@@ -1,357 +1,610 @@
 # English translations for Bakix
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-06-06 16:15+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
-
-msgid "Bakix — Přihlášení"
-msgstr "Bakix — Sign In"
-
-msgid "Vítejte zpět"
-msgstr "Welcome back"
-
-msgid "Přihlaste se ke svému účtu Bakalářů"
-msgstr "Sign in to your Bakaláře account"
-
-msgid "Načítám školu…"
-msgstr "Loading school…"
-
-msgid "Změnit adresu školy"
-msgstr "Change school address"
-
-msgid "Změnit"
-msgstr "Change"
-
-msgid "URL školy"
-msgstr "School URL"
-
-msgid "Uživatelské jméno"
-msgstr "Username"
-
-msgid "Heslo"
-msgstr "Password"
-
-msgid "Zapamatovat přihlašovací jméno a školu"
-msgstr "Remember my username and school"
-
-msgid "Přihlásit se"
-msgstr "Sign in"
-
-msgid "Nový uživatel?"
-msgstr "New user?"
-
-msgid "Nastavit účet →"
-msgstr "Set up account →"
-
-msgid "Bezpečnost"
-msgstr "Security"
-
-msgid "Škola"
-msgstr "School"
-
-msgid "Jak Bakix zachází s vašimi daty"
-msgstr "How Bakix handles your data"
-
-msgid "Přihlašovací údaje šifrované"
-msgstr "Credentials encrypted"
-
-msgid "Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128) výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám."
-msgstr "Bakix stores your credentials in encrypted form (Fernet / AES-128) exclusively for automatic access renewal after token expiry. Your password is never logged or shared with third parties."
-
-msgid "Přihlašovací tokeny v session"
-msgstr "Session login tokens"
-
-msgid "Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný token platný 8 hodin. Po odhlášení je smazán."
-msgstr "Bakix works like the Bakaláře mobile app — it holds a temporary token valid for 8 hours. It is deleted on logout."
-
-msgid "Šifrované připojení"
-msgstr "Encrypted connection"
-
-msgid "Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i serverem školy."
-msgstr "All communication uses HTTPS — between your browser, Bakix, and the school server."
-
-msgid "Data přímo ze školy"
-msgstr "Data directly from school"
-
-msgid "Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí stranou."
-msgstr "Bakix calls your school Bakaláře API directly — data does not pass through any third party."
-
-msgid "Rozumím, pokračovat →"
-msgstr "Understood, continue →"
-
-msgid "Adresa školy"
-msgstr "School address"
-
-msgid "Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů."
-msgstr "Enter your school URL. Bakix will verify that a Bakaláře server is running there before asking for your credentials."
-
-msgid "Bez https:// — např. zstsobra.bakalari.cz"
-msgstr "Without https:// — e.g. zstsobra.bakalari.cz"
-
-msgid "← Zpět"
-msgstr "← Back"
-
-msgid "Ověřit a pokračovat →"
-msgstr "Verify and continue →"
-
-msgid "Přihlašovací údaje"
-msgstr "Login credentials"
-
-msgid "Stejné údaje jako do mobilní aplikace nebo webových Bakalářů."
-msgstr "Same credentials as the mobile app or web Bakaláře."
-
-msgid "Připojit se"
-msgstr "Connect"
-
-msgid "Přepnout téma"
-msgstr "Toggle theme"
-
-msgid "Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — přístupné, krásné, chytré."
-msgstr "A clean dashboard for Bakaláře. Grades, schedule, and substitutions — accessible, beautiful, smart."
-
-msgid "Začít zdarma"
-msgstr "Get started free"
-
-msgid "Zjistit více"
-msgstr "Learn more"
-
-msgid "Demo verze"
-msgstr "Demo version"
-
-msgid "Co Bakix umí"
-msgstr "What Bakix can do"
-
-msgid "Vše, co potřebujete."
-msgstr "Everything you need."
-
-msgid "Na jednom místě."
-msgstr "In one place."
-
-msgid "Výsledky"
-msgstr "Results"
-
-msgid "Přehled Známek"
-msgstr "Grade Overview"
-
-msgid "Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte přesně, kde stojíte a co vás čeká."
-msgstr "All subjects and averages at a glance. Trend development over time — you always know where you stand."
-
-msgid "AI asistent"
-msgstr "AI assistant"
-
-msgid "Chytrá Analýza"
-msgstr "Smart Analysis"
-
-msgid "Predikce průměrů, analýza trendů a personalizované rady — powered by AI."
-msgstr "Grade predictions, trend analysis and personalised advice — powered by AI."
-
-msgid "Aktuální Rozvrh"
-msgstr "Current Schedule"
-
-msgid "Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás čeká."
-msgstr "Schedule directly from Bakaláře. Substitutions clearly marked — you always know what to expect."
-
-msgid "Absence & Docházka"
-msgstr "Absence & Attendance"
-
-msgid "Přehled omluvených i neomluvených hodin. Žádné překvapení na konci pololetí."
-msgstr "Overview of excused and unexcused absences. No surprises at the end of term."
-
-msgid "Zdarma. Navždy."
-msgstr "Free. Forever."
-
-msgid "Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí přihlašovací údaje z Bakalářů — a jste uvnitř."
-msgstr "Core features are and will remain free. No registration — just your Bakaláře credentials and you are in."
-
-msgid "Připraveni začít?"
-msgstr "Ready to start?"
-
-msgid "Stačí přihlašovací údaje z Bakalářů."
-msgstr "All you need are your Bakaláře credentials."
-
-msgid "Žádná registrace, žádné heslo navíc."
-msgstr "No registration, no extra password."
-
-msgid "Kdo za tím stojí"
-msgstr "Who is behind this"
-
-msgid "Vytvořeno studenty"
-msgstr "Built by students"
-
-msgid "pro studenty."
-msgstr "for students."
-
-msgid "Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho školním datům — zdarma, navždy."
-msgstr "Bakix was born out of frustration with confusing school systems. Our goal is to give every student a clear, fast and beautiful access to their school data — free, forever."
-
-msgid "Podmínky použití"
-msgstr "Terms of Use"
-
-msgid "Ochrana soukromí"
-msgstr "Privacy Policy"
-
-msgid "Trend známek"
-msgstr "Grade trend"
-
-msgid "Předchozí předmět"
-msgstr "Previous subject"
-
-msgid "Další předmět"
-msgstr "Next subject"
-
-msgid "Výběr předmětu"
-msgstr "Select subject"
-
-msgid "Chyba přihlášení"
-msgstr "Login error"
-
-msgid "Dnes"
-msgstr "Today"
-
-msgid "Zítra"
-msgstr "Tomorrow"
-
-msgid "Úkoly"
-msgstr "Tasks"
-
-msgid "Zprávy"
-msgstr "Messages"
-
-msgid "Známky"
-msgstr "Grades"
-
-msgid "Kalkulačka průměru"
-msgstr "Grade average calculator"
-
-msgid "Co to je?"
-msgstr "What is this?"
-
-msgid "Předmět"
-msgstr "Subject"
-
-msgid "Chci průměr (např. 1.49)"
-msgstr "Target average (e.g. 1.49)"
-
-msgid "Spočítat"
-msgstr "Calculate"
-
-msgid "Moje projekty"
-msgstr "My projects"
-
-msgid "Zatím žádné projekty. Popros AI o vytvoření stránky!"
-msgstr "No projects yet. Ask AI to create a page!"
-
-msgid "Odhlásit se"
-msgstr "Sign out"
-
-msgid "Nastavení"
-msgstr "Settings"
-
-msgid "(vyplňte pro změnu)"
-msgstr "(fill in to change)"
-
-msgid "Zapamatovat heslo"
-msgstr "Remember password"
-
-msgid "Profil"
-msgstr "Profile"
-
-msgid "Zobrazované jméno"
-msgstr "Display name"
-
-msgid "Jak ti říkají?"
-msgstr "What do they call you?"
-
-msgid "Zobrazení"
-msgstr "Display"
-
-msgid "Téma"
-msgstr "Theme"
-
-msgid "Světlé"
-msgstr "Light"
-
-msgid "Tmavé"
-msgstr "Dark"
-
-msgid "Jazyk"
-msgstr "Language"
-
-msgid "Česky"
-msgstr "Czech"
-
-msgid "Notifikace"
-msgstr "Notifications"
-
-msgid "Kontrolovat každých"
-msgstr "Check every"
-
-msgid "1 minutu"
-msgstr "1 minute"
-
-msgid "5 minut"
-msgstr "5 minutes"
-
-msgid "15 minut"
-msgstr "15 minutes"
-
-msgid "30 minut"
-msgstr "30 minutes"
-
-msgid "1 hodinu"
-msgstr "1 hour"
-
-msgid "2 hodiny"
-msgstr "2 hours"
-
-msgid "Nové známky"
-msgstr "New grades"
-
-msgid "Změny rozvrhu"
-msgstr "Schedule changes"
-
-msgid "Denní shrnutí"
-msgstr "Daily summary"
-
-msgid "Absence"
-msgstr "Absences"
-
-msgid "Aplikace na plochu"
-msgstr "Add to home screen"
-
-msgid "Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci."
-msgstr "On desktop (Chrome/Edge) you can install Bakix as an app."
-
-msgid "Nainstalovat aplikaci"
-msgstr "Install app"
-
-msgid "Zrušit"
-msgstr "Cancel"
-
-msgid "Uložit"
-msgstr "Save"
-
-msgid "Zavřít"
-msgstr "Close"
-
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: app/templates/base.html:23 app/templates/welcome.html:27
 msgid "Jazyk se mění…"
 msgstr "Switching language…"
 
+#: app/templates/base.html:24
 msgid "Dnes máš volno, užij si den! ✦"
 msgstr "No classes today, enjoy your day! ✦"
 
+#: app/templates/base.html:25
 msgid "Žádné úkoly — skvělá práce! ✓"
 msgstr "No tasks — great work! ✓"
 
+#: app/templates/base.html:26
 msgid "Žádné nové zprávy. Klid a pohoda."
 msgstr "No new messages. All quiet."
 
+#: app/templates/base.html:27
 msgid "Žádné předměty."
 msgstr "No subjects."
 
+#: app/templates/base.html:28
 msgid "Síťová chyba."
 msgstr "Network error."
 
+#: app/templates/base.html:41 app/templates/index.html:324
+#: app/templates/welcome.html:41
+msgid "Jazyk"
+msgstr "Language"
+
+#: app/templates/base.html:45 app/templates/welcome.html:45
+msgid "Přepnout téma"
+msgstr "Toggle theme"
+
+#: app/templates/index.html:52 app/templates/index.html:384
+msgid "Odhlásit se"
+msgstr "Sign out"
+
+#: app/templates/index.html:54 app/templates/index.html:250
+#: app/templates/index.html:254
+msgid "Nastavení"
+msgstr "Settings"
+
+#: app/templates/index.html:63
+msgid "Trend známek"
+msgstr "Grade trend"
+
+#: app/templates/index.html:66
+msgid "Předchozí předmět"
+msgstr "Previous subject"
+
+#: app/templates/index.html:68
+msgid "Další předmět"
+msgstr "Next subject"
+
+#: app/templates/index.html:76
+msgid "Výběr předmětu"
+msgstr "Select subject"
+
+#: app/templates/index.html:83
+msgid "Chyba přihlášení"
+msgstr "Login error"
+
+#: app/templates/index.html:126 app/templates/index.html:255
+#: app/templates/index.html:409 app/templates/index.html:484
+#: app/templates/index.html:518
+msgid "Zavřít"
+msgstr "Close"
+
+#: app/templates/index.html:134
+msgid "Rozvrh"
+msgstr "Timetable"
+
+#: app/templates/index.html:136
+msgid "Dnes"
+msgstr "Today"
+
+#: app/templates/index.html:137
+msgid "Zítra"
+msgstr "Tomorrow"
+
+#: app/templates/index.html:144 app/templates/index.html:345
+msgid "Úkoly"
+msgstr "Tasks"
+
+#: app/templates/index.html:150 app/templates/index.html:341
+msgid "Zprávy"
+msgstr "Messages"
+
+#: app/templates/index.html:151 app/templates/index.html:480
+#: app/templates/index.html:483
+msgid "Nová zpráva"
+msgstr "New message"
+
+#: app/templates/index.html:151
+msgid "Napsat novou zprávu"
+msgstr "Write a new message"
+
+#: app/templates/index.html:157
+msgid "Známky"
+msgstr "Grades"
+
+#: app/templates/index.html:166
+msgid "Kalkulačka průměru"
+msgstr "Grade average calculator"
+
+#: app/templates/index.html:167
+msgid "Co to je?"
+msgstr "What is this?"
+
+#: app/templates/index.html:177 app/templates/index.html:494
+msgid "Předmět"
+msgstr "Subject"
+
+#: app/templates/index.html:181
+msgid "Chci průměr (např. 1.49)"
+msgstr "Target average (e.g. 1.49)"
+
+#: app/templates/index.html:184
+msgid "Spočítat"
+msgstr "Calculate"
+
+#: app/templates/index.html:192
+msgid "Moje projekty"
+msgstr "My projects"
+
+#: app/templates/index.html:204
+msgid "Zatím žádné projekty. Popros AI o vytvoření stránky!"
+msgstr "No projects yet. Ask AI to create a page!"
+
+#: app/templates/index.html:259 app/templates/onboarding.html:25
+#: app/templates/onboarding.html:111
+msgid "Přihlašovací údaje"
+msgstr "Login credentials"
+
+#: app/templates/index.html:261 app/templates/login.html:51
+#: app/templates/onboarding.html:90
+msgid "URL školy"
+msgstr "School URL"
+
+#: app/templates/index.html:265 app/templates/login.html:60
+#: app/templates/onboarding.html:119
+msgid "Uživatelské jméno"
+msgstr "Username"
+
+#: app/templates/index.html:270 app/templates/login.html:67
+#: app/templates/onboarding.html:126
+msgid "Heslo"
+msgstr "Password"
+
+#: app/templates/index.html:270
+msgid "(vyplňte pro změnu)"
+msgstr "(fill in to change)"
+
+#: app/templates/index.html:276
+msgid "Zapamatovat heslo"
+msgstr "Remember password"
+
+#: app/templates/index.html:280 app/templates/welcome.html:212
+msgid "Podmínky použití"
+msgstr "Terms of Use"
+
+#: app/templates/index.html:281 app/templates/welcome.html:213
+msgid "Ochrana soukromí"
+msgstr "Privacy Policy"
+
+#: app/templates/index.html:286
+msgid "Profil"
+msgstr "Profile"
+
+#: app/templates/index.html:288
+msgid "Zobrazované jméno"
+msgstr "Display name"
+
+#: app/templates/index.html:289
+msgid "Jak ti říkají?"
+msgstr "What do they call you?"
+
+#: app/templates/index.html:294
+msgid "Předplatné"
+msgstr "Subscription"
+
+#: app/templates/index.html:314
+msgid "Zobrazení"
+msgstr "Display"
+
+#: app/templates/index.html:316
+msgid "Téma"
+msgstr "Theme"
+
+#: app/templates/index.html:319
+msgid "Světlé"
+msgstr "Light"
+
+#: app/templates/index.html:320
+msgid "Tmavé"
+msgstr "Dark"
+
+#: app/templates/index.html:326
+msgid "Česky"
+msgstr "Czech"
+
+#: app/templates/index.html:333
+msgid "Notifikace"
+msgstr "Notifications"
+
+#: app/templates/index.html:349
+msgid "Nové známky"
+msgstr "New grades"
+
+#: app/templates/index.html:353
+msgid "Změny rozvrhu"
+msgstr "Schedule changes"
+
+#: app/templates/index.html:357
+msgid "Denní shrnutí"
+msgstr "Daily summary"
+
+#: app/templates/index.html:361 app/templates/welcome.html:133
+msgid "Absence"
+msgstr "Absences"
+
+#: app/templates/index.html:368
+msgid "Aplikace na plochu"
+msgstr "Add to home screen"
+
+#: app/templates/index.html:369
+msgid "Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci."
+msgstr "On desktop (Chrome/Edge) you can install Bakix as an app."
+
+#: app/templates/index.html:371
+msgid "Nainstalovat aplikaci"
+msgstr "Install app"
+
+#: app/templates/index.html:378 app/templates/index.html:503
+msgid "Zrušit"
+msgstr "Cancel"
+
+#: app/templates/index.html:379
+msgid "Uložit"
+msgstr "Save"
+
+#: app/templates/index.html:488
+msgid "Příjemce"
+msgstr "Recipient"
+
+#: app/templates/index.html:495
+msgid "Předmět zprávy…"
+msgstr "Message subject…"
+
+#: app/templates/index.html:498
+msgid "Text zprávy"
+msgstr "Message text"
+
+#: app/templates/index.html:499
+msgid "Napiš svou zprávu…"
+msgstr "Write your message…"
+
+#: app/templates/index.html:504
+msgid "Odeslat"
+msgstr "Send"
+
+#: app/templates/login.html:2 app/templates/onboarding.html:2
+msgid "Bakix — Přihlášení"
+msgstr "Bakix — Sign In"
+
+#: app/templates/login.html:18
+msgid "Vítejte zpět"
+msgstr "Welcome back"
+
+#: app/templates/login.html:19
+msgid "Přihlaste se ke svému účtu Bakalářů"
+msgstr "Sign in to your Bakaláře account"
+
+#: app/templates/login.html:43
+msgid "Změnit adresu školy"
+msgstr "Change school address"
+
+#: app/templates/login.html:45
+msgid "Načítám školu…"
+msgstr "Loading school…"
+
+#: app/templates/login.html:46
+msgid "Změnit"
+msgstr "Change"
+
+#: app/templates/login.html:76
+msgid "Zapamatovat přihlašovací jméno a školu"
+msgstr "Remember my username and school"
+
+#: app/templates/login.html:80 app/templates/welcome.html:48
+msgid "Přihlásit se"
+msgstr "Sign in"
+
+#: app/templates/login.html:87
+msgid "Nový uživatel?"
+msgstr "New user?"
+
+#: app/templates/login.html:87
+msgid "Nastavit účet →"
+msgstr "Set up account →"
+
+#: app/templates/onboarding.html:17
+msgid "Bezpečnost"
+msgstr "Security"
+
+#: app/templates/onboarding.html:21
+msgid "Škola"
+msgstr "School"
+
+#: app/templates/onboarding.html:34
+msgid "Jak Bakix zachází s vašimi daty"
+msgstr "How Bakix handles your data"
+
+#: app/templates/onboarding.html:40
+msgid "Přihlašovací údaje šifrované"
+msgstr "Credentials encrypted"
+
+#: app/templates/onboarding.html:42
+msgid ""
+"Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128)"
+" výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v "
+"čitelné podobě není nikdy logováno ani sdíleno třetím stranám."
+msgstr ""
+"Bakix stores your credentials in encrypted form (Fernet / AES-128) "
+"exclusively for automatic access renewal after token expiry. Your "
+"password is never logged or shared with third parties."
+
+#: app/templates/onboarding.html:49
+msgid "Přihlašovací tokeny v session"
+msgstr "Session login tokens"
+
+#: app/templates/onboarding.html:51
+msgid ""
+"Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný "
+"token platný 8 hodin. Po odhlášení je smazán."
+msgstr ""
+"Bakix works like the Bakaláře mobile app — it holds a temporary token "
+"valid for 8 hours. It is deleted on logout."
+
+#: app/templates/onboarding.html:58
+msgid "Šifrované připojení"
+msgstr "Encrypted connection"
+
+#: app/templates/onboarding.html:60
+msgid ""
+"Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i"
+" serverem školy."
+msgstr ""
+"All communication uses HTTPS — between your browser, Bakix, and the "
+"school server."
+
+#: app/templates/onboarding.html:67
+msgid "Data přímo ze školy"
+msgstr "Data directly from school"
+
+#: app/templates/onboarding.html:69
+msgid ""
+"Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí"
+" stranou."
+msgstr ""
+"Bakix calls your school Bakaláře API directly — data does not pass "
+"through any third party."
+
+#: app/templates/onboarding.html:77
+msgid "Rozumím, pokračovat →"
+msgstr "Understood, continue →"
+
+#: app/templates/onboarding.html:84
+msgid "Adresa školy"
+msgstr "School address"
+
+#: app/templates/onboarding.html:86
+msgid ""
+"Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server "
+"Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů."
+msgstr ""
+"Enter your school URL. Bakix will verify that a Bakaláře server is "
+"running there before asking for your credentials."
+
+#: app/templates/onboarding.html:94
+msgid "Bez https:// — např. zstsobra.bakalari.cz"
+msgstr "Without https:// — e.g. zstsobra.bakalari.cz"
+
+#: app/templates/onboarding.html:102 app/templates/onboarding.html:133
+msgid "← Zpět"
+msgstr "← Back"
+
+#: app/templates/onboarding.html:104
+msgid "Ověřit a pokračovat →"
+msgstr "Verify and continue →"
+
+#: app/templates/onboarding.html:113
+msgid "Stejné údaje jako do mobilní aplikace nebo webových Bakalářů."
+msgstr "Same credentials as the mobile app or web Bakaláře."
+
+#: app/templates/onboarding.html:135
+msgid "Připojit se"
+msgstr "Connect"
+
+#: app/templates/payment_cancel.html:7
+msgid "Platba zrušena"
+msgstr "Payment cancelled"
+
+#: app/templates/payment_cancel.html:9
+msgid "Nic se nestrhlo. Premium si můžeš aktivovat kdykoliv později."
+msgstr "Nothing was charged. You can activate Premium anytime later."
+
+#: app/templates/payment_cancel.html:11 app/templates/payment_success.html:28
+msgid "Zpět do aplikace"
+msgstr "Back to app"
+
+#: app/templates/payment_success.html:8
+msgid "Něco se nepovedlo"
+msgstr "Something went wrong"
+
+#: app/templates/payment_success.html:12
+msgid "Premium aktivováno!"
+msgstr "Premium activated!"
+
+#: app/templates/payment_success.html:14
+msgid "Děkujeme za podporu. Máš teď 50 AI dotazů denně."
+msgstr "Thank you for your support. You now have 50 AI queries per day."
+
+#: app/templates/payment_success.html:18
+msgid "Platí do"
+msgstr "Valid until"
+
+#: app/templates/payment_success.html:23
+msgid "Platba se zpracovává"
+msgstr "Payment processing"
+
+#: app/templates/payment_success.html:25
+msgid "Jakmile platbu potvrdíme, Premium se ti aktivuje automaticky."
+msgstr "Once we confirm your payment, Premium will activate automatically."
+
+#: app/templates/welcome.html:64
+msgid ""
+"Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — "
+"přístupné, krásné, chytré."
+msgstr ""
+"A clean dashboard for Bakaláře. Grades, schedule, and substitutions — "
+"accessible, beautiful, smart."
+
+#: app/templates/welcome.html:69 app/templates/welcome.html:165
+msgid "Začít zdarma"
+msgstr "Get started free"
+
+#: app/templates/welcome.html:72
+msgid "Demo verze"
+msgstr "Demo version"
+
+#: app/templates/welcome.html:73
+msgid "Zjistit více"
+msgstr "Learn more"
+
+#: app/templates/welcome.html:85
+msgid "Co Bakix umí"
+msgstr "What Bakix can do"
+
+#: app/templates/welcome.html:86
+msgid "Vše, co potřebujete."
+msgstr "Everything you need."
+
+#: app/templates/welcome.html:86
+msgid "Na jednom místě."
+msgstr "In one place."
+
+#: app/templates/welcome.html:93
+msgid "Výsledky"
+msgstr "Results"
+
+#: app/templates/welcome.html:94
+msgid "Přehled Známek"
+msgstr "Grade Overview"
+
+#: app/templates/welcome.html:96
+msgid ""
+"Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte "
+"přesně, kde stojíte a co vás čeká."
+msgstr ""
+"All subjects and averages at a glance. Trend development over time — you "
+"always know where you stand."
+
+#: app/templates/welcome.html:113
+msgid "AI asistent"
+msgstr "AI assistant"
+
+#: app/templates/welcome.html:114
+msgid "Chytrá Analýza"
+msgstr "Smart Analysis"
+
+#: app/templates/welcome.html:116
+msgid "Predikce průměrů, analýza trendů a personalizované rady — powered by AI."
+msgstr "Grade predictions, trend analysis and personalised advice — powered by AI."
+
+#: app/templates/welcome.html:124
+msgid "Aktuální Rozvrh"
+msgstr "Current Schedule"
+
+#: app/templates/welcome.html:126
+msgid ""
+"Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás"
+" čeká."
+msgstr ""
+"Schedule directly from Bakaláře. Substitutions clearly marked — you "
+"always know what to expect."
+
+#: app/templates/welcome.html:134
+msgid "Absence & Docházka"
+msgstr "Absence & Attendance"
+
+#: app/templates/welcome.html:136
+msgid ""
+"Přehled omluvených i neomluvených hodin. Žádné překvapení na konci "
+"pololetí."
+msgstr ""
+"Overview of excused and unexcused absences. No surprises at the end of "
+"term."
+
+#: app/templates/welcome.html:144
+msgid "Zdarma. Navždy."
+msgstr "Free. Forever."
+
+#: app/templates/welcome.html:146
+msgid ""
+"Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí "
+"přihlašovací údaje z Bakalářů — a jste uvnitř."
+msgstr ""
+"Core features are and will remain free. No registration — just your "
+"Bakaláře credentials and you are in."
+
+#: app/templates/welcome.html:158
+msgid "Připraveni začít?"
+msgstr "Ready to start?"
+
+#: app/templates/welcome.html:160
+msgid "Stačí přihlašovací údaje z Bakalářů."
+msgstr "All you need are your Bakaláře credentials."
+
+#: app/templates/welcome.html:161
+msgid "Žádná registrace, žádné heslo navíc."
+msgstr "No registration, no extra password."
+
+#: app/templates/welcome.html:174
+msgid "Kdo za tím stojí"
+msgstr "Who is behind this"
+
+#: app/templates/welcome.html:175
+msgid "Vytvořeno studenty"
+msgstr "Built by students"
+
+#: app/templates/welcome.html:175
+msgid "pro studenty."
+msgstr "for students."
+
+#: app/templates/welcome.html:178
+msgid ""
+"Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je"
+" poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho "
+"školním datům — zdarma, navždy."
+msgstr ""
+"Bakix was born out of frustration with confusing school systems. Our goal"
+" is to give every student a clear, fast and beautiful access to their "
+"school data — free, forever."
+
+#: app/templates/welcome.html:185
 msgid "Zakladatel & Dev"
 msgstr "Founder & Dev"
+
+#: app/templates/wrap.html:302
+msgid "Zpět"
+msgstr "← Back"
+
+#~ msgid "Kontrolovat každých"
+#~ msgstr "Check every"
+
+#~ msgid "1 minutu"
+#~ msgstr "1 minute"
+
+#~ msgid "5 minut"
+#~ msgstr "5 minutes"
+
+#~ msgid "15 minut"
+#~ msgstr "15 minutes"
+
+#~ msgid "30 minut"
+#~ msgstr "30 minutes"
+
+#~ msgid "1 hodinu"
+#~ msgstr "1 hour"
+
+#~ msgid "2 hodiny"
+#~ msgstr "2 hours"
+

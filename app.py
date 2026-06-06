@@ -15,7 +15,8 @@ logging.basicConfig(
 )
 
 app = create_app()
-app.config["DEBUG"] = _debug   # potřebné pro {% if config.DEBUG %} v šablonách
+app.config["DEBUG"]     = _debug
+app.config["TEST_MODE"] = os.getenv("TEST", "").strip().lower() in ("1", "true", "yes")
 
 if __name__ == "__main__":
     _base = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +26,7 @@ if __name__ == "__main__":
         return p if os.path.isabs(p) else os.path.join(_base, p)
 
     if _debug:
-        # ── Lokální vývoj ─────────────────────────────────────────────────
+        # ── Lokální vývoj ─────────────────────────────────────────────────y
         cert_file = os.getenv("FLASK_SSL_CERT", "").strip()
         key_file  = os.getenv("FLASK_SSL_KEY",  "").strip()
 

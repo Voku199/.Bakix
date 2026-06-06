@@ -1,3 +1,133 @@
+/* ── Settings — subscription section ─────────────────── */
+.settings-sub-plan {
+  display:     flex;
+  align-items: center;
+  gap:         .6rem;
+  margin-bottom: .6rem;
+}
+.settings-sub-badge {
+  display:        inline-block;
+  font-size:      9px;
+  font-weight:    700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding:        3px 9px;
+  border-radius:  100px;
+  background:     var(--bg);
+  border:         1px solid var(--border);
+  color:          var(--muted);
+  transition:     background .2s, color .2s, border-color .2s;
+}
+.settings-sub-badge--premium {
+  background:  color-mix(in srgb, var(--accent) 12%, var(--bg));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color:        var(--accent);
+}
+.settings-sub-desc {
+  font-size: .78rem;
+  color:     var(--muted);
+}
+.settings-sub-compare {
+  border:        1px solid var(--border);
+  border-radius: 8px;
+  overflow:      hidden;
+  margin-bottom: .75rem;
+  font-size:     .78rem;
+}
+.settings-sub-row {
+  display:         flex;
+  justify-content: space-between;
+  padding:         .4rem .75rem;
+  color:           var(--muted);
+}
+.settings-sub-row + .settings-sub-row { border-top: 1px solid var(--border); }
+.settings-sub-row--hi {
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+  color:      var(--text);
+}
+.settings-sub-row__name { font-weight: 700; }
+.settings-sub-status {
+  margin-top: .4rem;
+  font-size:  .75rem;
+  min-height: 1em;
+}
+.settings-sub-status--ok  { color: var(--green); }
+.settings-sub-status--err { color: var(--red); }
+
+/* ── AI rate-limit upgrade CTA ────────────────────────── */
+.ai-rate-cta {
+  display:       flex;
+  align-items:   center;
+  gap:           .6rem;
+  flex-wrap:     wrap;
+  padding:       .6rem .85rem;
+  margin:        .35rem 0;
+  background:    color-mix(in srgb, var(--accent) 10%, var(--bg2));
+  border:        1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: 8px;
+  font-size:     .75rem;
+}
+.ai-rate-cta__text { color: var(--text); flex: 1; }
+.ai-rate-cta__btn {
+  flex-shrink:    0;
+  padding:        .35rem .8rem;
+  background:     var(--accent);
+  color:          var(--btn-primary-fg);
+  border:         none;
+  border-radius:  6px;
+  font-family:    var(--font);
+  font-size:      .72rem;
+  font-weight:    700;
+  cursor:         pointer;
+  letter-spacing: .3px;
+  transition:     opacity .15s;
+}
+.ai-rate-cta__btn:hover { opacity: .85; }
+
+/* ── Wrap entry card ──────────────────────────────────── */
+.wrap-entry-card {
+  background: linear-gradient(135deg, var(--accent) 0%, #8b3515 100%);
+  border-color: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.wrap-entry-card__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.wrap-entry-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+
+.wrap-entry-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f0ebe3;
+  letter-spacing: -.3px;
+}
+
+.wrap-entry-card__sub {
+  font-size: .7rem;
+  color: rgba(240, 235, 227, .75);
+}
+
+.wrap-entry-card__btn {
+  flex-shrink: 0;
+  background: rgba(240,235,227,.2);
+  border: 1px solid rgba(240,235,227,.4);
+  color: #f0ebe3;
+}
+
+.wrap-entry-card__btn:hover {
+  background: rgba(240,235,227,.35);
+}
+
 /* ── Mobile overflow guards ───────────────────────────── */
 html, body {
   max-width: 100%;

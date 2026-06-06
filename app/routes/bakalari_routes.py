@@ -8,17 +8,67 @@ import uuid
 
 from flask import Blueprint, render_template, session, redirect, url_for, request, jsonify, abort, current_app
 from markupsafe import Markup
+try:
+    import nh3 as _nh3
+
+    # Allowlist must match what the AI is told to emit (see _AI_CHAT_PROMPT):
+    # quizzes (input/label/button + data-answer), flashcards (div), definition
+    # lists (dl/dt/dd) and inline SVG diagrams. <script> stays disallowed — the
+    # quiz-check logic lives in generated_page.html, keyed off data-answer.
+    _SANITIZE_TAGS = {
+        "h1","h2","h3","h4","h5","h6","p","br","hr","ul","ol","li",
+        "strong","em","b","i","u","s","code","pre","blockquote",
+        "table","thead","tbody","tr","th","td","caption",
+        "a","img","span","div","section","article","header","footer",
+        "input","label","button","dl","dt","dd",
+        "svg","path","rect","circle","ellipse","line","polygon","polyline","text","g",
+    }
+    _SANITIZE_ATTRS = {
+        "a":        {"href","title","target"},
+        "img":      {"src","alt","width","height"},
+        "input":    {"type","name","value","checked","disabled"},
+        "button":   {"type"},
+        "label":    {"for"},
+        # SVG — list both camelCase and lowercased forms (HTML parsing lowercases).
+        "svg":      {"viewbox","viewBox","xmlns","width","height","fill","stroke"},
+        "path":     {"d","fill","stroke","stroke-width","stroke-linecap","stroke-linejoin"},
+        "rect":     {"x","y","width","height","rx","ry","fill","stroke","stroke-width"},
+        "circle":   {"cx","cy","r","fill","stroke","stroke-width"},
+        "ellipse":  {"cx","cy","rx","ry","fill","stroke","stroke-width"},
+        "line":     {"x1","y1","x2","y2","stroke","stroke-width"},
+        "polygon":  {"points","fill","stroke","stroke-width"},
+        "polyline": {"points","fill","stroke","stroke-width"},
+        "text":     {"x","y","fill","font-size","text-anchor","font-weight"},
+        "g":        {"fill","stroke","stroke-width","transform"},
+        "*":        {"class","id","data-answer","data-gp-check"},
+    }
+
+    def _sanitize_html(html: str) -> str:
+        return _nh3.clean(html, tags=_SANITIZE_TAGS, attributes=_SANITIZE_ATTRS)
+except ImportError:
+    def _sanitize_html(html: str) -> str:  # fallback: strip only obvious dangers
+        import re
+        html = re.sub(r'<script[\s\S]*?</script>', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'javascript:', '', html, flags=re.IGNORECASE)
+        return html
 
 from app.database.db import fetch_row, get_settings as _db_get_settings, save_settings as _db_save_settings, upsert_all, update_display_name as _db_update_display_name, cache_get, cache_set
+from app.extensions import limiter
 from app.services.bakalari import BakalariService
 from app.services.crypto import encrypt_json
-from app.services.gemini_service import GeminiService, has_pending_skill
+from app.services.gemini_service import GeminiService, has_pending_skill, RateLimitedError, is_valid_model, is_premium_model, resolve_model_for_tier, AI_MODE_NORMAL, AI_MODE_THINKING
 from app.services.push_service import PushNotificationService
 from app.services import demo_data as _demo
+from app.services.wrap_service import log_activity, generate_wrap_for_user
 
 log = logging.getLogger(__name__)
 
 bakalari_bp = Blueprint("bakalari", __name__)
+
+# Free-tier caps (Premium = unlimited). Skill cap lives in gemini_service.
+_FREE_MAX_PAGES = 3
+_FREE_MAX_CHATS = 3
 
 _COLORS = [
     "#b5451b", "#2d6a4f", "#5c7a9e", "#8b6b3d",
@@ -149,6 +199,9 @@ def api_homeworks():
 
         today   = datetime.date.today()
         _ck     = f"hw_{today}"
+
+        log_activity(user_id, "homeworks_checked")
+
         _hit    = cache_get(user_id, _ck)
         if _hit is not None:
             return jsonify(_hit)
@@ -218,6 +271,8 @@ def api_komens():
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
 
+        log_activity(user_id, "komens_checked")
+
         _hit = cache_get(user_id, "komens")
         if _hit is not None:
             return jsonify(_hit)
@@ -242,9 +297,12 @@ def api_komens():
         )[:5]
 
         def _clean_text(raw: str) -> str:
-            text = _HTML_TAG_RE.sub("", raw)
+            text = re.sub(r'<br\s*/?>', '/n', raw, flags=re.IGNORECASE)
+            text = _HTML_TAG_RE.sub("", text)
             text = _HTML_ENTITY_RE.sub(" ", text)
-            return " ".join(text.split())
+            text = re.sub(r'[\r\n]+', '/n', text)
+            segs = [' '.join(s.split()) for s in text.split('/n')]
+            return '/n'.join(s for s in segs if s)
 
         result = [
             {
@@ -278,6 +336,61 @@ def api_komens():
         return jsonify(result)
     except Exception:
         log.exception("api_komens: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/api/komens/message-types", methods=["GET"])
+def api_komens_message_types():
+    try:
+        svc, token, user_id = _get_svc_and_token()
+        if not token:
+            return jsonify({"error": "Not authenticated"}), 401
+        data = svc.get_message_types(token)
+        if data.get("status_code") == 401:
+            token = svc.reauth(user_id)
+            if not token:
+                return jsonify({"error": "Not authenticated"}), 401
+            data = svc.get_message_types(token)
+            if data.get("status_code") == 401:
+                return jsonify({"error": "Not authenticated"}), 401
+        if "error" in data:
+            return jsonify({"error": f"Nepodařilo se načíst příjemce ({data.get('status_code', '')})"}), 502
+        recipients = [
+            {"code": r.get("Code"), "name": r.get("Name") or r.get("DisplayName")}
+            for r in (data.get("Recipients") or [])
+            if r.get("Code")
+        ]
+        return jsonify({"recipients": recipients})
+    except Exception:
+        log.exception("api_komens_message_types: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/api/komens/send", methods=["POST"])
+def api_komens_send():
+    try:
+        svc, token, user_id = _get_svc_and_token()
+        if not token:
+            return jsonify({"error": "Not authenticated"}), 401
+        body         = request.get_json(force=True, silent=True) or {}
+        recipient_id = (body.get("recipient_id") or "").strip()
+        subject      = (body.get("subject") or "").strip()
+        content      = (body.get("content") or "").strip()
+        if not recipient_id or not subject or not content:
+            return jsonify({"error": "Chybí příjemce, předmět nebo text."}), 400
+        result = svc.send_komens_message(token, recipient_id, subject, content)
+        if result.get("status_code") == 401:
+            token = svc.reauth(user_id)
+            if not token:
+                return jsonify({"error": "Not authenticated"}), 401
+            result = svc.send_komens_message(token, recipient_id, subject, content)
+            if result.get("status_code") == 401:
+                return jsonify({"error": "Not authenticated"}), 401
+        if "error" in result:
+            return jsonify({"error": result.get("error", "Odeslání selhalo.")}), 502
+        return jsonify({"ok": True})
+    except Exception:
+        log.exception("api_komens_send: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
@@ -322,6 +435,8 @@ def api_marks():
         svc, token, user_id = _get_svc_and_token()
         if not token:
             return jsonify({"error": "Not authenticated"}), 401
+
+        log_activity(user_id, "marks_checked")
 
         _hit = cache_get(user_id, "marks")
         if _hit is not None:
@@ -603,6 +718,44 @@ def api_dashboard_tomorrow():
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
+@bakalari_bp.route("/api/subscription", methods=["GET"])
+def api_subscription_get():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import get_subscription_info
+    return jsonify(get_subscription_info(user_id))
+
+
+@bakalari_bp.route("/api/subscription", methods=["POST"])
+def api_subscription_post():
+    """Dev-only manual tier toggle.
+
+    Premium is now sold through Stripe (see /api/payment/checkout). Granting it
+    for free is gated behind DEBUG so production can't self-upgrade — real users
+    must pay. 'cancel' (downgrade to free) stays allowed everywhere.
+    """
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    data   = request.get_json(force=True, silent=True) or {}
+    action = (data.get("action") or "").strip()
+    if action not in ("upgrade", "cancel"):
+        return jsonify({"error": "Invalid action"}), 400
+
+    if action == "upgrade":
+        if not current_app.config.get("DEBUG"):
+            return jsonify({"error": "Premium se aktivuje platbou.",
+                            "checkout": "/api/payment/checkout"}), 403
+        from app.database.db import grant_premium_days
+        grant_premium_days(user_id, 30)  # dev shortcut: +30 days
+        return jsonify({"ok": True, "tier": "premium"})
+
+    from app.database.db import update_subscription_tier
+    update_subscription_tier(user_id, "free")
+    return jsonify({"ok": True, "tier": "free"})
+
+
 @bakalari_bp.route("/api/cache/clear", methods=["POST"])
 def api_cache_clear():
     user_id = session.get("user_id")
@@ -651,8 +804,16 @@ def api_settings_post():
             refresh_token=result["refresh_token"],
         )
 
+    language_changed = False
+    new_lang = data.get("language", "")
+    if new_lang in ("cs", "en") and session.get("language") != new_lang:
+        session["language"] = new_lang
+        session.modified = True
+        language_changed = True
+        log.debug("api_settings_post: session language set to %s for user=%.8s", new_lang, user_id)
+
     _db_save_settings(user_id, data)
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "language_changed": language_changed})
 
 
 @bakalari_bp.route("/api/gemini/insights", methods=["GET"])
@@ -737,39 +898,10 @@ def api_gemini_chat():
 
 # ── Generated-page helpers ────────────────────────────────────────────────────────────────
 
-def _gen_dir() -> str:
-    return os.path.join(current_app.instance_path, "generated")
-
-
-def _gen_index_path() -> str:
-    return os.path.join(_gen_dir(), "index.json")
-
-
-def _load_gen_index() -> dict:
-    path = _gen_index_path()
-    if os.path.exists(path):
-        try:
-            with open(path, encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, json.JSONDecodeError):
-            pass
-    return {}
-
-
-def _save_gen_index(index: dict) -> None:
-    os.makedirs(_gen_dir(), exist_ok=True)
-    with open(_gen_index_path(), "w", encoding="utf-8") as f:
-        json.dump(index, f, ensure_ascii=False)
-
-
 def get_user_projects(user_id: str) -> list:
     """Return [{page_id, topic}] for all generated pages owned by user_id."""
-    index = _load_gen_index()
-    return [
-        {"page_id": page_id, "topic": meta.get("title") or "AI obsah"}
-        for page_id, meta in index.items()
-        if meta.get("user_id") == user_id
-    ]
+    from app.database.db import list_generated_pages
+    return list_generated_pages(user_id)
 
 
 @bakalari_bp.route("/api/user/settings", methods=["POST"])
@@ -796,9 +928,108 @@ def api_ai_pages():
     return jsonify(get_user_projects(user_id))
 
 
+# ── Conversations (multiple chats per user) ─────────────────────────────────
+
+def _resolve_conversation(user_id: str, raw_id) -> str:
+    """Return a valid conversation id owned by user_id, creating one if needed."""
+    from app.database.db import get_conversation, create_conversation
+    raw_id = (raw_id or "").strip()
+    if raw_id and get_conversation(raw_id, user_id):
+        return raw_id
+    return create_conversation(user_id)
+
+
+@bakalari_bp.route("/api/ai/conversations", methods=["GET"])
+def api_conversations_list():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import list_conversations
+    return jsonify(list_conversations(user_id))
+
+
+@bakalari_bp.route("/api/ai/conversations", methods=["POST"])
+def api_conversations_create():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import create_conversation, count_conversations, get_subscription_tier
+    if get_subscription_tier(user_id) != "premium" and count_conversations(user_id) >= _FREE_MAX_CHATS:
+        return jsonify({
+            "error": "chat_limit",
+            "message": f"Ve free verzi můžeš mít {_FREE_MAX_CHATS} chaty. Smaž některý, nebo přejdi na Premium pro neomezené chaty. ✦",
+            "tier": "free",
+        }), 403
+    body  = request.get_json(force=True, silent=True) or {}
+    title = (body.get("title") or "Nový chat").strip()[:80] or "Nový chat"
+    conv_id = create_conversation(user_id, title)
+    return jsonify({"id": conv_id, "title": title})
+
+
+@bakalari_bp.route("/api/ai/conversations/<conversation_id>", methods=["PATCH"])
+def api_conversations_rename(conversation_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import rename_conversation
+    body  = request.get_json(force=True, silent=True) or {}
+    title = (body.get("title") or "").strip()[:80]
+    if not title:
+        return jsonify({"error": "Chybí název"}), 400
+    if not rename_conversation(conversation_id, user_id, title):
+        return abort(404)
+    return jsonify({"ok": True, "title": title})
+
+
+@bakalari_bp.route("/api/ai/conversations/<conversation_id>", methods=["DELETE"])
+def api_conversations_delete(conversation_id):
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import delete_conversation
+    if not delete_conversation(conversation_id, user_id):
+        return abort(404)
+    return jsonify({"ok": True})
+
+
+@bakalari_bp.route("/api/ai/conversations/<conversation_id>/messages", methods=["GET"])
+def api_conversations_messages(conversation_id):
+    """Return the rendered messages of one conversation for rehydrating the thread."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    from app.database.db import get_conversation_history_rows
+    rows = get_conversation_history_rows(conversation_id, user_id)
+    if rows is None:
+        return abort(404)
+
+    out = []
+    for r in rows:
+        role = r["role"]
+        if role == "user":
+            out.append({"role": "user", "message": r["content"], "is_html": False,
+                        "timestamp": r["timestamp"]})
+            continue
+        # model rows store the full ai_result JSON (or a "[page modified: …]" note)
+        text = r["content"]
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict) and "message" in parsed:
+                text = parsed.get("message") or ""
+        except (ValueError, TypeError):
+            pass
+        if not text:
+            continue
+        msg, is_html = _prep_chat_msg(text)
+        out.append({"role": "model", "message": msg, "is_html": is_html,
+                    "timestamp": r["timestamp"]})
+    return jsonify({"id": conversation_id, "messages": out})
+
+
 # ── AI chat endpoint (structured response with optional page generation) ─────
 
 @bakalari_bp.route("/api/ai/chat", methods=["POST"])
+@limiter.limit("30 per minute")
 def api_ai_chat():
     try:
         user_id = session.get("user_id")
@@ -808,9 +1039,42 @@ def api_ai_chat():
         body      = request.get_json(force=True, silent=True) or {}
         message   = (body.get("message") or "").strip()
         chat_mode = (body.get("chat_mode") or "auto").strip().lower()
+        _raw_model = (body.get("model_id") or "").strip()
+        model_id  = _raw_model if is_valid_model(_raw_model) else None
+        ai_mode   = AI_MODE_THINKING if (body.get("ai_mode") or "") == AI_MODE_THINKING else AI_MODE_NORMAL
 
         if not message:
             return jsonify({"error": "Prázdná zpráva"}), 400
+
+        # ── Premium gating ────────────────────────────────────────────────────
+        from app.database.db import (
+            get_subscription_tier, get_conversation, create_conversation,
+            count_conversations, count_generated_pages, set_conversation_title_if_default,
+        )
+        tier = get_subscription_tier(user_id)
+        # #1 Thinking mode is Premium-only — silently fall back to Normal for free.
+        thinking_locked = False
+        if ai_mode == AI_MODE_THINKING and tier != "premium":
+            ai_mode = AI_MODE_NORMAL
+            thinking_locked = True
+        # #2 Pro models are Premium-only — free users get the freemium default.
+        model_id, model_locked = resolve_model_for_tier(model_id, tier)
+
+        # ── Resolve / create the conversation (with the free chat cap, #4) ────
+        conversation_id = (body.get("conversation_id") or "").strip()
+        if conversation_id and not get_conversation(conversation_id, user_id):
+            conversation_id = ""
+        if not conversation_id:
+            if tier != "premium" and count_conversations(user_id) >= _FREE_MAX_CHATS:
+                return jsonify({
+                    "error": "chat_limit",
+                    "message": f"Ve free verzi můžeš mít {_FREE_MAX_CHATS} chaty. "
+                               "Smaž některý v 🗂, nebo přejdi na Premium pro neomezené chaty. ✦",
+                    "tier": "free",
+                }), 403
+            conversation_id = create_conversation(user_id)
+        # Name a still-unnamed chat after its first message.
+        set_conversation_title_if_default(conversation_id, message)
 
         _msg_lower = message.lower().strip()
 
@@ -837,6 +1101,7 @@ def api_ai_chat():
 
             _plan_msg, _plan_html = _prep_chat_msg(_plan_msg)
             return jsonify({
+                "conversation_id": conversation_id,
                 "message":      _plan_msg,
                 "is_html":      _plan_html,
                 "action_url":   None,
@@ -851,11 +1116,12 @@ def api_ai_chat():
             _explain_term = message[len("Vysvětlit přes AI:"):].strip()
             if _explain_term:
                 try:
-                    ai_result = GeminiService().explain_term(user_id, _explain_term)
+                    ai_result = GeminiService().explain_term(user_id, conversation_id, _explain_term, model_id=model_id, ai_mode=ai_mode)
                 except ValueError:
                     return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
                 _exp_msg, _exp_html = _prep_chat_msg(ai_result.get("message", ""))
                 return jsonify({
+                    "conversation_id": conversation_id,
                     "message":      _exp_msg,
                     "is_html":      _exp_html,
                     "action_url":   None,
@@ -894,6 +1160,7 @@ def api_ai_chat():
 
             _summary_msg, _summary_html = _prep_chat_msg(_summary_msg)
             return jsonify({
+                "conversation_id": conversation_id,
                 "message":      _summary_msg,
                 "is_html":      _summary_html,
                 "action_url":   None,
@@ -911,6 +1178,7 @@ def api_ai_chat():
                 return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
             _skill_msg, _skill_html = _prep_chat_msg(ai_result.get("message", ""))
             return jsonify({
+                "conversation_id": conversation_id,
                 "message":      _skill_msg,
                 "is_html":      _skill_html,
                 "action_url":   None,
@@ -956,30 +1224,35 @@ def api_ai_chat():
         try:
             gemini = GeminiService()
             if chat_mode == "grades" or (chat_mode == "auto" and flat_grades):
-                ai_result = gemini.handle_grades_context(user_id, flat_grades, message)
+                ai_result = gemini.handle_grades_context(user_id, conversation_id, flat_grades, message, model_id=model_id, ai_mode=ai_mode)
             else:
-                ai_result = gemini.get_response(user_id, message, student_data)
+                ai_result = gemini.get_response(user_id, conversation_id, message, student_data, model_id=model_id, ai_mode=ai_mode)
         except ValueError:
             return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
 
         action_url = None
+        page_limit_reached = False
         html_body  = ai_result.get("page_content_html") or ""
         if ai_result.get("intent") == "create_page" and html_body.strip():
-            page_id   = uuid.uuid4().hex
-            page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-            os.makedirs(_gen_dir(), exist_ok=True)
-            with open(page_path, "w", encoding="utf-8") as f:
-                f.write(html_body)
-            index = _load_gen_index()
-            index[page_id] = {
-                "user_id": user_id,
-                "title":   ai_result.get("page_title") or "AI obsah",
-            }
-            _save_gen_index(index)
-            action_url = f"/api/ai/generated/{page_id}"
+            # #3 Free users keep at most _FREE_MAX_PAGES saved study pages.
+            if tier != "premium" and count_generated_pages(user_id) >= _FREE_MAX_PAGES:
+                page_limit_reached = True
+            else:
+                from app.database.db import create_generated_page
+                page_id = uuid.uuid4().hex
+                create_generated_page(
+                    page_id, user_id, ai_result.get("page_title") or "AI obsah", html_body,
+                )
+                action_url = f"/api/ai/generated/{page_id}"
 
         chat_msg, is_html = _prep_chat_msg(ai_result.get("message", ""))
-        return jsonify({
+        if page_limit_reached:
+            chat_msg += (
+                f"\n\n_(Dosáhl jsi limitu {_FREE_MAX_PAGES} uložených stránek ve free verzi. "
+                "Smaž některou přes ✦, nebo přejdi na Premium pro neomezené stránky.)_"
+            )
+        resp = {
+            "conversation_id": conversation_id,
             "message":      chat_msg,
             "is_html":      is_html,
             "action_url":   action_url,
@@ -987,7 +1260,14 @@ def api_ai_chat():
             "is_test":      bool(ai_result.get("is_test", False)),
             "sender":       "ai",
             "timestamp":    datetime.datetime.utcnow().isoformat() + "Z",
-        })
+        }
+        if thinking_locked:    resp["thinking_locked"] = True
+        if model_locked:       resp["model_locked"] = True
+        if page_limit_reached: resp["page_limit_reached"] = True
+        if ai_result.get("rate_limited"):
+            resp["rate_limited"] = True
+            resp["tier"]         = ai_result.get("tier", "free")
+        return jsonify(resp)
     except Exception:
         log.exception("api_ai_chat: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
@@ -1003,22 +1283,15 @@ def api_ai_generated(page_id):
     if not page_id.isalnum() or len(page_id) > 32:
         return abort(404)
 
-    index = _load_gen_index()
-    meta  = index.get(page_id)
-    if not meta or meta.get("user_id") != user_id:
+    from app.database.db import get_generated_page
+    page = get_generated_page(page_id)
+    if not page or page["user_id"] != user_id:
         return abort(404)
-
-    page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-    if not os.path.isfile(page_path):
-        return abort(404)
-
-    with open(page_path, encoding="utf-8") as f:
-        raw_html = f.read()
 
     return render_template(
         "generated_page.html",
-        title=meta.get("title", "AI obsah"),
-        content=Markup(raw_html),
+        title=page["title"] or "AI obsah",
+        content=Markup(_sanitize_html(page["html"])),
         page_id=page_id,
     )
 
@@ -1032,19 +1305,14 @@ def api_ai_generated_update(page_id):
     if not page_id.isalnum() or len(page_id) > 32:
         return abort(404)
 
-    index = _load_gen_index()
-    meta  = index.get(page_id)
-    if not meta or meta.get("user_id") != user_id:
-        return abort(404)
-
     body    = request.get_json(force=True, silent=True) or {}
     content = (body.get("content") or "").strip()
     if not content:
         return jsonify({"error": "Prázdný obsah"}), 400
 
-    page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-    with open(page_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    from app.database.db import update_generated_page_html
+    if not update_generated_page_html(page_id, user_id, content):
+        return abort(404)
     return jsonify({"ok": True})
 
 
@@ -1057,21 +1325,14 @@ def api_ai_generated_delete(page_id):
     if not page_id.isalnum() or len(page_id) > 32:
         return abort(404)
 
-    index = _load_gen_index()
-    meta  = index.get(page_id)
-    if not meta or meta.get("user_id") != user_id:
+    from app.database.db import delete_generated_page
+    if not delete_generated_page(page_id, user_id):
         return abort(404)
-
-    page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-    if os.path.isfile(page_path):
-        os.remove(page_path)
-
-    del index[page_id]
-    _save_gen_index(index)
     return jsonify({"ok": True})
 
 
 @bakalari_bp.route("/api/ai/regen/<page_id>", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_ai_regen(page_id):
     try:
         user_id = session.get("user_id")
@@ -1081,17 +1342,11 @@ def api_ai_regen(page_id):
         if not page_id.isalnum() or len(page_id) > 32:
             return abort(404)
 
-        index = _load_gen_index()
-        meta  = index.get(page_id)
-        if not meta or meta.get("user_id") != user_id:
+        from app.database.db import get_generated_page, update_generated_page_html
+        page = get_generated_page(page_id)
+        if not page or page["user_id"] != user_id:
             return abort(404)
-
-        page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-        if not os.path.isfile(page_path):
-            return abort(404)
-
-        with open(page_path, encoding="utf-8") as f:
-            current_html = f.read()
+        current_html = page["html"]
 
         body   = request.get_json(force=True, silent=True) or {}
         prompt = (body.get("prompt") or "").strip()
@@ -1114,12 +1369,13 @@ def api_ai_regen(page_id):
             pass
 
         try:
-            new_html = GeminiService().regenerate_page(current_html, prompt, student_data)
+            new_html = GeminiService().regenerate_page(current_html, prompt, student_data, user_id=user_id)
+        except RateLimitedError as exc:
+            return jsonify({"ok": False, "error": "rate_limited", "tier": exc.tier}), 429
         except ValueError:
             return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
 
-        with open(page_path, "w", encoding="utf-8") as f:
-            f.write(new_html)
+        update_generated_page_html(page_id, user_id, new_html)
         return jsonify({"ok": True})
     except Exception:
         log.exception("api_ai_regen: unexpected error")
@@ -1127,6 +1383,7 @@ def api_ai_regen(page_id):
 
 
 @bakalari_bp.route("/api/ai/modify/<page_id>", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_ai_modify(page_id):
     """Stateful page modification — uses persistent conversation history per user.
 
@@ -1142,13 +1399,9 @@ def api_ai_modify(page_id):
         if not page_id.isalnum() or len(page_id) > 32:
             return abort(404)
 
-        index = _load_gen_index()
-        meta  = index.get(page_id)
-        if not meta or meta.get("user_id") != user_id:
-            return abort(404)
-
-        page_path = os.path.join(_gen_dir(), f"{page_id}.html")
-        if not os.path.isfile(page_path):
+        from app.database.db import get_generated_page, update_generated_page_html
+        page = get_generated_page(page_id)
+        if not page or page["user_id"] != user_id:
             return abort(404)
 
         body   = request.get_json(force=True, silent=True) or {}
@@ -1156,20 +1409,42 @@ def api_ai_modify(page_id):
         if not prompt:
             return jsonify({"error": "Prázdný požadavek"}), 400
 
-        with open(page_path, encoding="utf-8") as f:
-            current_html = f.read()
+        current_html = page["html"]
+        conversation_id = _resolve_conversation(user_id, body.get("conversation_id"))
 
         try:
-            new_html = GeminiService().modify_page(user_id, current_html, prompt)
+            new_html = GeminiService().modify_page(user_id, conversation_id, current_html, prompt)
+        except RateLimitedError as exc:
+            return jsonify({"ok": False, "error": "rate_limited", "tier": exc.tier}), 429
         except ValueError:
             return jsonify({"error": "GEMINI_API_KEY not configured"}), 503
 
-        with open(page_path, "w", encoding="utf-8") as f:
-            f.write(new_html)
+        update_generated_page_html(page_id, user_id, new_html)
 
         return jsonify({"ok": True, "page_url": f"/api/ai/generated/{page_id}"})
     except Exception:
         log.exception("api_ai_modify: unexpected error")
+        return jsonify({"error": "Interní chyba serveru"}), 500
+
+
+@bakalari_bp.route("/wrap")
+def wrap_page():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("welcome"))
+    return render_template("wrap.html")
+
+
+@bakalari_bp.route("/api/wrap/data")
+def api_wrap_data():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    try:
+        stats = generate_wrap_for_user(user_id)
+        return jsonify(stats)
+    except Exception:
+        log.exception("api_wrap_data: unexpected error")
         return jsonify({"error": "Interní chyba serveru"}), 500
 
 
@@ -1209,6 +1484,8 @@ def index():
             chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
             user_projects=[],
             display_name="Demo uživatel",
+            is_premium=False,
+            show_wrap=(os.getenv("DEBUG") == "True") or (datetime.date.today().month in (6, 12)),
         )
 
     row = fetch_row(user_id)
@@ -1260,6 +1537,11 @@ def index():
 
     display_name = (row.get("display_name") or "") if row else ""
 
+    _show_wrap = (os.getenv("DEBUG") == "True") or (datetime.date.today().month in (6, 12))
+
+    from app.database.db import get_subscription_tier
+    _is_premium = get_subscription_tier(user_id) == "premium"
+
     return render_template(
         "index.html",
         error=None,
@@ -1270,4 +1552,6 @@ def index():
         chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
         user_projects=get_user_projects(user_id),
         display_name=display_name,
+        is_premium=_is_premium,
+        show_wrap=_show_wrap,
     )

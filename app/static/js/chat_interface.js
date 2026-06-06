@@ -12,13 +12,21 @@ document.addEventListener('DOMContentLoaded', function () {
   var modifyBtn    = document.getElementById('ai-modify-btn');
   var modifyPicker = document.getElementById('ai-modify-picker');
   var popoutBtn    = document.getElementById('ai-popout-btn');
+  var convosBtn    = document.getElementById('ai-convos-btn');
+  var newChatBtn   = document.getElementById('ai-newchat-btn');
   var sidebarHdr   = sidebar ? sidebar.querySelector('.ai-sidebar__header') : null;
 
   if (!fab || !sidebar) return;
 
   var chatHistory     = [];
   var initialRendered = false;
+  var currentConversationId = localStorage.getItem('bakix_conversation_id') || null;
+  var conversations   = [];
+  var convosPanelEl   = null;
+  var isPremium       = (typeof IS_PREMIUM !== 'undefined') ? !!IS_PREMIUM : false;
   var currentMode     = 'auto';
+  var selectedModel   = localStorage.getItem('bakix_ai_model') || 'gemini-3.1-flash-lite';
+  var selectedAiMode  = localStorage.getItem('bakix_ai_mode')  || 'normal';
   var userProjects    = (typeof USER_PROJECTS !== 'undefined' && Array.isArray(USER_PROJECTS))
                         ? USER_PROJECTS : [];
   var insightsPromise;
@@ -167,15 +175,176 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!initialRendered) {
       initialRendered = true;
-      var placeholder = appendMsg('model', 'Analyzuji tvá studijní data…', false, null);
-      placeholder.classList.add('ai-msg--thinking');
-      insightsPromise.then(function (d) {
-        placeholder.remove();
-        if (d) renderInsights(d);
-        else appendMsg('model', 'Nemám teď přístup ke tvým datům. Zeptej se mě na cokoliv!', false, null);
-      });
+      renderInitial();
     }
   }
+
+  // Show the active conversation's messages, or insights for a fresh chat.
+  function renderInitial() {
+    if (currentConversationId) {
+      loadConversation(currentConversationId);
+      return;
+    }
+    var placeholder = appendMsg('model', 'Analyzuji tvá studijní data…', false, null);
+    placeholder.classList.add('ai-msg--thinking');
+    insightsPromise.then(function (d) {
+      placeholder.remove();
+      if (d) renderInsights(d);
+      else appendMsg('model', 'Nemám teď přístup ke tvým datům. Zeptej se mě na cokoliv!', false, null);
+    });
+  }
+
+  // ── Conversations (multiple chats) ────────────────────────
+
+  function loadConversation(id) {
+    currentConversationId = id;
+    localStorage.setItem('bakix_conversation_id', id);
+    initialRendered = true;
+    thread.innerHTML = '';
+    chatHistory = [];
+    suggestEl.innerHTML = '';
+    convosPanelEl = null;
+    fetch('/api/ai/conversations/' + id + '/messages')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var msgs = (d && d.messages) || [];
+        if (!msgs.length) {
+          appendMsg('model', 'Nový chat — zeptej se mě na cokoliv ✦', false, null);
+          return;
+        }
+        msgs.forEach(function (m) {
+          appendMsg(m.role, m.message, m.is_html, m.timestamp);
+          chatHistory.push({ role: m.role === 'user' ? 'user' : 'model', text: m.message });
+        });
+      })
+      .catch(function () {
+        appendMsg('model', 'Nepodařilo se načíst tento chat.', false, null);
+      });
+  }
+
+  function newChat() {
+    currentConversationId = null;
+    localStorage.removeItem('bakix_conversation_id');
+    chatHistory = [];
+    thread.innerHTML = '';
+    suggestEl.innerHTML = '';
+    convosPanelEl = null;
+    initialRendered = true;
+    var placeholder = appendMsg('model', 'Analyzuji tvá studijní data…', false, null);
+    placeholder.classList.add('ai-msg--thinking');
+    insightsPromise.then(function (d) {
+      placeholder.remove();
+      if (d) renderInsights(d);
+      else appendMsg('model', 'Nový chat — zeptej se mě na cokoliv ✦', false, null);
+    });
+    if (input) input.focus();
+  }
+
+  function refreshConversations() {
+    return fetch('/api/ai/conversations')
+      .then(function (r) { return r.json(); })
+      .then(function (list) { if (Array.isArray(list)) conversations = list; return conversations; })
+      .catch(function () { return conversations; });
+  }
+
+  function buildConvosPanel(list) {
+    var panel = document.createElement('div');
+    panel.className = 'ai-msg ai-msg--projects';
+
+    var label = document.createElement('div');
+    label.className = 'ai-section__label';
+    label.textContent = 'Historie chatů';
+    panel.appendChild(label);
+
+    var listEl = document.createElement('div');
+    listEl.className = 'projects-list-thread';
+
+    var newRow = document.createElement('button');
+    newRow.className = 'ai-suggestion-btn';
+    newRow.textContent = '＋ Nový chat';
+    newRow.addEventListener('click', function () {
+      if (convosPanelEl) { convosPanelEl.remove(); convosPanelEl = null; }
+      newChat();
+    });
+    listEl.appendChild(newRow);
+
+    if (!list.length) {
+      var empty = document.createElement('p');
+      empty.className = 'projects-thread-empty';
+      empty.textContent = 'Zatím žádné uložené chaty.';
+      listEl.appendChild(empty);
+    } else {
+      list.forEach(function (cv) {
+        var row = document.createElement('div');
+        row.className = 'project-thread-row';
+
+        var link = document.createElement('a');
+        link.className = 'project-thread-link';
+        link.href = '#';
+        link.textContent = cv.title || 'Chat';
+        link.title = cv.title || 'Chat';
+        if (cv.id === currentConversationId) link.style.fontWeight = '700';
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          loadConversation(cv.id);
+        });
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'project-thread-modify';
+        delBtn.textContent = '×';
+        delBtn.title = 'Smazat chat';
+        delBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          deleteConversation(cv.id);
+        });
+
+        row.appendChild(link);
+        row.appendChild(delBtn);
+        listEl.appendChild(row);
+      });
+    }
+
+    panel.appendChild(listEl);
+    return panel;
+  }
+
+  function showConversationsPanel() {
+    if (convosPanelEl && thread.contains(convosPanelEl)) {
+      convosPanelEl.remove();
+      convosPanelEl = null;
+      return;
+    }
+    convosPanelEl = buildConvosPanel(conversations);
+    thread.appendChild(convosPanelEl);
+    thread.scrollTop = thread.scrollHeight;
+    refreshConversations().then(function (list) {
+      if (convosPanelEl && thread.contains(convosPanelEl)) {
+        var updated = buildConvosPanel(list);
+        thread.replaceChild(updated, convosPanelEl);
+        convosPanelEl = updated;
+        thread.scrollTop = thread.scrollHeight;
+      }
+    });
+  }
+
+  function deleteConversation(id) {
+    fetch('/api/ai/conversations/' + id, { method: 'DELETE' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) return;
+        conversations = conversations.filter(function (c) { return c.id !== id; });
+        if (id === currentConversationId) { newChat(); return; }
+        if (convosPanelEl && thread.contains(convosPanelEl)) {
+          var updated = buildConvosPanel(conversations);
+          thread.replaceChild(updated, convosPanelEl);
+          convosPanelEl = updated;
+        }
+      })
+      .catch(function () {});
+  }
+
+  if (convosBtn)  convosBtn.addEventListener('click', function (e) { e.stopPropagation(); showConversationsPanel(); });
+  if (newChatBtn) newChatBtn.addEventListener('click', function () { newChat(); });
 
   function closeSidebar() {
     sidebar.classList.remove('open');
@@ -264,6 +433,136 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // ── Model selector ───────────────────────────────────────
+
+  var modelBtn   = document.getElementById('ai-model-btn');
+  var modelPanel = document.getElementById('ai-model-panel');
+  var modelName  = document.getElementById('ai-model-name');
+  var modelBadge = document.getElementById('ai-model-badge');
+
+  function applyModel(modelId, name, group) {
+    selectedModel = modelId;
+    localStorage.setItem('bakix_ai_model', modelId);
+    if (modelName) modelName.textContent = name;
+    if (modelBadge) {
+      modelBadge.textContent = group === 'freemium' ? 'Free' : 'Pro';
+      modelBadge.className   = 'ai-model-badge' + (group === 'freemium' ? ' ai-model-badge--freemium' : '');
+    }
+    if (modelPanel) {
+      modelPanel.querySelectorAll('.ai-model-opt').forEach(function (o) {
+        var active = o.dataset.model === modelId;
+        o.classList.toggle('active', active);
+        o.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+    }
+  }
+
+  function _modelOpt(id) {
+    if (!modelPanel || !id) return null;
+    try { return modelPanel.querySelector('[data-model="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]'); }
+    catch (e) { return null; }
+  }
+
+  // Restore saved model on load. Free users can't keep a Pro model — fall back
+  // to the first freemium option, and flag Pro options as locked (🔒).
+  (function () {
+    if (!modelPanel) return;
+    if (!isPremium) {
+      var cur = _modelOpt(selectedModel);
+      if (!cur || cur.dataset.group === 'pro') {
+        var ff = modelPanel.querySelector('.ai-model-opt[data-group="freemium"]');
+        if (ff) selectedModel = ff.dataset.model;
+      }
+      modelPanel.querySelectorAll('.ai-model-opt[data-group="pro"]').forEach(function (o) {
+        o.classList.add('ai-model-opt--locked');
+        var desc = o.querySelector('.ai-model-opt__desc');
+        if (desc && desc.textContent.indexOf('🔒') === -1) desc.textContent = '🔒 Premium';
+      });
+    }
+    var saved = _modelOpt(selectedModel);
+    if (saved) applyModel(selectedModel, saved.dataset.name, saved.dataset.group);
+  })();
+
+  if (modelBtn && modelPanel) {
+    modelBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      modelPanel.classList.toggle('open');
+    });
+    modelPanel.querySelectorAll('.ai-model-opt').forEach(function (opt) {
+      opt.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        if (!isPremium && opt.dataset.group === 'pro') {
+          modelPanel.classList.remove('open');
+          showUpgradeHint('Tento model je součástí Premium.');
+          return;
+        }
+        applyModel(opt.dataset.model, opt.dataset.name, opt.dataset.group);
+        modelPanel.classList.remove('open');
+      });
+    });
+    document.addEventListener('click', function (e) {
+      if (!modelPanel.contains(e.target) && e.target !== modelBtn) {
+        modelPanel.classList.remove('open');
+      }
+    });
+  }
+
+  // ── AI mode toggle (Normal / Přemýšlení) ─────────────────
+
+  var _THINKING_STEPS = [
+    '💭 Přemýšlím…',
+    '🔍 Analyzuji kontext…',
+    '✏️ Formuluji odpověď…',
+    '🧠 Ještě chvíli…',
+  ];
+  var _thinkingTimer = null;
+
+  function applyAiMode(mode) {
+    selectedAiMode = mode;
+    localStorage.setItem('bakix_ai_mode', mode);
+    document.querySelectorAll('.ai-mode-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.aimode === mode);
+    });
+  }
+
+  // Thinking mode is Premium-only — force Normal and lock the button for free.
+  if (!isPremium && selectedAiMode === 'thinking') selectedAiMode = 'normal';
+  if (!isPremium) {
+    document.querySelectorAll('.ai-mode-btn[data-aimode="thinking"]').forEach(function (b) {
+      b.classList.add('ai-mode-btn--locked');
+      if (b.textContent.indexOf('🔒') === -1) b.textContent = '🔒 ' + b.textContent;
+    });
+  }
+
+  // Restore saved mode on load
+  applyAiMode(selectedAiMode);
+
+  document.querySelectorAll('.ai-mode-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.dataset.aimode === 'thinking' && !isPremium) {
+        showUpgradeHint('Režim Přemýšlení je součástí Premium.');
+        return;
+      }
+      applyAiMode(btn.dataset.aimode);
+    });
+  });
+
+  function startThinkingAnim(el) {
+    if (selectedAiMode !== 'thinking') return;
+    var i = 0;
+    el.classList.add('ai-msg--thinking-mode');
+    el.innerHTML = '<span class="ai-thinking-dot">💭</span> <span class="ai-thinking-dot">·</span><span class="ai-thinking-dot">·</span><span class="ai-thinking-dot">·</span>';
+    _thinkingTimer = setInterval(function () {
+      i = (i + 1) % _THINKING_STEPS.length;
+      el.textContent = _THINKING_STEPS[i];
+    }, 1800);
+  }
+
+  function stopThinkingAnim(el) {
+    if (_thinkingTimer) { clearInterval(_thinkingTimer); _thinkingTimer = null; }
+    el.classList.remove('ai-msg--thinking-mode');
+  }
+
   // ── Message builder ───────────────────────────────────────
 
   function appendMsg(role, content, isHtml, timestamp) {
@@ -279,6 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     thread.appendChild(el);
+    renderMath(el);
     thread.scrollTop = thread.scrollHeight;
     return el;
   }
@@ -292,6 +592,35 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.addEventListener('click', function () { suggestEl.innerHTML = ''; sendMessage(text); });
       suggestEl.appendChild(btn);
     });
+  }
+
+  // ── LaTeX rendering (KaTeX) for AI messages ───────────────
+
+  function renderMath(el) {
+    if (!el || !window.renderMathInElement) return;
+    try {
+      renderMathInElement(el, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true  },
+          { left: '$',  right: '$',  display: false },
+          { left: '\\[', right: '\\]', display: true  },
+          { left: '\\(', right: '\\)', display: false },
+        ],
+        throwOnError: false,
+      });
+    } catch (e) { /* malformed LaTeX → leave as-is */ }
+  }
+
+  // ── Premium upgrade hint (reuses rate-limit CTA styling) ──
+
+  function showUpgradeHint(text) {
+    var cta = document.createElement('div');
+    cta.className = 'ai-rate-cta';
+    cta.innerHTML =
+      '<span class="ai-rate-cta__text">' + esc(text) + '</span>' +
+      '<button class="ai-rate-cta__btn" onclick="document.getElementById(\'settings-open\') && document.getElementById(\'settings-open\').click()">✦ Premium</button>';
+    thread.appendChild(cta);
+    thread.scrollTop = thread.scrollHeight;
   }
 
   // ── Render initial AI insights ────────────────────────────
@@ -350,16 +679,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var thinking = appendMsg('model', '…', false, null);
     thinking.classList.add('ai-msg--thinking');
+    startThinkingAnim(thinking);
 
     fetch('/api/ai/chat', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: text, history: chatHistory.slice(0, -1), chat_mode: currentMode }),
+      body:    JSON.stringify({ message: text, history: chatHistory.slice(0, -1), chat_mode: currentMode, model_id: selectedModel, ai_mode: selectedAiMode, conversation_id: currentConversationId }),
     })
       .then(function (r) { return r.json(); })
       .then(function (r) {
+        stopThinkingAnim(thinking);
+        // Adopt the chat id the server used (a brand-new chat gets one created).
+        if (r.conversation_id) {
+          currentConversationId = r.conversation_id;
+          localStorage.setItem('bakix_conversation_id', r.conversation_id);
+          refreshConversations();
+        }
         var reply = r.message || r.error || 'Nastala chyba.';
         thinking.innerHTML = r.is_html ? reply : parseMarkdown(esc(reply));
+        renderMath(thinking);
         thinking.classList.remove('ai-msg--thinking');
         if (r.is_html)  thinking.classList.add('ai-msg--rich');
         if (r.is_test)  thinking.classList.add('ai-msg--test');
@@ -373,6 +711,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
         chatHistory.push({ role: 'model', text: reply });
 
+        if (r.rate_limited) {
+          var cta = document.createElement('div');
+          cta.className = 'ai-rate-cta';
+          if (r.tier === 'premium') {
+            cta.innerHTML = '<span class="ai-rate-cta__text">Denní limit Premiumu je vyčerpán — vrátí se za 24 h.</span>';
+          } else {
+            cta.innerHTML =
+              '<span class="ai-rate-cta__text">Bezplatný limit (5 dotazů/den) vyčerpán.</span>' +
+              '<button class="ai-rate-cta__btn" onclick="document.getElementById(\'settings-open\').click()">' +
+              '✦ Upgradovat na Premium</button>';
+          }
+          thread.appendChild(cta);
+          thread.scrollTop = thread.scrollHeight;
+        }
+
         if (r.action_url && r.action_label) {
           var btn = document.createElement('a');
           btn.href = r.action_url; btn.target = '_blank'; btn.rel = 'noopener noreferrer';
@@ -383,6 +736,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       })
       .catch(function () {
+        stopThinkingAnim(thinking);
         thinking.textContent = 'Síťová chyba. Zkus to znovu.';
         thinking.classList.remove('ai-msg--thinking');
       })

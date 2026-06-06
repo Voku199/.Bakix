@@ -4,7 +4,8 @@ import os
 
 from flask import Blueprint, abort, redirect, request, session, url_for, jsonify
 
-from app.database.db import fetch_row, upsert_all
+from app.database.db import fetch_row, upsert_all, get_settings as _db_get_settings
+from app.extensions import limiter
 from app.services.bakalari import BakalariService
 from app.services.crypto import decrypt_json, encrypt_json
 
@@ -13,7 +14,19 @@ log = logging.getLogger(__name__)
 login_bp = Blueprint("login", __name__)
 
 
+def _restore_session_language(user_id: str) -> None:
+    """Copy the user's saved language preference into the session so _get_locale() picks it up."""
+    try:
+        prefs = _db_get_settings(user_id)
+        lang  = prefs.get("language", "")
+        if lang in ("cs", "en"):
+            session["language"] = lang
+    except Exception:
+        pass
+
+
 @login_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == "GET":
         from flask import render_template
@@ -55,6 +68,7 @@ def login():
 
     session.permanent = True
     session["user_id"] = user_id
+    _restore_session_language(user_id)
 
     return redirect(url_for("bakalari.index"))
 
@@ -104,6 +118,7 @@ def login_now():
     )
     session.permanent  = True
     session["user_id"] = user_id
+    _restore_session_language(user_id)
     return redirect(url_for("bakalari.index"))
 
 
@@ -120,6 +135,14 @@ def login_demo():
 
 @login_bp.route("/logout")
 def logout():
+    user_id = session.get("user_id")
+    if user_id:
+        try:
+            from app.database.connection import get_connection
+            with get_connection() as db:
+                db.execute("DELETE FROM push_subscriptions WHERE user_id = ?", (user_id,))
+        except Exception:
+            pass
     session.clear()
     return redirect(url_for("welcome"))
 

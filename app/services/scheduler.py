@@ -8,9 +8,9 @@ log = logging.getLogger(__name__)
 
 _scheduler = BackgroundScheduler(timezone="Europe/Prague")
 
-_SEEN_TTL     = 2_592_000          # 30 days
-_HTML_TAG_RE  = re.compile(r'<[^>]+>')
-_HTML_ENT_RE  = re.compile(r'&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);')
+_SEEN_TTL    = 2_592_000          # 30 days
+_HTML_TAG_RE = re.compile(r'<[^>]+>')
+_HTML_ENT_RE = re.compile(r'&(?:nbsp|amp|lt|gt|quot|apos|#\d+|#x[\da-fA-F]+);')
 
 _SUB_LABELS = {
     'Cancelled':     'Odpadlo',
@@ -19,6 +19,32 @@ _SUB_LABELS = {
     'RoomChange':    'Jiná učebna',
     'Absent':        'Absence',
 }
+
+# ── Adaptive poll interval ─────────────────────────────────────────────────────
+# Called once per scheduler tick to decide the current global poll window.
+# All users share the same interval — no per-user setting.
+#
+# Rationale for the windows:
+#   School hours  → teachers enter grades / komens actively, be fast (3 min)
+#   After school  → grades still arrive, homework deadlines update (5 min)
+#   Evening/night → almost nothing changes, be gentle on Bakaláře (30 min)
+#   Weekend day   → occasional updates from diligent teachers (10 min)
+#   Weekend night → nothing, save API quota (30 min)
+
+_PRAGUE_TZ = datetime.timezone(datetime.timedelta(hours=1))   # CET; DST handled by APScheduler
+
+def _adaptive_interval_minutes() -> int:
+    now     = datetime.datetime.now()   # scheduler timezone is Europe/Prague
+    hour    = now.hour
+    weekday = now.weekday()             # 0=Mon … 6=Sun
+
+    if weekday >= 5:                    # weekend
+        return 10 if 7 <= hour < 22 else 30
+
+    # weekday
+    if 7 <= hour < 16:   return 3      # school hours
+    if 16 <= hour < 22:  return 5      # after school / teacher grading time
+    return 30                          # night
 
 
 def start_scheduler(app) -> None:
@@ -41,17 +67,22 @@ def start_scheduler(app) -> None:
         with app.app_context():
             _run_cache_cleanup()
 
-    @_scheduler.scheduled_job("interval", minutes=1, id="hw_komens_poll")
-    def hw_komens_poll():
+    @_scheduler.scheduled_job("cron", month="6,12", day=1, hour=9, minute=0, id="wrap_push")
+    def wrap_push_job():
         with app.app_context():
-            _poll_homework_and_komens()
+            _send_wrap_push_notifications()
+
+    @_scheduler.scheduled_job("interval", minutes=1, id="bakalari_poll")
+    def bakalari_poll():
+        with app.app_context():
+            _poll_all_users()
 
     _scheduler.start()
     log.info(
         "scheduler: started "
-        "(hw/komens/subs poll every 1 min with per-user throttle, "
+        "(adaptive poll every 1 min tick, interval 3–30 min by time of day; "
         "evening reminder 18:00, weekly summary Sun 08:00, "
-        "cache cleanup 04:00 Europe/Prague)"
+        "cache cleanup 04:00, wrap push Jun/Dec 1st 09:00 Europe/Prague)"
     )
 
 
@@ -164,10 +195,7 @@ def _send_evening_reminders() -> None:
 
 
 def _poll_substitutions(user_id: str, svc, token, push_svc) -> "str | None":
-    """Check today's and tomorrow's timetable for new substitutions; push if found.
-
-    Returns the token (possibly refreshed), or None if auth failed.
-    """
+    """Check today's and tomorrow's timetable for new substitutions; push if found."""
     from app.database.db import cache_get, cache_set
 
     tt_data = svc.get_timetable(token)
@@ -191,7 +219,7 @@ def _poll_substitutions(user_id: str, svc, token, push_svc) -> "str | None":
         if h.get("Id") and h.get("BeginTime") and h.get("EndTime")
     }
 
-    seen_ids = set(cache_get(user_id, "push_seen_subs", ttl=_SEEN_TTL) or [])
+    seen_ids    = set(cache_get(user_id, "push_seen_subs", ttl=_SEEN_TTL) or [])
     all_sub_ids: set = set()
 
     for day in (tt_data.get("Days") or []):
@@ -236,22 +264,101 @@ def _poll_substitutions(user_id: str, svc, token, push_svc) -> "str | None":
     return token
 
 
-def _poll_homework_and_komens() -> None:
-    """Wake every minute; each user is polled only when their configured interval has elapsed."""
-    from app.database.db import cache_get, cache_set, get_settings
+def _poll_marks(user_id: str, svc, token, push_svc, prefs: dict) -> "str | None":
+    """Check for new grades; push if found. Returns token (possibly refreshed) or None."""
+    from app.database.db import cache_get, cache_set
+
+    if prefs.get("notifications_grades") is False:
+        return token
+
+    marks_data = svc.get_marks(token)
+    if marks_data.get("status_code") == 401:
+        token = svc.reauth(user_id)
+        if not token:
+            return None
+        marks_data = svc.get_marks(token)
+    if "error" in marks_data:
+        log.warning("scheduler: marks: error user=%.8s: %s", user_id, marks_data)
+        return token
+
+    # Build a fingerprint for every mark: abbrev:marktext:date
+    current_ids: set[str] = set()
+    novel_marks: list[dict] = []
+
+    seen_ids = set(cache_get(user_id, "push_seen_marks", ttl=_SEEN_TTL) or [])
+
+    for subject in (marks_data.get("Subjects") or []):
+        subj_info = subject.get("Subject") or {}
+        abbrev    = subj_info.get("Abbrev", "?").strip()
+        name      = subj_info.get("Name", abbrev)
+        for mark in (subject.get("Marks") or []):
+            mark_text = (mark.get("MarkText") or "").strip()
+            mark_date = (mark.get("MarkDate") or "")[:10]
+            fprint    = f"{abbrev}:{mark_text}:{mark_date}"
+            current_ids.add(fprint)
+            if fprint not in seen_ids:
+                novel_marks.append({
+                    "subject": name,
+                    "abbrev":  abbrev,
+                    "text":    mark_text,
+                    "date":    mark_date,
+                    "caption": (mark.get("Caption") or "").strip(),
+                })
+
+    if novel_marks:
+        count = len(novel_marks)
+        first = novel_marks[0]
+        if count == 1:
+            caption = f" ({first['caption']})" if first["caption"] else ""
+            body    = f"{first['subject']}: {first['text']}{caption}"
+        else:
+            body = f"{count} nových známek (první: {first['subject']} {first['text']})"
+        push_svc.send_to_user(user_id, "Nová známka v Bakixu", body, tag="bakix-marks")
+        log.info("scheduler: marks: push user=%.8s novel=%d", user_id, count)
+
+    updated = seen_ids | current_ids
+    if updated != seen_ids:
+        cache_set(user_id, "push_seen_marks", list(updated))
+    return token
+
+
+def _send_wrap_push_notifications() -> None:
+    """Send a Bakix Wrap notification to all subscribed users on June 1 and December 1."""
     from app.services.push_service import PushNotificationService
 
     push_svc = PushNotificationService()
-    now      = datetime.datetime.utcnow()
-    today    = datetime.date.today()
-    to_date  = today + datetime.timedelta(days=7)
+    month    = datetime.date.today().month
+    period   = "první pololetí" if month == 6 else "druhé pololetí"
+    user_ids = _subscribed_user_ids()
+    for user_id in user_ids:
+        try:
+            push_svc.send_to_user(
+                user_id,
+                "Bakix Wrap je tady! ✦",
+                f"Podívej se na svoje statistiky za {period} — otevři Bakix!",
+                url="/wrap",
+                tag="bakix-wrap",
+            )
+        except Exception:
+            log.exception("scheduler: wrap push: failed for user=%.8s", user_id)
+    log.info("scheduler: wrap push sent to %d users", len(user_ids))
+
+
+def _poll_all_users() -> None:
+    """Tick every minute; actually poll Bakaláře only when the adaptive window has elapsed."""
+    from app.database.db import cache_get, cache_set, get_settings
+    from app.services.push_service import PushNotificationService
+
+    interval_min = _adaptive_interval_minutes()
+    push_svc     = PushNotificationService()
+    now          = datetime.datetime.utcnow()
+    today        = datetime.date.today()
+    to_date      = today + datetime.timedelta(days=7)
 
     for user_id in _subscribed_user_ids():
         try:
-            # ── Per-user interval throttle ────────────────────────────────────
-            prefs        = get_settings(user_id)
-            interval_min = max(1, int(prefs.get("poll_interval_minutes") or 30))
-            last_ts      = cache_get(user_id, "poll_last_checked", ttl=172800)  # 2-day TTL
+            # ── Adaptive throttle ─────────────────────────────────────────────
+            last_ts = cache_get(user_id, "poll_last_checked", ttl=172800)  # 2-day TTL
             if last_ts:
                 elapsed_sec = (now - datetime.datetime.fromisoformat(last_ts)).total_seconds()
                 if elapsed_sec < interval_min * 60:
@@ -263,7 +370,12 @@ def _poll_homework_and_komens() -> None:
                 log.warning("scheduler: poll: no token for user=%.8s", user_id)
                 continue
 
-            log.debug("scheduler: poll: running for user=%.8s interval=%dmin", user_id, interval_min)
+            log.debug(
+                "scheduler: poll: running for user=%.8s (interval=%dmin)",
+                user_id, interval_min,
+            )
+
+            prefs = get_settings(user_id)
 
             # ── Homework ──────────────────────────────────────────────────────
             hw_data = svc.get_homeworks(token, today.isoformat(), to_date.isoformat())
@@ -339,6 +451,11 @@ def _poll_homework_and_komens() -> None:
                     updated = seen_ids | msg_ids
                     if updated != seen_ids:
                         cache_set(user_id, "push_seen_komens", list(updated))
+
+            # ── Marks (grades) ────────────────────────────────────────────────
+            token = _poll_marks(user_id, svc, token, push_svc, prefs)
+            if not token:
+                continue
 
             # ── Substitutions ─────────────────────────────────────────────────
             _poll_substitutions(user_id, svc, token, push_svc)

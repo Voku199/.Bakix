@@ -2,10 +2,49 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style/index.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='bakix-icon-apple.svg') }}">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Bakix">
+<style>
+.ai-model-bar{padding:0 .5rem .3rem;position:relative;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+.ai-model-selector{display:inline-flex;align-items:center;gap:.3rem;padding:2px 8px;border:1px solid var(--border);border-radius:99px;background:none;cursor:pointer;font-size:11px;color:var(--muted);font-family:inherit;transition:background .15s;}
+.ai-model-selector:hover{background:var(--hover-bg,rgba(0,0,0,.05));}
+.ai-mode-toggle{display:inline-flex;align-items:center;gap:2px;margin-left:auto;}
+.ai-mode-btn{padding:2px 8px;border:1px solid var(--border);border-radius:99px;background:none;cursor:pointer;font-size:11px;color:var(--muted);font-family:inherit;transition:background .15s,color .15s;}
+.ai-mode-btn:hover{background:var(--hover-bg,rgba(0,0,0,.05));}
+.ai-mode-btn.active{background:var(--accent-subtle,rgba(92,122,158,.12));color:var(--text);border-color:var(--accent,#5c7a9e);font-weight:600;}
+.ai-mode-btn--thinking.active{background:rgba(139,92,246,.12);border-color:#8b5cf6;color:#8b5cf6;}
+@keyframes thinking-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.ai-msg--thinking-mode .ai-thinking-dot{display:inline-block;animation:thinking-pulse 1.4s ease-in-out infinite;}
+.ai-msg--thinking-mode .ai-thinking-dot:nth-child(2){animation-delay:.2s;}
+.ai-msg--thinking-mode .ai-thinking-dot:nth-child(3){animation-delay:.4s;}
+.ai-model-selector__name{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ai-model-badge{font-size:9px;padding:1px 5px;border-radius:99px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:var(--badge-info-bg,#dbeafe);color:var(--badge-info-fg,#1d4ed8);}
+.ai-model-badge--freemium{background:var(--badge-ok-bg,#dcfce7);color:var(--badge-ok-fg,#166534);}
+.ai-model-panel{display:none;position:absolute;bottom:calc(100% + 4px);left:.5rem;right:.5rem;background:#211e19;border:1px solid rgba(255,255,255,.1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:200;overflow:hidden;max-height:300px;overflow-y:auto;}
+.ai-model-panel.open{display:block;}
+.ai-model-group-hdr{padding:5px 12px 2px;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.35);background:rgba(0,0,0,.25);}
+.ai-model-opt{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 12px;border:none;background:none;cursor:pointer;text-align:left;font-family:inherit;gap:.5rem;}
+.ai-model-opt:hover{background:rgba(255,255,255,.07);}
+.ai-model-opt.active{background:rgba(255,255,255,.1);}
+.ai-model-opt__name{font-size:12px;color:#f0ece6;font-weight:500;flex:1;text-align:left;}
+.ai-model-opt__desc{font-size:10px;color:rgba(255,255,255,.4);white-space:nowrap;}
+.compose-modal{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);align-items:center;justify-content:center;}
+.compose-modal.open{display:flex;}
+.compose-modal__panel{background:var(--card-bg,#fff);border-radius:12px;width:min(460px,92vw);max-height:90vh;overflow:auto;box-shadow:0 8px 32px rgba(0,0,0,.28);}
+.compose-modal__header{display:flex;align-items:center;padding:.85rem 1rem .7rem;border-bottom:1px solid var(--border);}
+.compose-modal__title{flex:1;font-weight:600;font-size:.95rem;}
+.compose-modal__body{padding:1rem;}
+.compose-field{margin-bottom:.75rem;}
+.compose-field label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.28rem;font-weight:500;}
+.compose-field select,.compose-field input,.compose-field textarea{width:100%;padding:.5rem .7rem;border:1px solid var(--border);border-radius:8px;background:var(--input-bg,var(--bg));color:var(--text);font-family:inherit;font-size:.875rem;box-sizing:border-box;outline:none;}
+.compose-field select:focus,.compose-field input:focus,.compose-field textarea:focus{border-color:var(--accent,#5c7a9e);}
+.compose-field textarea{resize:vertical;min-height:110px;}
+.compose-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;}
+.compose-status{font-size:.8rem;margin-top:.5rem;min-height:1.1em;color:var(--muted);}
+</style>
 {% endblock %}
 
 
@@ -92,7 +131,7 @@
 
     <section class="card">
       <div class="card__title-row">
-        <h2 class="card__title">Rozvrh</h2>
+        <h2 class="card__title">{{ _('Rozvrh') }}</h2>
         <div class="tt-day-switch">
           <button class="btn btn--icon tt-day-btn tt-day-btn--active" data-day="today">{{ _('Dnes') }}</button>
           <button class="btn btn--icon tt-day-btn" data-day="tomorrow">{{ _('Zítra') }}</button>
@@ -107,7 +146,10 @@
     </section>
 
     <section class="card">
-      <h2 class="card__title">{{ _('Zprávy') }}</h2>
+      <div class="card__title-row">
+        <h2 class="card__title">{{ _('Zprávy') }}</h2>
+        <button class="btn btn--icon" id="compose-open" title="{{ _('Nová zpráva') }}" aria-label="{{ _('Napsat novou zprávu') }}">✏</button>
+      </div>
       <div id="komens-body"><div class="skel-rows"><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div><div class="skel-col"><div class="skel skel-line--short"></div><div class="skel skel-line--xshort"></div></div><div class="skel-col"><div class="skel skel-line"></div><div class="skel skel-line--short"></div></div></div></div>
     </section>
 
@@ -162,6 +204,24 @@
         <p class="empty">{{ _('Zatím žádné projekty. Popros AI o vytvoření stránky!') }}</p>
       {% endif %}
     </div>
+  </section>
+  {% endif %}
+
+  {# ── Bakix Wrap button ───────────────────────────────────── #}
+  {% if show_wrap %}
+  <section class="card wrap-entry-card" style="margin-bottom:1.25rem;">
+    <div class="wrap-entry-card__inner">
+      <div class="wrap-entry-card__text">
+        <span class="wrap-entry-card__title">Bakix Wrap ✦</span>
+        <span class="wrap-entry-card__sub">Tvoje statistiky za posledních 6 měsíců</span>
+      </div>
+      <a href="/wrap" class="btn btn--primary wrap-entry-card__btn">Zobrazit</a>
+    </div>
+    {% if config.DEBUG %}
+    <span style="font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;
+                 background:var(--badge-warn-bg);color:var(--badge-warn-fg);
+                 border-radius:4px;align-self:flex-start;margin-top:.35rem;">DEBUG</span>
+    {% endif %}
   </section>
   {% endif %}
 
@@ -230,6 +290,28 @@
         </div>
       </div>
 
+      {% if not config.TEST_MODE %}
+      <div class="settings-section">
+        <div class="settings-section-label">{{ _('Předplatné') }}</div>
+        <div class="settings-sub-plan">
+          <span class="settings-sub-badge" id="s-sub-badge">Free</span>
+          <span class="settings-sub-desc"  id="s-sub-desc">5 AI dotazů denně</span>
+        </div>
+        <div class="settings-sub-compare">
+          <div class="settings-sub-row">
+            <span class="settings-sub-row__name">Free</span>
+            <span class="settings-sub-row__val">5 AI dotazů / den</span>
+          </div>
+          <div class="settings-sub-row settings-sub-row--hi">
+            <span class="settings-sub-row__name">Premium ✦</span>
+            <span class="settings-sub-row__val">50 AI dotazů / den</span>
+          </div>
+        </div>
+        <button class="btn btn--primary" id="s-sub-btn" style="width:100%;">Aktivovat Premium ✦</button>
+        <div id="s-sub-status" class="settings-sub-status"></div>
+      </div>
+      {% endif %}
+
       <div class="settings-section">
         <div class="settings-section-label">{{ _('Zobrazení') }}</div>
         <div class="settings-row">
@@ -251,17 +333,6 @@
 
       <div class="settings-section">
         <div class="settings-section-label">{{ _('Notifikace') }}</div>
-        <div class="settings-row">
-          <span>{{ _('Kontrolovat každých') }}</span>
-          <select id="s-poll-interval">
-            <option value="1">{{ _('1 minutu') }}</option>
-            <option value="5">{{ _('5 minut') }}</option>
-            <option value="15">{{ _('15 minut') }}</option>
-            <option value="30">{{ _('30 minut') }}</option>
-            <option value="60">{{ _('1 hodinu') }}</option>
-            <option value="120">{{ _('2 hodiny') }}</option>
-          </select>
-        </div>
         {# notif-wrap shown by notifications.js when Push API is available #}
         <div id="notif-wrap" style="display:none; margin-bottom:.65rem;">
           <button class="btn btn--secondary" id="notif-enable-btn" style="width:100%; display:none;">Zapnout notifikace</button>
@@ -310,6 +381,12 @@
         <button class="btn btn--primary"   id="settings-save">{{ _('Uložit') }}</button>
       </div>
 
+      <div class="settings-section" style="margin-top:.5rem;">
+        <a href="/logout" class="btn btn--danger" style="width:100%;display:block;text-align:center;text-decoration:none;">
+          {{ _('Odhlásit se') }}
+        </a>
+      </div>
+
     </div>
   </div>
 
@@ -328,6 +405,8 @@
         <button class="chat-mode-btn"                       data-mode="grades"  title="Zaměřeno na tvé známky">Známky</button>
         <button class="chat-mode-btn"                       data-mode="general" title="Obecný chat">Chat</button>
       </div>
+      <button class="btn btn--icon" id="ai-convos-btn" title="Historie chatů" aria-label="Historie chatů">🗂</button>
+      <button class="btn btn--icon" id="ai-newchat-btn" title="Nový chat" aria-label="Nový chat">＋</button>
       <button class="btn btn--icon" id="ai-popout-btn" title="Okenní režim" aria-label="Přepnout do okenního režimu">⊞</button>
       <button class="btn btn--icon" id="ai-sidebar-close" aria-label="{{ _('Zavřít') }}">×</button>
     </div>
@@ -336,6 +415,60 @@
       <div id="ai-suggestions" class="ai-suggestions"></div>
       <div id="ai-modify-picker" class="chat-modify-picker" style="display:none;" aria-label="Výběr projektu"></div>
       <div id="ai-cmd-palette" class="ai-cmd-palette" style="display:none;" role="listbox" aria-label="Dostupné příkazy"></div>
+      <div class="ai-model-bar">
+        <button class="ai-model-selector" id="ai-model-btn" title="Vybrat AI model" aria-haspopup="listbox" style="flex-shrink:0;">
+          <span class="ai-model-selector__name" id="ai-model-name">Gemini 3.1 Flash Lite</span>
+          <span class="ai-model-badge" id="ai-model-badge">Pro</span>
+        </button>
+        <div id="ai-model-panel" class="ai-model-panel" role="listbox" aria-label="Výběr modelu">
+          <div class="ai-model-group-hdr">Pro</div>
+          <button class="ai-model-opt active" data-model="gemini-3.1-flash-lite" data-name="Gemini 3.1 Flash Lite" data-group="pro" role="option" aria-selected="true">
+            <span class="ai-model-opt__name">Gemini 3.1 Flash Lite</span>
+            <span class="ai-model-opt__desc">Výchozí</span>
+          </button>
+          <button class="ai-model-opt" data-model="gemini-3.5-flash" data-name="Gemini 3.5 Flash" data-group="pro" role="option">
+            <span class="ai-model-opt__name">Gemini 3.5 Flash</span>
+            <span class="ai-model-opt__desc">Rychlejší</span>
+          </button>
+          <button class="ai-model-opt" data-model="gemini-3-flash-preview" data-name="Gemini 3 Flash Preview" data-group="pro" role="option">
+            <span class="ai-model-opt__name">Gemini 3 Flash Preview</span>
+            <span class="ai-model-opt__desc">Preview</span>
+          </button>
+          <div class="ai-model-group-hdr">Freemium</div>
+          <button class="ai-model-opt" data-model="gemini-2.5-flash-lite" data-name="Gemini 2.5 Flash Lite" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Gemini 2.5 Flash Lite</span>
+            <span class="ai-model-opt__desc">10/den · tvorba stránek</span>
+          </button>
+          <button class="ai-model-opt" data-model="nvidia/nemotron-3-super-120b-a12b:free" data-name="Nemotron 120B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Nemotron 120B</span>
+            <span class="ai-model-opt__desc">Free · OpenRouter</span>
+          </button>
+          <button class="ai-model-opt" data-model="poolside/laguna-m.1:free" data-name="Laguna M.1" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Laguna M.1</span>
+            <span class="ai-model-opt__desc">Free · OpenRouter</span>
+          </button>
+          <button class="ai-model-opt" data-model="openrouter/free" data-name="OpenRouter Auto" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">OpenRouter Auto</span>
+            <span class="ai-model-opt__desc">Free · automaticky nejlepší</span>
+          </button>
+          <button class="ai-model-opt" data-model="openai/gpt-oss-120b:free" data-name="GPT OSS 120B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">GPT OSS 120B</span>
+            <span class="ai-model-opt__desc">Free · OpenRouter</span>
+          </button>
+          <button class="ai-model-opt" data-model="qwen/qwen3-next-80b-a3b-instruct:free" data-name="Qwen3 80B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Qwen3 80B</span>
+            <span class="ai-model-opt__desc">Free · OpenRouter</span>
+          </button>
+          <button class="ai-model-opt" data-model="google/gemma-4-26b-a4b-it:free" data-name="Gemma 4 26B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Gemma 4 26B</span>
+            <span class="ai-model-opt__desc">Free · OpenRouter</span>
+          </button>
+        </div>
+        <div class="ai-mode-toggle" role="group" aria-label="Režim odpovědi">
+          <button class="ai-mode-btn active"              id="ai-mode-normal"   data-aimode="normal"   title="Rychlá odpověď">Normal</button>
+          <button class="ai-mode-btn ai-mode-btn--thinking" id="ai-mode-thinking" data-aimode="thinking" title="Hlubší analýza, pomalejší">💭 Přemýšlení</button>
+        </div>
+      </div>
       <div class="ai-input-row">
         <button id="ai-modify-btn" class="btn btn--icon" title="Upravit projekt" aria-label="Vybrat projekt k úpravě"
                 style="flex-shrink:0;">✦</button>
@@ -344,6 +477,37 @@
       </div>
     </div>
   </aside>
+
+  {# ── Compose message modal ──────────────────────────────── #}
+  <div id="compose-modal" class="compose-modal" role="dialog" aria-modal="true" aria-label="{{ _('Nová zpráva') }}">
+    <div class="compose-modal__panel">
+      <div class="compose-modal__header">
+        <span class="compose-modal__title">{{ _('Nová zpráva') }}</span>
+        <button class="btn btn--icon" id="compose-close" aria-label="{{ _('Zavřít') }}">×</button>
+      </div>
+      <div class="compose-modal__body">
+        <div class="compose-field">
+          <label for="compose-recipient">{{ _('Příjemce') }}</label>
+          <select id="compose-recipient">
+            <option value="">Načítám…</option>
+          </select>
+        </div>
+        <div class="compose-field">
+          <label for="compose-subject">{{ _('Předmět') }}</label>
+          <input id="compose-subject" type="text" maxlength="200" placeholder="{{ _('Předmět zprávy…') }}">
+        </div>
+        <div class="compose-field">
+          <label for="compose-content">{{ _('Text zprávy') }}</label>
+          <textarea id="compose-content" maxlength="2000" placeholder="{{ _('Napiš svou zprávu…') }}"></textarea>
+        </div>
+        <div class="compose-status" id="compose-status"></div>
+        <div class="compose-actions">
+          <button class="btn btn--secondary" id="compose-cancel">{{ _('Zrušit') }}</button>
+          <button class="btn btn--primary"   id="compose-send">{{ _('Odeslat') }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   {# ── Message detail modal ───────────────────────────────── #}
   <div id="msg-modal" class="msg-modal" role="dialog" aria-modal="true" aria-label="Detail zprávy">
@@ -419,7 +583,99 @@
 {% endif %}
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 <script>const USER_PROJECTS = {{ user_projects | tojson | safe }};</script>
+<script>const IS_PREMIUM = {{ (is_premium | default(false)) | tojson | safe }};</script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 <script src="{{ url_for('static', filename='js/chat_interface.js') }}"></script>
 <script>window.VAPID_PUBLIC_KEY = {{ vapid_public_key | tojson }};</script>
 <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+<script>
+(function () {
+  'use strict';
+  var modal   = document.getElementById('compose-modal');
+  var recip   = document.getElementById('compose-recipient');
+  var subj    = document.getElementById('compose-subject');
+  var cont    = document.getElementById('compose-content');
+  var stat    = document.getElementById('compose-status');
+  var sendBtn = document.getElementById('compose-send');
+  if (!modal) return;
+
+  function setStatus(msg, isErr) {
+    stat.textContent = msg;
+    stat.style.color = isErr ? 'var(--red, #c0392b)' : 'var(--muted)';
+  }
+
+  function loadRecipients() {
+    recip.innerHTML = '<option value="">Načítám…</option>';
+    fetch('/api/komens/message-types')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var list = d.recipients || [];
+        if (!list.length) {
+          recip.innerHTML = '<option value="">Žádní příjemci</option>';
+          return;
+        }
+        recip.innerHTML = '<option value="">— Vyber příjemce —</option>';
+        list.forEach(function (p) {
+          var opt = document.createElement('option');
+          opt.value = p.code;
+          opt.textContent = p.name;
+          recip.appendChild(opt);
+        });
+      })
+      .catch(function () {
+        recip.innerHTML = '<option value="">Chyba načítání</option>';
+        setStatus('Nepodařilo se načíst příjemce.', true);
+      });
+  }
+
+  function openCompose() {
+    subj.value = '';
+    cont.value = '';
+    stat.textContent = '';
+    sendBtn.disabled = false;
+    loadRecipients();
+    modal.classList.add('open');
+    subj.focus();
+  }
+
+  function closeCompose() { modal.classList.remove('open'); }
+
+  function sendMessage() {
+    var recipientId = recip.value;
+    var subject     = subj.value.trim();
+    var content     = cont.value.trim();
+    if (!recipientId) { setStatus('Vyber příjemce.', true); return; }
+    if (!subject)     { setStatus('Zadej předmět zprávy.', true); return; }
+    if (!content)     { setStatus('Zadej text zprávy.', true); return; }
+    sendBtn.disabled = true;
+    setStatus('Odesílám…', false);
+    fetch('/api/komens/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient_id: recipientId, subject: subject, content: content }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok) {
+          setStatus('Zpráva odeslána!', false);
+          setTimeout(closeCompose, 1200);
+        } else {
+          setStatus(d.error || 'Chyba při odesílání.', true);
+          sendBtn.disabled = false;
+        }
+      })
+      .catch(function () {
+        setStatus('Síťová chyba.', true);
+        sendBtn.disabled = false;
+      });
+  }
+
+  document.getElementById('compose-open')?.addEventListener('click', openCompose);
+  document.getElementById('compose-close')?.addEventListener('click', closeCompose);
+  document.getElementById('compose-cancel')?.addEventListener('click', closeCompose);
+  sendBtn.addEventListener('click', sendMessage);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeCompose(); });
+})();
+</script>
 {% endblock %}

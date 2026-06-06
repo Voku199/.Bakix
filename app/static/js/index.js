@@ -15,19 +15,34 @@
         document.getElementById('s-remember').checked         = !!d.remember_password;
         document.getElementById('s-theme').value              = d.theme    || localStorage.getItem('bakix-theme') || 'auto';
         document.getElementById('s-language').value           = d.language || 'cs';
-        const pollSel = document.getElementById('s-poll-interval');
-        if (pollSel) {
-          pollSel.value = String(d.poll_interval_minutes || 30);
-          if (!pollSel.value || !pollSel.querySelector('option[value="' + pollSel.value + '"]')) {
-            pollSel.value = '30';
-          }
-        }
+
         document.getElementById('s-notif-messages').checked   = d.notifications_messages  !== false;
         document.getElementById('s-notif-homeworks').checked  = d.notifications_homeworks !== false;
         document.getElementById('s-notif-marks').checked      = d.notifications_marks     !== false;
         document.getElementById('s-notif-subs').checked       = d.notifications_subs      !== false;
         document.getElementById('s-notif-daily').checked      = d.notifications_daily     !== false;
         document.getElementById('s-notif-absences').checked   = d.notifications_absences  !== false;
+        // ── Subscription section ──────────────────────────────
+        const tier     = d.subscription_tier || 'free';
+        const isPrem   = tier === 'premium';
+        const expires  = d.subscription_expires_at || null;
+        const subBadge = document.getElementById('s-sub-badge');
+        const subDesc  = document.getElementById('s-sub-desc');
+        const subBtn   = document.getElementById('s-sub-btn');
+        const subSt    = document.getElementById('s-sub-status');
+        if (subBadge) { subBadge.textContent = isPrem ? 'Premium ✦' : 'Free'; subBadge.className = 'settings-sub-badge' + (isPrem ? ' settings-sub-badge--premium' : ''); }
+        if (subDesc) {
+          let desc = isPrem ? '50 AI dotazů denně' : '5 AI dotazů denně';
+          if (isPrem && expires) {
+            const dt = new Date(expires.replace(' ', 'T') + 'Z');  // server time is UTC
+            if (!isNaN(dt)) desc += ' · platí do ' + dt.toLocaleDateString('cs-CZ');
+          }
+          subDesc.textContent = desc;
+        }
+        // Free → buy, Premium → extend. Both go through the real payment flow.
+        if (subBtn)   { subBtn.textContent = isPrem ? 'Prodloužit Premium — 50 Kč' : 'Aktivovat Premium ✦ — 50 Kč'; subBtn.className = 'btn btn--primary'; subBtn.style.width = '100%'; }
+        if (subSt)    subSt.textContent = '';
+
         status.textContent = '';
         status.className   = 'settings-status';
         overlay.classList.add('open');
@@ -50,7 +65,6 @@
       remember_password:      document.getElementById('s-remember').checked,
       theme:                  document.getElementById('s-theme').value,
       language:               document.getElementById('s-language').value,
-      poll_interval_minutes:   parseInt(document.getElementById('s-poll-interval')?.value || '30', 10),
       notifications_messages:  document.getElementById('s-notif-messages').checked,
       notifications_homeworks: document.getElementById('s-notif-homeworks').checked,
       notifications_marks:     document.getElementById('s-notif-marks').checked,
@@ -88,6 +102,12 @@
     Promise.all(saves)
       .then(([d]) => {
         if (d.ok) {
+          if (d.language_changed) {
+            status.textContent = 'Uloženo. Přepínám jazyk…';
+            status.className   = 'settings-status settings-status--ok';
+            setTimeout(() => window.location.reload(), 600);
+            return;
+          }
           status.textContent = 'Uloženo.';
           status.className   = 'settings-status settings-status--ok';
           if (displayName) {
@@ -111,6 +131,31 @@
   document.getElementById('settings-cancel')?.addEventListener('click', closeSettings);
   document.getElementById('settings-save')  ?.addEventListener('click', saveSettings);
   overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
+
+  // ── Buy / extend Premium via Stripe Checkout ──────────────
+  document.getElementById('s-sub-btn')?.addEventListener('click', function () {
+    const btn   = this;
+    const subSt = document.getElementById('s-sub-status');
+
+    btn.disabled = true;
+    if (subSt) { subSt.textContent = 'Přesměrovávám na platbu…'; subSt.className = 'settings-sub-status'; }
+
+    fetch('/api/payment/checkout', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({}),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || !d.url) throw new Error(d.error || 'Platbu se nepodařilo zahájit.');
+        // Hand off to Stripe's hosted checkout page.
+        window.location.href = d.url;
+      })
+      .catch(err => {
+        if (subSt) { subSt.textContent = err.message || 'Síťová chyba.'; subSt.className = 'settings-sub-status settings-sub-status--err'; }
+        btn.disabled = false;
+      });
+  });
 
 })();
 
@@ -567,7 +612,8 @@ document.addEventListener('DOMContentLoaded', function () {
       div.appendChild(title); div.appendChild(meta);
       if (m.Text) {
         const t = document.createElement('div'); t.className = 'msg-item__text';
-        t.textContent = m.Text.length > 60 ? m.Text.slice(0, 60) + '…' : m.Text;
+        var _preview = m.Text.replace(/\/n/g, ' ');
+        t.textContent = _preview.length > 60 ? _preview.slice(0, 60) + '…' : _preview;
         div.appendChild(t);
       }
       div.addEventListener('click', function () { if (window.openMsgModal) window.openMsgModal(m); });
@@ -689,6 +735,16 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
+/* ── Komens /n helper ─────────────────────────────────────── */
+function msgToHtml(text) {
+  var esc = ('' + text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return esc.replace(/\/n/g, '<br>');
+}
+
 /* ── Komens message modal ─────────────────────────────────── */
 (function () {
   var modal      = document.getElementById('msg-modal');
@@ -703,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.openMsgModal = function (m) {
     modalTitle.textContent = m.Title  || '—';
     modalMeta.textContent  = (m.Sender || '—') + ' · ' + fmtDate(m.SentDate);
-    modalBody.textContent  = m.Text   || '';
+    modalBody.innerHTML = msgToHtml(m.Text || '');
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
   };

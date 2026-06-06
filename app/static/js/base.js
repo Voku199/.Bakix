@@ -1,3 +1,29 @@
+/* CSRF — auto-attach the token to every same-origin mutating fetch, so each
+   caller (chat, dashboard, push, login…) doesn't have to remember to. The
+   server (Flask-WTF) checks the X-CSRFToken header. */
+(function () {
+  var meta  = document.querySelector('meta[name="csrf-token"]');
+  var token = meta ? meta.getAttribute('content') : '';
+  if (!token || !window.fetch) return;
+  var SAFE   = /^(GET|HEAD|OPTIONS|TRACE)$/i;
+  var _fetch = window.fetch;
+  window.fetch = function (input, init) {
+    init = init || {};
+    var method = (init.method ||
+                  (input && typeof input === 'object' && input.method) ||
+                  'GET').toUpperCase();
+    var url    = typeof input === 'string' ? input : (input && input.url) || '';
+    var sameOrigin = url.indexOf('http') !== 0 || url.indexOf(location.origin) === 0;
+    if (!SAFE.test(method) && sameOrigin) {
+      var headers = new Headers(init.headers ||
+                    (input && typeof input === 'object' ? input.headers : null) || {});
+      if (!headers.has('X-CSRFToken')) headers.set('X-CSRFToken', token);
+      init.headers = headers;
+    }
+    return _fetch(input, init);
+  };
+})();
+
 /* Theme toggle + service worker — runs on every page */
 (function () {
   const root = document.documentElement;
