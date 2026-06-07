@@ -1264,6 +1264,7 @@ html, body {
 
 /* ── Pop-out toggle button ──────────────────────────────── */
 #ai-popout-btn { font-size: 13px; padding: 4px 7px; }
+@media (max-width: 640px) { #ai-popout-btn { display: none; } }
 
 /* ── In-thread project list (✦ panel) ──────────────────── */
 .ai-msg--projects {

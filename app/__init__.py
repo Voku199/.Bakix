@@ -14,6 +14,7 @@ _AUTH_EXEMPT = frozenset({
     "/welcome", "/onboarding",
     "/login", "/login/now", "/login-demo", "/logout",
     "/cookies", "/privacy", "/tos",
+    "/robots.txt", "/sitemap.xml",
 })
 
 
@@ -139,6 +140,53 @@ def create_app():
     def service_worker():
         from flask import send_from_directory
         return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+
+    @app.route("/robots.txt")
+    def robots_txt():
+        base = request.host_url.rstrip("/")
+        body = (
+            "User-agent: *\n"
+            "Allow: /welcome\n"
+            "Allow: /onboarding\n"
+            "Allow: /cookies\n"
+            "Allow: /privacy\n"
+            "Allow: /tos\n"
+            "Allow: /static/\n"
+            "Disallow: /api/\n"
+            "Disallow: /login/now\n"
+            "Disallow: /logout\n"
+            "Disallow: /prompt\n"
+            "Disallow: /wrap\n"
+            "Disallow: /payment\n"
+            f"\nSitemap: {base}/sitemap.xml\n"
+        )
+        return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+    @app.route("/sitemap.xml")
+    def sitemap_xml():
+        import datetime as _dt
+        base  = request.host_url.rstrip("/")
+        today = _dt.date.today().isoformat()
+        pages = [
+            {"loc": f"{base}/welcome",    "changefreq": "monthly", "priority": "1.0", "lastmod": today},
+            {"loc": f"{base}/onboarding", "changefreq": "monthly", "priority": "0.8", "lastmod": today},
+            {"loc": f"{base}/cookies",    "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
+            {"loc": f"{base}/privacy",    "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
+            {"loc": f"{base}/tos",        "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
+        ]
+        lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+        lines.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+        for p in pages:
+            lines.append(
+                f'  <url>\n'
+                f'    <loc>{p["loc"]}</loc>\n'
+                f'    <lastmod>{p["lastmod"]}</lastmod>\n'
+                f'    <changefreq>{p["changefreq"]}</changefreq>\n'
+                f'    <priority>{p["priority"]}</priority>\n'
+                f'  </url>'
+            )
+        lines.append("</urlset>")
+        return "\n".join(lines), 200, {"Content-Type": "application/xml; charset=utf-8"}
 
     @app.context_processor
     def _inject_user_globals():

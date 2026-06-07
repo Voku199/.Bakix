@@ -72,6 +72,16 @@ def start_scheduler(app) -> None:
         with app.app_context():
             _send_wrap_push_notifications()
 
+    @_scheduler.scheduled_job("cron", month="7,8", day_of_week="mon", hour=9, minute=0, id="summer_countdown")
+    def summer_countdown_job():
+        with app.app_context():
+            _send_summer_countdown()
+
+    @_scheduler.scheduled_job("cron", month="7,8", day_of_week="wed", hour=3, minute=0, id="token_keeper")
+    def token_keeper_job():
+        with app.app_context():
+            _refresh_all_tokens()
+
     @_scheduler.scheduled_job("interval", minutes=1, id="bakalari_poll")
     def bakalari_poll():
         with app.app_context():
@@ -344,8 +354,88 @@ def _send_wrap_push_notifications() -> None:
     log.info("scheduler: wrap push sent to %d users", len(user_ids))
 
 
+def _send_summer_countdown() -> None:
+    """Every Monday in July/August, push the countdown until school starts."""
+    from app.services.push_service import PushNotificationService
+
+    today = datetime.date.today()
+    if today.month not in (7, 8):
+        return
+
+    school_start = datetime.date(today.year, 9, 1)
+    while school_start.weekday() >= 5:
+        school_start += datetime.timedelta(days=1)
+    days_left = (school_start - today).days
+
+    if days_left == 1:
+        body = "Zítra začíná škola! Připrav si aktovku."
+    elif days_left <= 7:
+        body = f"Ještě {days_left} dní prázdnin — hurá!"
+    elif days_left <= 14:
+        body = f"Do školy zbývá {days_left} dní. Uži si zbytek prázdnin!"
+    else:
+        body = f"Do školy zbývá {days_left} dní. Léto ještě nekončí!"
+
+    push_svc = PushNotificationService()
+    user_ids = _subscribed_user_ids()
+    for user_id in user_ids:
+        try:
+            push_svc.send_to_user(
+                user_id,
+                f"Do školy zbývá {days_left} dní",
+                body,
+                url="/",
+                tag="bakix-summer",
+            )
+        except Exception:
+            log.exception("scheduler: summer_countdown: failed for user=%.8s", user_id)
+    log.info("scheduler: summer_countdown sent to %d users (days_left=%d)", len(user_ids), days_left)
+
+
+def _refresh_all_tokens() -> None:
+    """Every Wednesday in July/August, reauthenticate all users so tokens don't expire over summer.
+
+    Without this, students who don't open Bakix all summer would face a forced re-login in September
+    because the Bakaláře refresh token TTL is typically 30–90 days.
+    """
+    today = datetime.date.today()
+    if today.month not in (7, 8):
+        return
+
+    from app.database.connection import get_connection
+    from app.database.db import fetch_row
+    from app.services.bakalari import BakalariService
+
+    with get_connection() as db:
+        user_ids = [r[0] for r in db.execute("SELECT user_id FROM saved_credentials").fetchall()]
+
+    refreshed = 0
+    failed = 0
+    for user_id in user_ids:
+        try:
+            row = fetch_row(user_id)
+            if not row:
+                continue
+            svc   = BakalariService(base_url=row["school_url"])
+            token = svc.reauth(user_id)
+            if token:
+                refreshed += 1
+            else:
+                failed += 1
+                log.warning("scheduler: token_keeper: reauth failed for user=%.8s", user_id)
+        except Exception:
+            failed += 1
+            log.exception("scheduler: token_keeper: error for user=%.8s", user_id)
+
+    log.info("scheduler: token_keeper: refreshed=%d failed=%d", refreshed, failed)
+
+
 def _poll_all_users() -> None:
-    """Tick every minute; actually poll Bakaláře only when the adaptive window has elapsed."""
+    """Tick every minute; actually poll Bakaláře only when the adaptive window has elapsed.
+
+    In July/August (summer holidays), homework, komens and substitutions are skipped;
+    only marks are polled so students with retake exams still get grade notifications.
+    """
     from app.database.db import cache_get, cache_set, get_settings
     from app.services.push_service import PushNotificationService
 
@@ -354,6 +444,7 @@ def _poll_all_users() -> None:
     now          = datetime.datetime.utcnow()
     today        = datetime.date.today()
     to_date      = today + datetime.timedelta(days=7)
+    _is_summer   = today.month in (7, 8)
 
     for user_id in _subscribed_user_ids():
         try:
@@ -377,88 +468,91 @@ def _poll_all_users() -> None:
 
             prefs = get_settings(user_id)
 
-            # ── Homework ──────────────────────────────────────────────────────
-            hw_data = svc.get_homeworks(token, today.isoformat(), to_date.isoformat())
-            if hw_data.get("status_code") == 401:
-                token = svc.reauth(user_id)
-                if not token:
-                    continue
+            # ── Homework (skipped in summer — schools have no assignments) ────
+            if not _is_summer:
                 hw_data = svc.get_homeworks(token, today.isoformat(), to_date.isoformat())
+                if hw_data.get("status_code") == 401:
+                    token = svc.reauth(user_id)
+                    if not token:
+                        continue
+                    hw_data = svc.get_homeworks(token, today.isoformat(), to_date.isoformat())
 
-            if "error" not in hw_data:
-                homeworks = [
-                    {
-                        "ID":      hw.get("Id"),
-                        "Subject": (hw.get("Subject") or {}).get("Name"),
-                        "DateEnd": hw.get("DateEnd"),
-                    }
-                    for hw in (hw_data.get("Homeworks") if isinstance(hw_data, dict) else []) or []
-                    if not hw.get("Closed") and not hw.get("Done")
-                ]
-                hw_ids = {str(h["ID"]) for h in homeworks if h["ID"]}
-                if hw_ids:
-                    seen_ids  = set(cache_get(user_id, "push_seen_hw", ttl=_SEEN_TTL) or [])
-                    novel_ids = hw_ids - seen_ids
-                    if novel_ids and prefs.get("notifications_homeworks") is not False:
-                        first = next((h for h in homeworks if str(h["ID"]) in novel_ids), None)
-                        count = len(novel_ids)
-                        if count == 1 and first:
-                            due  = (first["DateEnd"] or "")[:10]
-                            subj = first["Subject"] or "předmět"
-                            body = f"{subj} – odevzdat do {due}"
-                        else:
-                            body = f"Máš {count} nových úkolů"
-                        push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body, tag="bakix-hw")
-                        log.info("scheduler: poll: hw push user=%.8s novel=%d", user_id, len(novel_ids))
-                    cache_set(user_id, "push_seen_hw", list(hw_ids | seen_ids))
+                if "error" not in hw_data:
+                    homeworks = [
+                        {
+                            "ID":      hw.get("Id"),
+                            "Subject": (hw.get("Subject") or {}).get("Name"),
+                            "DateEnd": hw.get("DateEnd"),
+                        }
+                        for hw in (hw_data.get("Homeworks") if isinstance(hw_data, dict) else []) or []
+                        if not hw.get("Closed") and not hw.get("Done")
+                    ]
+                    hw_ids = {str(h["ID"]) for h in homeworks if h["ID"]}
+                    if hw_ids:
+                        seen_ids  = set(cache_get(user_id, "push_seen_hw", ttl=_SEEN_TTL) or [])
+                        novel_ids = hw_ids - seen_ids
+                        if novel_ids and prefs.get("notifications_homeworks") is not False:
+                            first = next((h for h in homeworks if str(h["ID"]) in novel_ids), None)
+                            count = len(novel_ids)
+                            if count == 1 and first:
+                                due  = (first["DateEnd"] or "")[:10]
+                                subj = first["Subject"] or "předmět"
+                                body = f"{subj} – odevzdat do {due}"
+                            else:
+                                body = f"Máš {count} nových úkolů"
+                            push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body, tag="bakix-hw")
+                            log.info("scheduler: poll: hw push user=%.8s novel=%d", user_id, len(novel_ids))
+                        cache_set(user_id, "push_seen_hw", list(hw_ids | seen_ids))
 
-            # ── Komens ────────────────────────────────────────────────────────
-            komens_data = svc.get_komens(token)
-            if komens_data.get("status_code") == 401:
-                token = svc.reauth(user_id)
-                if not token:
-                    continue
+            # ── Komens (skipped in summer — teachers rarely message in Jul/Aug) ─
+            if not _is_summer:
                 komens_data = svc.get_komens(token)
+                if komens_data.get("status_code") == 401:
+                    token = svc.reauth(user_id)
+                    if not token:
+                        continue
+                    komens_data = svc.get_komens(token)
 
-            if "error" not in komens_data:
-                top5 = sorted(
-                    (komens_data.get("Messages") if isinstance(komens_data, dict) else []) or [],
-                    key=lambda m: m.get("SentDate") or "",
-                    reverse=True,
-                )[:5]
-                messages = [
-                    {
-                        "Id":     m.get("Id"),
-                        "Title":  m.get("Title"),
-                        "Sender": (m.get("Sender") or {}).get("Name"),
-                        "Read":   bool(m.get("Read")),
-                        "Text":   _clean_text(m.get("Text") or ""),
-                    }
-                    for m in top5
-                ]
-                msg_ids = {str(m["Id"]) for m in messages if m["Id"]}
-                if msg_ids:
-                    seen_ids     = set(cache_get(user_id, "push_seen_komens", ttl=_SEEN_TTL) or [])
-                    novel_unread = [m for m in messages if str(m["Id"]) not in seen_ids and not m["Read"]]
-                    if novel_unread and prefs.get("notifications_messages") is not False:
-                        first        = novel_unread[0]
-                        sender       = first["Sender"] or "škola"
-                        text_preview = (first["Text"] or "")[:80]
-                        title_t      = (first["Title"] or "Zpráva")[:60]
-                        body         = f"{sender}: {text_preview}" if text_preview else f"{sender}: {title_t}"
-                        push_svc.send_to_user(user_id, "Nová zpráva v Bakixu", body, tag="bakix-komens")
-                        log.info("scheduler: poll: komens push user=%.8s", user_id)
-                    updated = seen_ids | msg_ids
-                    if updated != seen_ids:
-                        cache_set(user_id, "push_seen_komens", list(updated))
+                if "error" not in komens_data:
+                    top5 = sorted(
+                        (komens_data.get("Messages") if isinstance(komens_data, dict) else []) or [],
+                        key=lambda m: m.get("SentDate") or "",
+                        reverse=True,
+                    )[:5]
+                    messages = [
+                        {
+                            "Id":     m.get("Id"),
+                            "Title":  m.get("Title"),
+                            "Sender": (m.get("Sender") or {}).get("Name"),
+                            "Read":   bool(m.get("Read")),
+                            "Text":   _clean_text(m.get("Text") or ""),
+                        }
+                        for m in top5
+                    ]
+                    msg_ids = {str(m["Id"]) for m in messages if m["Id"]}
+                    if msg_ids:
+                        seen_ids     = set(cache_get(user_id, "push_seen_komens", ttl=_SEEN_TTL) or [])
+                        novel_unread = [m for m in messages if str(m["Id"]) not in seen_ids and not m["Read"]]
+                        if novel_unread and prefs.get("notifications_messages") is not False:
+                            first        = novel_unread[0]
+                            sender       = first["Sender"] or "škola"
+                            text_preview = (first["Text"] or "")[:80]
+                            title_t      = (first["Title"] or "Zpráva")[:60]
+                            body         = f"{sender}: {text_preview}" if text_preview else f"{sender}: {title_t}"
+                            push_svc.send_to_user(user_id, "Nová zpráva v Bakixu", body, tag="bakix-komens")
+                            log.info("scheduler: poll: komens push user=%.8s", user_id)
+                        updated = seen_ids | msg_ids
+                        if updated != seen_ids:
+                            cache_set(user_id, "push_seen_komens", list(updated))
 
-            # ── Marks (grades) ────────────────────────────────────────────────
+            # ── Marks (always polled — retake exams happen in August) ─────────
             token = _poll_marks(user_id, svc, token, push_svc, prefs)
             if not token:
                 continue
 
-            # ── Substitutions ─────────────────────────────────────────────────
-            _poll_substitutions(user_id, svc, token, push_svc)
+            # ── Substitutions (skipped in summer — no timetable) ─────────────
+            if not _is_summer:
+                _poll_substitutions(user_id, svc, token, push_svc)
 
         except Exception:
             log.exception("scheduler: poll: failed for user=%.8s", user_id)

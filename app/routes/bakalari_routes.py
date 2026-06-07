@@ -75,6 +75,38 @@ _COLORS = [
     "#7a4f7a", "#4a7c6b", "#c47d2e", "#5e7a5e",
 ]
 
+_CZ_MONTHS = [
+    "ledna","února","března","dubna","května","června",
+    "července","srpna","září","října","listopadu","prosince",
+]
+
+
+def _holiday_info() -> "tuple[bool, int | None, str | None]":
+    """Returns (is_holiday, days_until_school, school_start_str).
+
+    Covers Czech summer holidays (Jul 1 – Aug 31) and Christmas (Dec 23 – Jan 1).
+    school_start is moved to the next Monday if it falls on a weekend.
+    """
+    today = datetime.date.today()
+    school_start = None
+
+    if today.month in (7, 8):
+        school_start = datetime.date(today.year, 9, 1)
+    elif today.month == 12 and today.day >= 23:
+        school_start = datetime.date(today.year + 1, 1, 2)
+    elif today.month == 1 and today.day == 1:
+        school_start = datetime.date(today.year, 1, 2)
+
+    if school_start is None:
+        return False, None, None
+
+    while school_start.weekday() >= 5:
+        school_start += datetime.timedelta(days=1)
+
+    days_left = (school_start - today).days
+    start_str = f"{school_start.day}. {_CZ_MONTHS[school_start.month - 1]} {school_start.year}"
+    return True, days_left, start_str
+
 
 def _build_chart_datasets(subjects):
     datasets = []
@@ -1474,6 +1506,7 @@ def index():
 
     if session.get("is_demo"):
         chart_datasets = _build_chart_datasets(_demo.DEMO_SUBJECTS_RAW)
+        _is_holiday_d, _days_d, _start_d = _holiday_info()
         return render_template(
             "index.html",
             error=None,
@@ -1486,6 +1519,9 @@ def index():
             display_name="Demo uživatel",
             is_premium=False,
             show_wrap=(os.getenv("DEBUG") == "True") or (datetime.date.today().month in (6, 12)),
+            is_holiday=_is_holiday_d,
+            days_until_school=_days_d,
+            school_start_date=_start_d,
         )
 
     row = fetch_row(user_id)
@@ -1542,6 +1578,8 @@ def index():
     from app.database.db import get_subscription_tier
     _is_premium = get_subscription_tier(user_id) == "premium"
 
+    _is_holiday, _days_until_school, _school_start_date = _holiday_info()
+
     return render_template(
         "index.html",
         error=None,
@@ -1554,4 +1592,7 @@ def index():
         display_name=display_name,
         is_premium=_is_premium,
         show_wrap=_show_wrap,
+        is_holiday=_is_holiday,
+        days_until_school=_days_until_school,
+        school_start_date=_school_start_date,
     )
