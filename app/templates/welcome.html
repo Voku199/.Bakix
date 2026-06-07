@@ -17,7 +17,26 @@
   <meta property="og:locale" content="cs_CZ">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Bakix — The Future of Schooling">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:description" content="AI studijní asistent pro české studenty. Přehled známek, rozvrhu a úkolů z Bakalářů. Zdarma.">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Bakix",
+    "url": "{{ request.host_url }}",
+    "logo": "{{ url_for('static', filename='bakix.svg', _external=True) }}",
+    "description": "AI studijní asistent pro české studenty napojený na Bakaláře.",
+    "foundingDate": "2025",
+    "inLanguage": ["cs", "en"],
+    "applicationCategory": "EducationApplication",
+    "sameAs": []
+  }
+  </script>
   <link rel="icon" href="{{ url_for('static', filename='bakix.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap">
@@ -73,7 +92,7 @@
     <div class="hero-content">
       <div class="glass">
         <p class="hero-eyebrow">✦ &nbsp; Bakix &nbsp; ✦</p>
-        <h1 class="hero-headline">The Future<br>of Schooling.</h1>
+        <h1 class="hero-headline">Bakix — The Future<br>of Schooling.</h1>
         <p class="hero-sub">
           {{ _('Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — přístupné, krásné, chytré.') }}
         </p>

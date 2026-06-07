@@ -8,14 +8,23 @@
   <meta name="description" content="{% block meta_description %}Bakix — AI studijní asistent pro studenty napojený na Bakaláře. Přehledný dashboard se známkami, rozvrhem, úkoly a Komens zprávami.{% endblock %}">
   <meta name="keywords" content="{% block meta_keywords %}Bakaláři, studijní asistent, AI asistent, škola, studenti, žáci, známky, rozvrh, úkoly, Komens, Bakix{% endblock %}">
   <meta name="author" content="Bakix">
-  <meta name="robots" content="{% block meta_robots %}noindex, nofollow{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{{ request.base_url }}">
+  <link rel="alternate" hreflang="cs" href="{{ request.base_url }}">
+  <link rel="alternate" hreflang="en" href="{{ request.base_url }}">
+  <link rel="alternate" hreflang="x-default" href="{{ request.base_url }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Bakix">
   <meta property="og:title" content="{% block og_title %}Bakix{% endblock %}">
   <meta property="og:description" content="{% block og_description %}AI studijní asistent napojený na Bakaláře.{% endblock %}">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{% block twitter_title %}Bakix{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}AI studijní asistent napojený na Bakaláře.{% endblock %}">
+  <meta name="twitter:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <link rel="icon" href="{{ url_for('static', filename='bakix.svg') }}" type="image/svg+xml">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#b5451b">
@@ -28,6 +37,22 @@
     .btn--lang:hover{border-color:var(--border-hi,#b0a89e);color:var(--text,#1c1917)}
     .btn--lang--active{background:var(--accent,#b5451b);border-color:var(--accent,#b5451b) !important;color:#fff !important}
   </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Bakix",
+    "url": "{{ request.base_url }}",
+    "description": "AI studijní asistent pro studenty napojený na Bakaláře.",
+    "applicationCategory": "EducationApplication",
+    "operatingSystem": "All",
+    "inLanguage": ["cs", "en"],
+    "author": {
+      "@type": "Organization",
+      "name": "Bakix"
+    }
+  }
+  </script>
   {% block extra_head %}{% endblock %}
   <script>
     window._t = {
