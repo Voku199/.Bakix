@@ -146,13 +146,15 @@ def create_app():
         base = request.host_url.rstrip("/")
         body = (
             "User-agent: *\n"
-            "Allow: /welcome\n"
-            "Allow: /onboarding\n"
-            "Allow: /cookies\n"
-            "Allow: /privacy\n"
-            "Allow: /tos\n"
-            "Allow: /static/\n"
-            "Disallow: /\n"
+            "Disallow: /api/\n"
+            "Disallow: /login\n"
+            "Disallow: /login/now\n"
+            "Disallow: /login-demo\n"
+            "Disallow: /logout\n"
+            "Disallow: /payment/\n"
+            "Disallow: /wrap\n"
+            "Disallow: /set-language/\n"
+            "Disallow: /prompt\n"
             f"\nSitemap: {base}/sitemap.xml\n"
         )
         return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
