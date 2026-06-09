@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════════════════════
+   Bakix Motion — Apple-grade motion system (CSS half)
+   ----------------------------------------------------------------
+   Drop-in companion of js/motion.js. Loaded from base.html after
+   base.css. Everything is gated behind the `bm-js` class on <html>,
+   which motion.js adds only when JS runs AND the user does not
+   prefer reduced motion — so without JS (or with reduced motion)
+   the app falls back to its original behaviour untouched.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ──────────────────────────────────────────────── */
+:root {
+  --bm-out:    cubic-bezier(.22, 1, .36, 1);   /* Apple's easeOutExpo-ish glide */
+  --bm-spring: cubic-bezier(.34, 1.4, .44, 1); /* gentle overshoot */
+  --bm-sheet:  cubic-bezier(.32, .72, 0, 1);   /* iOS sheet slide */
+  --bm-glare-a: .26;
+}
+[data-theme="dark"] { --bm-glare-a: .07; }
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] { --bm-glare-a: .07; }
+}
+
+/* ── Frosted-glass header on scroll ──────────────────────── */
+.bm-js .header {
+  transition: background .45s var(--bm-out),
+              box-shadow .45s var(--bm-out),
+              border-color .45s var(--bm-out);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter:         blur(18px) saturate(1.5);
+}
+html.bm-js.bm-scrolled .header {
+  background:          color-mix(in srgb, var(--bg2) 76%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--border) 55%, transparent);
+  box-shadow:          0 12px 32px -18px rgba(0, 0, 0, .35);
+}
+
+/* ── Cards: hover lift shadow + specular glare (desktop) ─── */
+.bm-js .bm-tiltable {
+  position: relative;
+  will-change: transform;
+}
+.bm-js .bm-glare {
+  position:       absolute;
+  inset:          0;
+  border-radius:  inherit;
+  pointer-events: none;
+  opacity:        0;
+  z-index:        1;
+  background: radial-gradient(420px circle at var(--bm-mx, 50%) var(--bm-my, 50%),
+              rgba(255, 255, 255, var(--bm-glare-a)), transparent 58%);
+  transition: opacity .45s var(--bm-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .bm-js .bm-tiltable          { transition: box-shadow .5s var(--bm-out); }
+  .bm-js .bm-tiltable:hover    { box-shadow: 0 14px 36px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.08); }
+  .bm-js .bm-tiltable:hover .bm-glare { opacity: 1; }
+}
+
+/* ── Marks accordion: real height animation ──────────────────
+   Original CSS toggles display none/block (un-animatable).
+   With JS active the detail is always display:block and the
+   open/close height is driven by WAAPI in motion.js. */
+.bm-js .marks-detail {
+  display:     block;
+  height:      0;
+  overflow:    hidden;
+  padding-top: 0;
+}
+.bm-js .marks-sum-row.open .marks-detail {
+  height:      auto;
+  padding-top: .3rem;
+}
+
+/* ── Settings panel: springier pop, content cascades in ──── */
+.bm-js .settings-panel {
+  transform:  scale(.9) translateY(18px);
+  transition: transform .55s var(--bm-spring), box-shadow .55s var(--bm-out);
+}
+.bm-js .settings-overlay.open .settings-panel { transform: none; }
+
+/* ── Message detail modal: grows out of the tapped message ──
+   (motion.js sets transform-origin to the tap point) */
+.bm-js .msg-modal {
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter:         blur(0px);
+  transition: opacity .25s ease,
+              backdrop-filter .35s ease,
+              -webkit-backdrop-filter .35s ease;
+}
+.bm-js .msg-modal.open {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter:         blur(8px);
+}
+.bm-js .msg-modal__panel {
+  transform:  scale(.88) translateY(10px);
+  opacity:    .3;
+  transition: transform .55s var(--bm-spring), opacity .22s ease;
+}
+.bm-js .msg-modal.open .msg-modal__panel {
+  transform: none;
+  opacity:   1;
+}
+
+/* ── Compose modal: springier curve than stock ───────────── */
+.bm-js .compose-modal__panel {
+  transition: transform .5s var(--bm-spring), opacity .22s ease;
+}
+
+/* ── AI sidebar: iOS-sheet slide + frosted dimmer ────────── */
+.bm-js .ai-sidebar:not(.ai-sidebar--windowed) {
+  transition: transform .6s var(--bm-sheet);
+}
+.bm-js .ai-overlay {
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter:         blur(0px);
+  transition: background .5s var(--bm-out),
+              backdrop-filter .5s var(--bm-out),
+              -webkit-backdrop-filter .5s var(--bm-out);
+}
+.bm-js .ai-overlay.open {
+  background: rgba(0, 0, 0, .28);
+  -webkit-backdrop-filter: blur(7px) saturate(1.3);
+  backdrop-filter:         blur(7px) saturate(1.3);
+}
+
+/* ── Chat bubbles pop from their corner (iMessage style) ─── */
+.bm-js .ai-msg--user  { transform-origin: 90% 100%; }
+.bm-js .ai-msg--model { transform-origin: 10% 100%; }
+
+/* ── Premium CTA: slow specular sheen sweep ──────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .bm-js .wrap-entry-card { position: relative; overflow: hidden; }
+  .bm-js .wrap-entry-card::after {
+    content:   '';
+    position:  absolute;
+    inset:     0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%,
+                rgba(255, 255, 255, .14) 45%, transparent 60%);
+    transform: translateX(-130%);
+    animation: bm-sheen 5s var(--bm-out) infinite;
+  }
+  @keyframes bm-sheen {
+    0%, 55% { transform: translateX(-130%); }
+    100%    { transform: translateX(130%); }
+  }
+}
+
+/* ── Theme switch: circular reveal (View Transition API) ───
+   motion.js drives the expanding clip-path circle; these rules
+   disable the default cross-fade so the circle is the only thing
+   the browser animates. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 9999; }

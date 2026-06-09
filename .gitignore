@@ -5,6 +5,7 @@ __pycache__/
 # Secrets & local config
 .env
 .certs/
+CLAUDE.MD
 
 # Flask instance folder (SQLite DB, session data)
 instance/
