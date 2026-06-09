@@ -221,6 +221,7 @@ def _get_svc_and_token():
 
 
 @bakalari_bp.route("/api/3/homeworks", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_homeworks():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_HOMEWORKS)
@@ -295,6 +296,7 @@ def api_homeworks():
 
 
 @bakalari_bp.route("/api/3/komens/messages/received", methods=["POST"])
+@limiter.limit("30 per minute")
 def api_komens():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_KOMENS)
@@ -372,6 +374,7 @@ def api_komens():
 
 
 @bakalari_bp.route("/api/komens/message-types", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_komens_message_types():
     try:
         svc, token, user_id = _get_svc_and_token()
@@ -399,6 +402,7 @@ def api_komens_message_types():
 
 
 @bakalari_bp.route("/api/komens/send", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_komens_send():
     try:
         svc, token, user_id = _get_svc_and_token()
@@ -427,6 +431,7 @@ def api_komens_send():
 
 
 @bakalari_bp.route("/api/3/absence/student", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_absences():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_ABSENCES)
@@ -460,6 +465,7 @@ def api_absences():
 
 
 @bakalari_bp.route("/api/3/marks", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_marks():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_MARKS_API)
@@ -539,6 +545,7 @@ def api_marks():
 
 
 @bakalari_bp.route("/api/3/subjects/themes/<string:subject_id>", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_subject_themes(subject_id):
     try:
         svc, token, user_id = _get_svc_and_token()
@@ -581,6 +588,7 @@ def api_subject_themes(subject_id):
 
 
 @bakalari_bp.route("/api/3/timetable/actual", methods=["GET"])
+@limiter.limit("30 per minute")
 def get_today_timetable():
     try:
         svc, token, user_id = _get_svc_and_token()
@@ -607,6 +615,7 @@ def get_today_timetable():
 
 
 @bakalari_bp.route("/api/dashboard/today", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_dashboard_today():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_TIMETABLE_TODAY)
@@ -682,6 +691,7 @@ def api_dashboard_today():
 
 
 @bakalari_bp.route("/api/dashboard/tomorrow", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_dashboard_tomorrow():
     if session.get("is_demo"):
         return jsonify(_demo.DEMO_TIMETABLE_TOMORROW)
@@ -751,6 +761,7 @@ def api_dashboard_tomorrow():
 
 
 @bakalari_bp.route("/api/subscription", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_subscription_get():
     user_id = session.get("user_id")
     if not user_id:
@@ -789,6 +800,7 @@ def api_subscription_post():
 
 
 @bakalari_bp.route("/api/cache/clear", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_cache_clear():
     user_id = session.get("user_id")
     if not user_id:
@@ -799,6 +811,7 @@ def api_cache_clear():
 
 
 @bakalari_bp.route("/api/settings", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_settings_get():
     user_id = session.get("user_id")
     if not user_id:
@@ -807,6 +820,7 @@ def api_settings_get():
 
 
 @bakalari_bp.route("/api/settings", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_settings_post():
     user_id = session.get("user_id")
     if not user_id:
@@ -849,6 +863,7 @@ def api_settings_post():
 
 
 @bakalari_bp.route("/api/gemini/insights", methods=["GET"])
+@limiter.limit("10 per minute")
 def api_gemini_insights():
     try:
         svc, token, user_id = _get_svc_and_token()
@@ -903,6 +918,7 @@ def api_gemini_insights():
 
 
 @bakalari_bp.route("/api/gemini/chat", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_gemini_chat():
     try:
         user_id = session.get("user_id")
@@ -937,6 +953,7 @@ def get_user_projects(user_id: str) -> list:
 
 
 @bakalari_bp.route("/api/user/settings", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_user_settings_post():
     user_id = session.get("user_id")
     if not user_id:
@@ -953,6 +970,7 @@ def api_user_settings_post():
 
 
 @bakalari_bp.route("/api/ai/pages", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_ai_pages():
     user_id = session.get("user_id")
     if not user_id:
@@ -972,6 +990,7 @@ def _resolve_conversation(user_id: str, raw_id) -> str:
 
 
 @bakalari_bp.route("/api/ai/conversations", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_conversations_list():
     user_id = session.get("user_id")
     if not user_id:
@@ -981,6 +1000,7 @@ def api_conversations_list():
 
 
 @bakalari_bp.route("/api/ai/conversations", methods=["POST"])
+@limiter.limit("20 per minute")
 def api_conversations_create():
     user_id = session.get("user_id")
     if not user_id:
@@ -999,6 +1019,7 @@ def api_conversations_create():
 
 
 @bakalari_bp.route("/api/ai/conversations/<conversation_id>", methods=["PATCH"])
+@limiter.limit("30 per minute")
 def api_conversations_rename(conversation_id):
     user_id = session.get("user_id")
     if not user_id:
@@ -1014,6 +1035,7 @@ def api_conversations_rename(conversation_id):
 
 
 @bakalari_bp.route("/api/ai/conversations/<conversation_id>", methods=["DELETE"])
+@limiter.limit("30 per minute")
 def api_conversations_delete(conversation_id):
     user_id = session.get("user_id")
     if not user_id:
@@ -1025,6 +1047,7 @@ def api_conversations_delete(conversation_id):
 
 
 @bakalari_bp.route("/api/ai/conversations/<conversation_id>/messages", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_conversations_messages(conversation_id):
     """Return the rendered messages of one conversation for rehydrating the thread."""
     user_id = session.get("user_id")
@@ -1306,6 +1329,7 @@ def api_ai_chat():
 
 
 @bakalari_bp.route("/api/ai/generated/<page_id>", methods=["GET"])
+@limiter.limit("30 per minute")
 def api_ai_generated(page_id):
     user_id = session.get("user_id")
     if not user_id:
@@ -1329,6 +1353,7 @@ def api_ai_generated(page_id):
 
 
 @bakalari_bp.route("/api/ai/generated/<page_id>", methods=["PUT"])
+@limiter.limit("30 per minute")
 def api_ai_generated_update(page_id):
     user_id = session.get("user_id")
     if not user_id:
@@ -1349,6 +1374,7 @@ def api_ai_generated_update(page_id):
 
 
 @bakalari_bp.route("/api/ai/generated/<page_id>", methods=["DELETE"])
+@limiter.limit("30 per minute")
 def api_ai_generated_delete(page_id):
     user_id = session.get("user_id")
     if not user_id:
@@ -1468,6 +1494,7 @@ def wrap_page():
 
 
 @bakalari_bp.route("/api/wrap/data")
+@limiter.limit("10 per minute")
 def api_wrap_data():
     user_id = session.get("user_id")
     if not user_id:

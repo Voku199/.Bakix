@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, jsonify, request, session
 
 from app.database.db import cache_get, cache_set, fetch_row
+from app.extensions import limiter
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ def ping():
 
 
 @proxy_bp.route("/api/dashboard/homeworks/count")
+@limiter.limit("30 per minute")
 def api_dashboard_homeworks_count():
     """Return the count of pending (not-done, not-closed) homeworks for the next 30 days.
 
@@ -154,6 +156,7 @@ def api_dashboard_homeworks_count():
 
 
 @proxy_bp.route("/api/dashboard/homeworks")
+@limiter.limit("30 per minute")
 def api_dashboard_homeworks():
     """Richer homework list with flexible date range and done/undone filter.
 
@@ -241,6 +244,7 @@ def api_dashboard_homeworks():
 
 
 @proxy_bp.route("/api/dashboard/marks")
+@limiter.limit("30 per minute")
 def api_dashboard_marks():
     """Flat list of all marks (latest 100, newest first).
 
@@ -303,6 +307,7 @@ def api_dashboard_marks():
 
 
 @proxy_bp.route("/api/dashboard/marks/theme")
+@limiter.limit("30 per minute")
 def api_dashboard_marks_theme():
     """Return curriculum themes for a subject, with smart date-matching.
 
@@ -366,6 +371,7 @@ def api_dashboard_marks_theme():
 
 
 @proxy_bp.route("/api/dashboard/messages/unread")
+@limiter.limit("30 per minute")
 def api_dashboard_messages_unread():
     """Return the count and list of unread Komens messages.
 
@@ -409,6 +415,7 @@ def api_dashboard_messages_unread():
 
 
 @proxy_bp.route("/api/dashboard/messages/<message_id>/read", methods=["POST"])
+@limiter.limit("30 per minute")
 def api_dashboard_messages_mark_read(message_id):
     """Mark a Komens message as read via /api/3/komens/messages/read.
 
