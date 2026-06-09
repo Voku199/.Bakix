@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-06 16:15+0200\n"
+"POT-Creation-Date: 2026-06-09 21:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -14,264 +14,272 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#: app/templates/base.html:23 app/templates/welcome.html:27
+#: app/templates/base.html:60 app/templates/welcome.html:45
 msgid "Jazyk se mění…"
 msgstr "Switching language…"
 
-#: app/templates/base.html:24
+#: app/templates/base.html:61
 msgid "Dnes máš volno, užij si den! ✦"
 msgstr "No classes today, enjoy your day! ✦"
 
-#: app/templates/base.html:25
+#: app/templates/base.html:62
 msgid "Žádné úkoly — skvělá práce! ✓"
 msgstr "No tasks — great work! ✓"
 
-#: app/templates/base.html:26
+#: app/templates/base.html:63
 msgid "Žádné nové zprávy. Klid a pohoda."
 msgstr "No new messages. All quiet."
 
-#: app/templates/base.html:27
+#: app/templates/base.html:64
 msgid "Žádné předměty."
 msgstr "No subjects."
 
-#: app/templates/base.html:28
+#: app/templates/base.html:65
 msgid "Síťová chyba."
 msgstr "Network error."
 
-#: app/templates/base.html:41 app/templates/index.html:324
-#: app/templates/welcome.html:41
+#: app/templates/base.html:78 app/templates/index.html:362
+#: app/templates/welcome.html:1054
 msgid "Jazyk"
 msgstr "Language"
 
-#: app/templates/base.html:45 app/templates/welcome.html:45
+#: app/templates/base.html:82
 msgid "Přepnout téma"
 msgstr "Toggle theme"
 
-#: app/templates/index.html:52 app/templates/index.html:384
+#: app/templates/index.html:58 app/templates/index.html:422
 msgid "Odhlásit se"
 msgstr "Sign out"
 
-#: app/templates/index.html:54 app/templates/index.html:250
-#: app/templates/index.html:254
+#: app/templates/index.html:60 app/templates/index.html:286
+#: app/templates/index.html:290
 msgid "Nastavení"
 msgstr "Settings"
 
-#: app/templates/index.html:63
+#: app/templates/index.html:69
 msgid "Trend známek"
 msgstr "Grade trend"
 
-#: app/templates/index.html:66
+#: app/templates/index.html:72
 msgid "Předchozí předmět"
 msgstr "Previous subject"
 
-#: app/templates/index.html:68
+#: app/templates/index.html:74
 msgid "Další předmět"
 msgstr "Next subject"
 
-#: app/templates/index.html:76
+#: app/templates/index.html:82
 msgid "Výběr předmětu"
 msgstr "Select subject"
 
-#: app/templates/index.html:83
+#: app/templates/index.html:89
 msgid "Chyba přihlášení"
 msgstr "Login error"
 
-#: app/templates/index.html:126 app/templates/index.html:255
-#: app/templates/index.html:409 app/templates/index.html:484
-#: app/templates/index.html:518
+#: app/templates/index.html:162 app/templates/index.html:291
+#: app/templates/index.html:447 app/templates/index.html:522
+#: app/templates/index.html:556
 msgid "Zavřít"
 msgstr "Close"
 
-#: app/templates/index.html:134
+#: app/templates/index.html:170 app/templates/welcome.html:1049
+#: app/templates/welcome.html:1097 app/templates/welcome.html:1141
+#: app/templates/welcome.html:1209
 msgid "Rozvrh"
 msgstr "Timetable"
 
-#: app/templates/index.html:136
+#: app/templates/index.html:172 app/templates/welcome.html:1097
+#: app/templates/welcome.html:1200
 msgid "Dnes"
 msgstr "Today"
 
-#: app/templates/index.html:137
+#: app/templates/index.html:173 app/templates/welcome.html:1116
+#: app/templates/welcome.html:1262
 msgid "Zítra"
 msgstr "Tomorrow"
 
-#: app/templates/index.html:144 app/templates/index.html:345
+#: app/templates/index.html:180 app/templates/index.html:383
+#: app/templates/welcome.html:1050 app/templates/welcome.html:1115
+#: app/templates/welcome.html:1141 app/templates/welcome.html:1240
 msgid "Úkoly"
 msgstr "Tasks"
 
-#: app/templates/index.html:150 app/templates/index.html:341
+#: app/templates/index.html:186 app/templates/index.html:379
+#: app/templates/welcome.html:1142 app/templates/welcome.html:1286
 msgid "Zprávy"
 msgstr "Messages"
 
-#: app/templates/index.html:151 app/templates/index.html:480
-#: app/templates/index.html:483
+#: app/templates/index.html:187 app/templates/index.html:518
+#: app/templates/index.html:521
 msgid "Nová zpráva"
 msgstr "New message"
 
-#: app/templates/index.html:151
+#: app/templates/index.html:187
 msgid "Napsat novou zprávu"
 msgstr "Write a new message"
 
-#: app/templates/index.html:157
+#: app/templates/index.html:193 app/templates/welcome.html:1048
+#: app/templates/welcome.html:1141 app/templates/welcome.html:1152
 msgid "Známky"
 msgstr "Grades"
 
-#: app/templates/index.html:166
+#: app/templates/index.html:202 app/templates/welcome.html:1143
 msgid "Kalkulačka průměru"
 msgstr "Grade average calculator"
 
-#: app/templates/index.html:167
+#: app/templates/index.html:203
 msgid "Co to je?"
 msgstr "What is this?"
 
-#: app/templates/index.html:177 app/templates/index.html:494
+#: app/templates/index.html:213 app/templates/index.html:532
 msgid "Předmět"
 msgstr "Subject"
 
-#: app/templates/index.html:181
+#: app/templates/index.html:217
 msgid "Chci průměr (např. 1.49)"
 msgstr "Target average (e.g. 1.49)"
 
-#: app/templates/index.html:184
+#: app/templates/index.html:220
 msgid "Spočítat"
 msgstr "Calculate"
 
-#: app/templates/index.html:192
+#: app/templates/index.html:228
 msgid "Moje projekty"
 msgstr "My projects"
 
-#: app/templates/index.html:204
+#: app/templates/index.html:240
 msgid "Zatím žádné projekty. Popros AI o vytvoření stránky!"
 msgstr "No projects yet. Ask AI to create a page!"
 
-#: app/templates/index.html:259 app/templates/onboarding.html:25
-#: app/templates/onboarding.html:111
+#: app/templates/index.html:295 app/templates/onboarding.html:25
+#: app/templates/onboarding.html:127
 msgid "Přihlašovací údaje"
 msgstr "Login credentials"
 
-#: app/templates/index.html:261 app/templates/login.html:51
-#: app/templates/onboarding.html:90
+#: app/templates/index.html:297 app/templates/login.html:51
+#: app/templates/onboarding.html:106
 msgid "URL školy"
 msgstr "School URL"
 
-#: app/templates/index.html:265 app/templates/login.html:60
-#: app/templates/onboarding.html:119
+#: app/templates/index.html:301 app/templates/login.html:60
+#: app/templates/onboarding.html:135
 msgid "Uživatelské jméno"
 msgstr "Username"
 
-#: app/templates/index.html:270 app/templates/login.html:67
-#: app/templates/onboarding.html:126
+#: app/templates/index.html:306 app/templates/login.html:67
+#: app/templates/onboarding.html:142
 msgid "Heslo"
 msgstr "Password"
 
-#: app/templates/index.html:270
+#: app/templates/index.html:306
 msgid "(vyplňte pro změnu)"
 msgstr "(fill in to change)"
 
-#: app/templates/index.html:276
+#: app/templates/index.html:312
 msgid "Zapamatovat heslo"
 msgstr "Remember password"
 
-#: app/templates/index.html:280 app/templates/welcome.html:212
+#: app/templates/index.html:316 app/templates/welcome.html:1410
 msgid "Podmínky použití"
 msgstr "Terms of Use"
 
-#: app/templates/index.html:281 app/templates/welcome.html:213
+#: app/templates/index.html:317 app/templates/welcome.html:1411
 msgid "Ochrana soukromí"
 msgstr "Privacy Policy"
 
-#: app/templates/index.html:286
+#: app/templates/index.html:322
 msgid "Profil"
 msgstr "Profile"
 
-#: app/templates/index.html:288
+#: app/templates/index.html:324
 msgid "Zobrazované jméno"
 msgstr "Display name"
 
-#: app/templates/index.html:289
+#: app/templates/index.html:325
 msgid "Jak ti říkají?"
 msgstr "What do they call you?"
 
-#: app/templates/index.html:294
+#: app/templates/index.html:331
 msgid "Předplatné"
 msgstr "Subscription"
 
-#: app/templates/index.html:314
+#: app/templates/index.html:352
 msgid "Zobrazení"
 msgstr "Display"
 
-#: app/templates/index.html:316
+#: app/templates/index.html:354
 msgid "Téma"
 msgstr "Theme"
 
-#: app/templates/index.html:319
+#: app/templates/index.html:357
 msgid "Světlé"
 msgstr "Light"
 
-#: app/templates/index.html:320
+#: app/templates/index.html:358
 msgid "Tmavé"
 msgstr "Dark"
 
-#: app/templates/index.html:326
+#: app/templates/index.html:364
 msgid "Česky"
 msgstr "Czech"
 
-#: app/templates/index.html:333
+#: app/templates/index.html:371 app/templates/welcome.html:1142
 msgid "Notifikace"
 msgstr "Notifications"
 
-#: app/templates/index.html:349
+#: app/templates/index.html:387 app/templates/welcome.html:1104
 msgid "Nové známky"
 msgstr "New grades"
 
-#: app/templates/index.html:353
+#: app/templates/index.html:391
 msgid "Změny rozvrhu"
 msgstr "Schedule changes"
 
-#: app/templates/index.html:357
+#: app/templates/index.html:395
 msgid "Denní shrnutí"
 msgstr "Daily summary"
 
-#: app/templates/index.html:361 app/templates/welcome.html:133
+#: app/templates/index.html:399
 msgid "Absence"
 msgstr "Absences"
 
-#: app/templates/index.html:368
+#: app/templates/index.html:406
 msgid "Aplikace na plochu"
 msgstr "Add to home screen"
 
-#: app/templates/index.html:369
+#: app/templates/index.html:407
 msgid "Na desktopu (Chrome/Edge) si můžeš Bakix nainstalovat jako aplikaci."
 msgstr "On desktop (Chrome/Edge) you can install Bakix as an app."
 
-#: app/templates/index.html:371
+#: app/templates/index.html:409
 msgid "Nainstalovat aplikaci"
 msgstr "Install app"
 
-#: app/templates/index.html:378 app/templates/index.html:503
+#: app/templates/index.html:416 app/templates/index.html:541
 msgid "Zrušit"
 msgstr "Cancel"
 
-#: app/templates/index.html:379
+#: app/templates/index.html:417
 msgid "Uložit"
 msgstr "Save"
 
-#: app/templates/index.html:488
+#: app/templates/index.html:526
 msgid "Příjemce"
 msgstr "Recipient"
 
-#: app/templates/index.html:495
+#: app/templates/index.html:533
 msgid "Předmět zprávy…"
 msgstr "Message subject…"
 
-#: app/templates/index.html:498
+#: app/templates/index.html:536
 msgid "Text zprávy"
 msgstr "Message text"
 
-#: app/templates/index.html:499
+#: app/templates/index.html:537
 msgid "Napiš svou zprávu…"
 msgstr "Write your message…"
 
-#: app/templates/index.html:504
+#: app/templates/index.html:542
 msgid "Odeslat"
 msgstr "Send"
 
@@ -303,7 +311,8 @@ msgstr "Change"
 msgid "Zapamatovat přihlašovací jméno a školu"
 msgstr "Remember my username and school"
 
-#: app/templates/login.html:80 app/templates/welcome.html:48
+#: app/templates/login.html:80 app/templates/welcome.html:1058
+#: app/templates/welcome.html:1412
 msgid "Přihlásit se"
 msgstr "Sign in"
 
@@ -328,54 +337,36 @@ msgid "Jak Bakix zachází s vašimi daty"
 msgstr "How Bakix handles your data"
 
 #: app/templates/onboarding.html:40
-msgid "Přihlašovací údaje šifrované"
-msgstr "Credentials encrypted"
+msgid "Heslo nikdy nevidíme"
+msgstr "We never see your password"
 
 #: app/templates/onboarding.html:42
-msgid ""
-"Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128)"
-" výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v "
-"čitelné podobě není nikdy logováno ani sdíleno třetím stranám."
-msgstr ""
-"Bakix stores your credentials in encrypted form (Fernet / AES-128) "
-"exclusively for automatic access renewal after token expiry. Your "
-"password is never logged or shared with third parties."
+msgid "Vaše heslo ukládáme pouze v zašifrované podobě — nikdo z Bakixu ho nemůže přečíst. Slouží výhradně k automatickému obnovení přístupu, pokud vás Bakaláře odhlásí."
+msgstr "Your password is stored only in encrypted form — nobody at Bakix can read it. It is used solely to automatically restore access when Bakaláři logs you out."
 
 #: app/templates/onboarding.html:49
-msgid "Přihlašovací tokeny v session"
-msgstr "Session login tokens"
+msgid "Funguje jako mobilní aplikace"
+msgstr "Works as a mobile app"
 
 #: app/templates/onboarding.html:51
-msgid ""
-"Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný "
-"token platný 8 hodin. Po odhlášení je smazán."
-msgstr ""
-"Bakix works like the Bakaláře mobile app — it holds a temporary token "
-"valid for 8 hours. It is deleted on logout."
+msgid "Bakix pracuje stejně jako aplikace Bakaláři — získá dočasný token platný 8 hodin. Po odhlášení ho ihned smaže."
+msgstr "Bakix works just like the Bakaláři app — it obtains a temporary token valid for 8 hours. It is deleted immediately when you log out."
 
 #: app/templates/onboarding.html:58
 msgid "Šifrované připojení"
 msgstr "Encrypted connection"
 
 #: app/templates/onboarding.html:60
-msgid ""
-"Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i"
-" serverem školy."
-msgstr ""
-"All communication uses HTTPS — between your browser, Bakix, and the "
-"school server."
+msgid "Veškerá komunikace probíhá přes HTTPS — mezi vaším prohlížečem, Bakixem i serverem školy."
+msgstr "All communication uses HTTPS — between your browser, Bakix, and the school server."
 
 #: app/templates/onboarding.html:67
-msgid "Data přímo ze školy"
-msgstr "Data directly from school"
+msgid "Data jdou přímo ze školy"
+msgstr "Data comes straight from your school"
 
 #: app/templates/onboarding.html:69
-msgid ""
-"Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí"
-" stranou."
-msgstr ""
-"Bakix calls your school Bakaláře API directly — data does not pass "
-"through any third party."
+msgid "Bakix volá přímo server vaší školy — žádná třetí strana vaše data nevidí."
+msgstr "Bakix talks directly to your school's server — no third party ever sees your data."
 
 #: app/templates/onboarding.html:77
 msgid "Rozumím, pokračovat →"
@@ -386,30 +377,42 @@ msgid "Adresa školy"
 msgstr "School address"
 
 #: app/templates/onboarding.html:86
-msgid ""
-"Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server "
-"Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů."
-msgstr ""
-"Enter your school URL. Bakix will verify that a Bakaláře server is "
-"running there before asking for your credentials."
+msgid "Vyhledejte svou školu — nebo zadejte URL ručně."
+msgstr "Find your school — or enter the URL manually."
+
+#: app/templates/onboarding.html:91
+msgid "Vyhledat školu"
+msgstr "Find school"
 
 #: app/templates/onboarding.html:94
+msgid "Město nebo název školy…"
+msgstr "City or school name…"
+
+#: app/templates/onboarding.html:97
+msgid "Výsledky hledání"
+msgstr "Search results"
+
+#: app/templates/onboarding.html:102
+msgid "nebo zadat URL ručně"
+msgstr "or enter URL manually"
+
+#: app/templates/onboarding.html:110
 msgid "Bez https:// — např. zstsobra.bakalari.cz"
 msgstr "Without https:// — e.g. zstsobra.bakalari.cz"
 
-#: app/templates/onboarding.html:102 app/templates/onboarding.html:133
+#: app/templates/onboarding.html:118 app/templates/onboarding.html:149
 msgid "← Zpět"
 msgstr "← Back"
 
-#: app/templates/onboarding.html:104
+#: app/templates/onboarding.html:120
 msgid "Ověřit a pokračovat →"
 msgstr "Verify and continue →"
 
-#: app/templates/onboarding.html:113
+#: app/templates/onboarding.html:129
 msgid "Stejné údaje jako do mobilní aplikace nebo webových Bakalářů."
 msgstr "Same credentials as the mobile app or web Bakaláře."
 
-#: app/templates/onboarding.html:135
+#: app/templates/onboarding.html:151
 msgid "Připojit se"
 msgstr "Connect"
 
@@ -449,143 +452,448 @@ msgstr "Payment processing"
 msgid "Jakmile platbu potvrdíme, Premium se ti aktivuje automaticky."
 msgstr "Once we confirm your payment, Premium will activate automatically."
 
-#: app/templates/welcome.html:64
-msgid ""
-"Přehledný dashboard pro vaše Bakaláře. Známky, rozvrh a suplování — "
-"přístupné, krásné, chytré."
-msgstr ""
-"A clean dashboard for Bakaláře. Grades, schedule, and substitutions — "
-"accessible, beautiful, smart."
+#: app/templates/welcome.html:6 app/templates/welcome.html:14
+#: app/templates/welcome.html:22
+msgid "Škola. Konečně přehledně."
+msgstr "School. Finally clear."
 
-#: app/templates/welcome.html:69 app/templates/welcome.html:165
+#: app/templates/welcome.html:7
+msgid "Bakix je AI studijní asistent pro české studenty napojený na Bakaláře. Přehledný dashboard se známkami, rozvrhem, úkoly a Komens zprávami. Zdarma, bez registrace."
+msgstr "Bakix is an AI study assistant for Czech students connected to Bakaláři. A clean dashboard with grades, timetable, homework and Komens messages. Free, no registration."
+
+#: app/templates/welcome.html:15
+msgid "Přehledný AI dashboard pro Bakaláře. Známky, rozvrh a suplování — přístupné, krásné, chytré. Zdarma."
+msgstr "A clean AI dashboard for Bakaláři. Grades, timetable and substitutions — accessible, beautiful, smart. Free."
+
+#: app/templates/welcome.html:23
+msgid "AI studijní asistent pro české studenty. Přehled známek, rozvrhu a úkolů z Bakalářů. Zdarma."
+msgstr "An AI study assistant for Czech students. Grades, timetable and homework from Bakaláři at a glance. Free."
+
+#: app/templates/welcome.html:1059
+msgid "Začít"
+msgstr "Start"
+
+#: app/templates/welcome.html:1069
+msgid "AI studijní asistent pro Bakaláře"
+msgstr "AI study assistant for Bakaláři"
+
+#: app/templates/welcome.html:1071
+msgid "Škola."
+msgstr "School."
+
+#: app/templates/welcome.html:1072
+msgid "Konečně"
+msgstr "Finally"
+
+#: app/templates/welcome.html:1073
+msgid "přehledně."
+msgstr "clear."
+
+#: app/templates/welcome.html:1076
+msgid "Bakix se připojí na <strong>Bakaláře</strong> a promění známky, rozvrh, úkoly i zprávy v jeden přehledný dashboard. S AI asistentem, který tě <strong>fakt naučí</strong>."
+msgstr "Bakix connects to <strong>Bakaláři</strong> and turns grades, timetable, homework and messages into one clean dashboard. With an AI assistant that <strong>actually teaches you</strong>."
+
+#: app/templates/welcome.html:1079
 msgid "Začít zdarma"
 msgstr "Get started free"
 
-#: app/templates/welcome.html:72
-msgid "Demo verze"
-msgstr "Demo version"
+#: app/templates/welcome.html:1080 app/templates/welcome.html:1396
+msgid "Vyzkoušet demo"
+msgstr "Try the demo"
 
-#: app/templates/welcome.html:73
-msgid "Zjistit více"
-msgstr "Learn more"
+#: app/templates/welcome.html:1081
+msgid "Co všechno umí"
+msgstr "See what it can do"
 
-#: app/templates/welcome.html:85
-msgid "Co Bakix umí"
-msgstr "What Bakix can do"
+#: app/templates/welcome.html:1083
+msgid "Demo nevyžaduje žádné údaje — jedním klikem"
+msgstr "The demo needs no credentials — one click"
 
-#: app/templates/welcome.html:86
-msgid "Vše, co potřebujete."
-msgstr "Everything you need."
+#: app/templates/welcome.html:1085
+msgid "PWA — mobil i desktop"
+msgstr "PWA — mobile & desktop"
 
-#: app/templates/welcome.html:86
-msgid "Na jednom místě."
-msgstr "In one place."
+#: app/templates/welcome.html:1086
+msgid "Bakaláři API"
+msgstr "Bakaláři API"
 
-#: app/templates/welcome.html:93
-msgid "Výsledky"
-msgstr "Results"
+#: app/templates/welcome.html:1094
+msgid "Vítej zpět,"
+msgstr "Welcome back,"
 
-#: app/templates/welcome.html:94
-msgid "Přehled Známek"
-msgstr "Grade Overview"
+#: app/templates/welcome.html:1098 app/templates/welcome.html:1125
+#: app/templates/welcome.html:1173 app/templates/welcome.html:1228
+msgid "Matematika"
+msgstr "Mathematics"
 
-#: app/templates/welcome.html:96
-msgid ""
-"Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte "
-"přesně, kde stojíte a co vás čeká."
-msgstr ""
-"All subjects and averages at a glance. Trend development over time — you "
-"always know where you stand."
+#: app/templates/welcome.html:1099 app/templates/welcome.html:1178
+#: app/templates/welcome.html:1229
+msgid "Čeština"
+msgstr "Czech"
 
-#: app/templates/welcome.html:113
+#: app/templates/welcome.html:1100 app/templates/welcome.html:1183
+#: app/templates/welcome.html:1230
+msgid "Fyzika"
+msgstr "Physics"
+
+#: app/templates/welcome.html:1100 app/templates/welcome.html:1230
+msgid "Odpadlo"
+msgstr "Cancelled"
+
+#: app/templates/welcome.html:1116
+msgid "Fyzika — protokol"
+msgstr "Physics — lab report"
+
+#: app/templates/welcome.html:1117 app/templates/welcome.html:1271
+msgid "Dějepis — referát"
+msgstr "History — presentation"
+
+#: app/templates/welcome.html:1124
+msgid "Push notifikace"
+msgstr "Push notifications"
+
+#: app/templates/welcome.html:1125
+msgid "Nová známka"
+msgstr "New grade"
+
+#: app/templates/welcome.html:1128
+msgid "Průměr"
+msgstr "Average"
+
+#: app/templates/welcome.html:1132 app/templates/welcome.html:1142
+#: app/templates/welcome.html:1338
 msgid "AI asistent"
 msgstr "AI assistant"
 
-#: app/templates/welcome.html:114
-msgid "Chytrá Analýza"
-msgstr "Smart Analysis"
+#: app/templates/welcome.html:1133
+msgid "Zítra píšeš fyziku — chceš si to projet?"
+msgstr "You have a physics test tomorrow — want to review it?"
 
-#: app/templates/welcome.html:116
-msgid "Predikce průměrů, analýza trendů a personalizované rady — powered by AI."
-msgstr "Grade predictions, trend analysis and personalised advice — powered by AI."
+#: app/templates/welcome.html:1153
+msgid "Všechny známky."
+msgstr "All your grades."
 
-#: app/templates/welcome.html:124
-msgid "Aktuální Rozvrh"
-msgstr "Current Schedule"
+#: app/templates/welcome.html:1153
+msgid "Jeden pohled."
+msgstr "One glance."
 
-#: app/templates/welcome.html:126
-msgid ""
-"Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás"
-" čeká."
-msgstr ""
-"Schedule directly from Bakaláře. Substitutions clearly marked — you "
-"always know what to expect."
+#: app/templates/welcome.html:1155
+msgid "Žádné proklikávání Bakalářů. Průměry, váhy, trendy — všechno přepočítané a seřazené. <strong>Nová známka? Víš o ní dřív, než dojdeš ze třídy.</strong>"
+msgstr "No more clicking through Bakaláři. Averages, weights, trends — all computed and sorted. <strong>New grade? You know before you leave the classroom.</strong>"
 
-#: app/templates/welcome.html:134
-msgid "Absence & Docházka"
-msgstr "Absence & Attendance"
+#: app/templates/welcome.html:1158
+msgid "Vážené průměry"
+msgstr "Weighted averages"
 
-#: app/templates/welcome.html:136
-msgid ""
-"Přehled omluvených i neomluvených hodin. Žádné překvapení na konci "
-"pololetí."
-msgstr ""
-"Overview of excused and unexcused absences. No surprises at the end of "
-"term."
+#: app/templates/welcome.html:1159
+msgid "Trend grafy"
+msgstr "Trend charts"
 
-#: app/templates/welcome.html:144
-msgid "Zdarma. Navždy."
-msgstr "Free. Forever."
+#: app/templates/welcome.html:1160
+msgid "Kalkulačka „co potřebuju na jedničku“"
+msgstr "“What do I need for an A” calculator"
 
-#: app/templates/welcome.html:146
-msgid ""
-"Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí "
-"přihlašovací údaje z Bakalářů — a jste uvnitř."
-msgstr ""
-"Core features are and will remain free. No registration — just your "
-"Bakaláře credentials and you are in."
+#: app/templates/welcome.html:1168
+msgid "Přehled známek"
+msgstr "Grade overview"
 
-#: app/templates/welcome.html:158
-msgid "Připraveni začít?"
-msgstr "Ready to start?"
+#: app/templates/welcome.html:1169
+msgid "Live z Bakalářů"
+msgstr "Live from Bakaláři"
 
-#: app/templates/welcome.html:160
-msgid "Stačí přihlašovací údaje z Bakalářů."
-msgstr "All you need are your Bakaláře credentials."
+#: app/templates/welcome.html:1173 app/templates/welcome.html:1178
+#: app/templates/welcome.html:1183
+msgid "známek"
+msgstr "grades"
 
-#: app/templates/welcome.html:161
-msgid "Žádná registrace, žádné heslo navíc."
-msgstr "No registration, no extra password."
+#: app/templates/welcome.html:1189
+msgid "Graf vývoje průměru"
+msgstr "Average trend chart"
 
-#: app/templates/welcome.html:174
-msgid "Kdo za tím stojí"
-msgstr "Who is behind this"
+#: app/templates/welcome.html:1200
+msgid "Září"
+msgstr "September"
 
-#: app/templates/welcome.html:175
-msgid "Vytvořeno studenty"
-msgstr "Built by students"
+#: app/templates/welcome.html:1200
+msgid "↘ průměr klesá = zlepšuješ se"
+msgstr "↘ average dropping = you are improving"
 
-#: app/templates/welcome.html:175
-msgid "pro studenty."
-msgstr "for students."
+#: app/templates/welcome.html:1210
+msgid "Víš, co tě čeká."
+msgstr "Know what is coming."
 
-#: app/templates/welcome.html:178
-msgid ""
-"Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je"
-" poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho "
-"školním datům — zdarma, navždy."
-msgstr ""
-"Bakix was born out of frustration with confusing school systems. Our goal"
-" is to give every student a clear, fast and beautiful access to their "
-"school data — free, forever."
+#: app/templates/welcome.html:1210
+msgid "Dřív než zazvoní."
+msgstr "Before the bell rings."
 
-#: app/templates/welcome.html:185
-msgid "Zakladatel & Dev"
-msgstr "Founder & Dev"
+#: app/templates/welcome.html:1212
+msgid "Dnešek a zítřek na jedno klepnutí. Suplování, odpadlé hodiny a změny učeben <strong>zvýrazněné dřív, než si jich všimne třída</strong>."
+msgstr "Today and tomorrow one tap away. Substitutions, cancelled lessons and room changes <strong>highlighted before your class notices</strong>."
 
-#: app/templates/wrap.html:302
+#: app/templates/welcome.html:1215
+msgid "Dnes / zítra přepínač"
+msgstr "Today / tomorrow switch"
+
+#: app/templates/welcome.html:1216 app/templates/welcome.html:1229
+msgid "Suplování"
+msgstr "Substitution"
+
+#: app/templates/welcome.html:1217
+msgid "Push při změně"
+msgstr "Push on changes"
+
+#: app/templates/welcome.html:1225
+msgid "Úterý · 6 hodin"
+msgstr "Tuesday · 6 lessons"
+
+#: app/templates/welcome.html:1226
+msgid "2 změny"
+msgstr "2 changes"
+
+#: app/templates/welcome.html:1228 app/templates/welcome.html:1229
+#: app/templates/welcome.html:1231 app/templates/welcome.html:1232
+msgid "uč."
+msgstr "room"
+
+#: app/templates/welcome.html:1230
+msgid "odpadá"
+msgstr "cancelled"
+
+#: app/templates/welcome.html:1231
+msgid "Angličtina"
+msgstr "English"
+
+#: app/templates/welcome.html:1232
+msgid "Dějepis"
+msgstr "History"
+
+#: app/templates/welcome.html:1241
+msgid "Deadliny tě"
+msgstr "Deadlines will not"
+
+#: app/templates/welcome.html:1241
+msgid "už nepřekvapí."
+msgstr "surprise you again."
+
+#: app/templates/welcome.html:1243
+msgid "Domácí úkoly seřazené podle odevzdání. Co hoří, svítí červeně. <strong>A večer ti přijde připomínka</strong> — takže ráno žádná panika."
+msgstr "Homework sorted by due date. What is urgent glows red. <strong>And an evening reminder arrives</strong> — so no morning panic."
+
+#: app/templates/welcome.html:1246
+msgid "Řazení podle deadline"
+msgstr "Sorted by deadline"
+
+#: app/templates/welcome.html:1247
+msgid "Přílohy"
+msgstr "Attachments"
+
+#: app/templates/welcome.html:1248
+msgid "Večerní souhrn v push"
+msgstr "Evening push summary"
+
+#: app/templates/welcome.html:1256
+msgid "Domácí úkoly"
+msgstr "Homework"
+
+#: app/templates/welcome.html:1257
+msgid "4 aktivní"
+msgstr "4 active"
+
+#: app/templates/welcome.html:1261
+msgid "Fyzika — laboratorní protokol"
+msgstr "Physics — laboratory report"
+
+#: app/templates/welcome.html:1261
+msgid "měření hustoty"
+msgstr "density measurement"
+
+#: app/templates/welcome.html:1266
+msgid "Matematika — pracovní list"
+msgstr "Maths — worksheet"
+
+#: app/templates/welcome.html:1266
+msgid "kvadratické rovnice"
+msgstr "quadratic equations"
+
+#: app/templates/welcome.html:1267
+msgid "Pátek"
+msgstr "Friday"
+
+#: app/templates/welcome.html:1271
+msgid "první republika"
+msgstr "the First Republic"
+
+#: app/templates/welcome.html:1272
+msgid "Příští týden"
+msgstr "Next week"
+
+#: app/templates/welcome.html:1276
+msgid "Angličtina — esej"
+msgstr "English — essay"
+
+#: app/templates/welcome.html:1287
+msgid "Zprávy od učitelů."
+msgstr "Messages from teachers."
+
+#: app/templates/welcome.html:1287
+msgid "Bez lovení."
+msgstr "No hunting around."
+
+#: app/templates/welcome.html:1289
+msgid "Komens zprávy přehledně na dashboardu — nepřečtené nahoře, <strong>odpovědět můžeš rovnou z Bakixu</strong>. A o ničem důležitém se nedozvíš poslední."
+msgstr "Komens messages right on the dashboard — unread first, <strong>and you can reply straight from Bakix</strong>. You will never be the last to know."
+
+#: app/templates/welcome.html:1292
+msgid "Nepřečtené první"
+msgstr "Unread first"
+
+#: app/templates/welcome.html:1293
+msgid "Psaní zpráv"
+msgstr "Compose messages"
+
+#: app/templates/welcome.html:1294
+msgid "Push okamžitě"
+msgstr "Instant push"
+
+#: app/templates/welcome.html:1302
+msgid "doručené"
+msgstr "inbox"
+
+#: app/templates/welcome.html:1303
+msgid "2 nové"
+msgstr "2 new"
+
+#: app/templates/welcome.html:1309
+msgid "Změna termínu písemky z matematiky — přesouvá se na čtvrtek…"
+msgstr "The maths test has been rescheduled — moved to Thursday…"
+
+#: app/templates/welcome.html:1311
+msgid "před 9 min"
+msgstr "9 min ago"
+
+#: app/templates/welcome.html:1317
+msgid "Zítra nezapomeňte čtenářské deníky, vybírám na začátku hodiny…"
+msgstr "Do not forget your reading journals tomorrow, I will collect them at the start of class…"
+
+#: app/templates/welcome.html:1319
+msgid "před 2 h"
+msgstr "2 h ago"
+
+#: app/templates/welcome.html:1324
+msgid "Ředitelství školy"
+msgstr "School administration"
+
+#: app/templates/welcome.html:1325
+msgid "V pátek končí výuka v 11:40 z důvodu pedagogické rady…"
+msgstr "Classes end at 11:40 on Friday due to a staff meeting…"
+
+#: app/templates/welcome.html:1327
+msgid "včera"
+msgstr "yesterday"
+
+#: app/templates/welcome.html:1339
+msgid "AI, co zná"
+msgstr "AI that knows"
+
+#: app/templates/welcome.html:1339
+msgid "tvoje známky."
+msgstr "your grades."
+
+#: app/templates/welcome.html:1341
+msgid "Není to jen chatbot. Bakix AI vidí tvůj rozvrh, úkoly i průměry — takže radí přesně tobě. <strong>Vysvětlí látku, vytvoří studijní plán, vygeneruje procvičování.</strong>"
+msgstr "Not just another chatbot. Bakix AI sees your timetable, homework and averages — so its advice fits you. <strong>It explains topics, builds study plans, generates practice.</strong>"
+
+#: app/templates/welcome.html:1344
+msgid "Gemini uvnitř"
+msgstr "Gemini inside"
+
+#: app/templates/welcome.html:1345
+msgid "Studijní stránky na míru"
+msgstr "Custom study pages"
+
+#: app/templates/welcome.html:1346
+msgid "Vlastní AI persony"
+msgstr "Custom AI personas"
+
+#: app/templates/welcome.html:1354
+msgid "AI chat"
+msgstr "AI chat"
+
+#: app/templates/welcome.html:1358
+msgid "Vysvětli mi Pythagorovu větu"
+msgstr "Explain the Pythagorean theorem"
+
+#: app/templates/welcome.html:1360
+msgid "odpověď za 1,2 s"
+msgstr "answered in 1.2 s"
+
+#: app/templates/welcome.html:1360
+msgid "zná tvůj rozvrh i známky"
+msgstr "knows your timetable and grades"
+
+#: app/templates/welcome.html:1371
+msgid "a víš všechno o dnešku"
+msgstr "and you know everything about today"
+
+#: app/templates/welcome.html:1375
+msgid "aktivních studentů"
+msgstr "active students"
+
+#: app/templates/welcome.html:1379
+msgid "podporovaných škol"
+msgstr "supported schools"
+
+#: app/templates/welcome.html:1383
+msgid "na start. fakt."
+msgstr "to start. really."
+
+#: app/templates/welcome.html:1390
+msgid "Přestaň lovit známky."
+msgstr "Stop hunting for grades."
+
+#: app/templates/welcome.html:1390
+msgid "Začni je mít."
+msgstr "Start owning them."
+
+#: app/templates/welcome.html:1392
+msgid "Najdeš svoji školu, přihlásíš se <strong>Bakaláři účtem</strong> — a hotovo. Žádná registrace, žádné heslo navíc."
+msgstr "Find your school, sign in <strong>with your Bakaláři account</strong> — done. No registration, no extra password."
+
+#: app/templates/welcome.html:1395
+msgid "Spustit Bakix"
+msgstr "Launch Bakix"
+
+#: app/templates/welcome.html:1398
+msgid "PWA · žádná instalace ze storu · zdarma"
+msgstr "PWA · no app store install · free"
+
+#: app/templates/welcome.html:1407
+msgid "vyrobeno studenty pro studenty"
+msgstr "made by students for students"
+
+#: app/templates/welcome.html:1408
+msgid "Právní informace"
+msgstr "Legal"
+
+#: app/templates/welcome.html:1414
+msgid "Bakix není oficiální produkt Bakaláři software a.s."
+msgstr "Bakix is not an official product of Bakaláři software a.s."
+
+#: app/templates/welcome.html:1492
+msgid "Jasně! V pravoúhlém trojúhelníku platí a² + b² = c². Přepona na druhou = součet čtverců odvěsen. Zítra ji píšeš — chceš tři příklady na procvičení?"
+msgstr "Sure! In a right triangle, a² + b² = c². The hypotenuse squared equals the sum of the squares of the legs. Your test is tomorrow — want three practice problems?"
+
+#: app/templates/wrap.html:348
 msgid "Zpět"
 msgstr "← Back"
+
+#: app/templates/wrap.html:377
+msgid "Ztlumit hudbu"
+msgstr "Mute music"
+
+#: app/templates/wrap.html:377
+msgid "Hudba"
+msgstr "Music"
 
 #~ msgid "Kontrolovat každých"
 #~ msgstr "Check every"
@@ -607,4 +915,76 @@ msgstr "← Back"
 
 #~ msgid "2 hodiny"
 #~ msgstr "2 hours"
+
+#~ msgid "Přihlašovací údaje šifrované"
+#~ msgstr "Credentials encrypted"
+
+#~ msgid "Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128) výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám."
+#~ msgstr "Bakix stores your credentials in encrypted form (Fernet / AES-128) exclusively for automatic access renewal after token expiry. Your password is never logged or shared with third parties."
+
+#~ msgid "Přihlašovací tokeny v session"
+#~ msgstr "Session login tokens"
+
+#~ msgid "Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů."
+#~ msgstr "Enter your school URL. Bakix will verify that a Bakaláře server is running there before asking for your credentials."
+
+#~ msgid "Demo verze"
+#~ msgstr "Demo version"
+
+#~ msgid "Zjistit více"
+#~ msgstr "Learn more"
+
+#~ msgid "Co Bakix umí"
+#~ msgstr "What Bakix can do"
+
+#~ msgid "Vše, co potřebujete."
+#~ msgstr "Everything you need."
+
+#~ msgid "Všechny předměty a průměry na první pohled. Trendy vývoje v čase — víte přesně, kde stojíte a co vás čeká."
+#~ msgstr "All subjects and averages at a glance. Trend development over time — you always know where you stand."
+
+#~ msgid "Chytrá Analýza"
+#~ msgstr "Smart Analysis"
+
+#~ msgid "Predikce průměrů, analýza trendů a personalizované rady — powered by AI."
+#~ msgstr "Grade predictions, trend analysis and personalised advice — powered by AI."
+
+#~ msgid "Aktuální Rozvrh"
+#~ msgstr "Current Schedule"
+
+#~ msgid "Rozvrh přímo z Bakalářů. Suplování přehledně označené — vždy víte, co vás čeká."
+#~ msgstr "Schedule directly from Bakaláře. Substitutions clearly marked — you always know what to expect."
+
+#~ msgid "Absence & Docházka"
+#~ msgstr "Absence & Attendance"
+
+#~ msgid "Přehled omluvených i neomluvených hodin. Žádné překvapení na konci pololetí."
+#~ msgstr "Overview of excused and unexcused absences. No surprises at the end of term."
+
+#~ msgid "Zdarma. Navždy."
+#~ msgstr "Free. Forever."
+
+#~ msgid "Základní funkce jsou a zůstanou zdarma. Žádná registrace, stačí přihlašovací údaje z Bakalářů — a jste uvnitř."
+#~ msgstr "Core features are and will remain free. No registration — just your Bakaláře credentials and you are in."
+
+#~ msgid "Připraveni začít?"
+#~ msgstr "Ready to start?"
+
+#~ msgid "Stačí přihlašovací údaje z Bakalářů."
+#~ msgstr "All you need are your Bakaláře credentials."
+
+#~ msgid "Žádná registrace, žádné heslo navíc."
+#~ msgstr "No registration, no extra password."
+
+#~ msgid "Kdo za tím stojí"
+#~ msgstr "Who is behind this"
+
+#~ msgid "pro studenty."
+#~ msgstr "for students."
+
+#~ msgid "Bakix vznikl z frustrace z nepřehledných školních systémů. Naším cílem je poskytnout každému studentu přehledný, rychlý a krásný přístup k jeho školním datům — zdarma, navždy."
+#~ msgstr "Bakix was born out of frustration with confusing school systems. Our goal is to give every student a clear, fast and beautiful access to their school data — free, forever."
+
+#~ msgid "Zakladatel & Dev"
+#~ msgstr "Founder & Dev"
 
