@@ -14,28 +14,120 @@
     dotEls[currentStep].classList.add('is-active');
   };
 
-  /* ── Step 2: URL validation ──────────────────────────────── */
-  const urlInput    = document.getElementById('school-url-input');
+  /* ── Step 2: School search ───────────────────────────────── */
+  const searchInput = document.getElementById('school-search-input');
+  const dropdown    = document.getElementById('school-dropdown');
   const hiddenUrl   = document.getElementById('school_url');
+  let   searchTimer = null;
+
+  searchInput.addEventListener('input', function () {
+    const val = this.value.trim();
+    hiddenUrl.value = '';
+    urlInput.classList.remove('is-valid', 'has-error');
+    if (val.length < 2) { closeDropdown(); return; }
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => fetchSchools(val), 320);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeDropdown(); return; }
+    if (e.key === 'ArrowDown') {
+      const first = dropdown.querySelector('.school-option[data-url]');
+      if (first) { first.focus(); e.preventDefault(); }
+    }
+  });
+
+  async function fetchSchools(q) {
+    renderDropdown(null); // loading state
+    try {
+      const r    = await fetch('/api/schools/search?q=' + encodeURIComponent(q));
+      const data = await r.json();
+      renderDropdown(data);
+    } catch (_) {
+      closeDropdown();
+    }
+  }
+
+  function renderDropdown(schools) {
+    dropdown.innerHTML = '';
+    if (schools === null) {
+      dropdown.innerHTML = '<li class="school-option school-option--info">Hledám…</li>';
+      dropdown.classList.add('is-open');
+      return;
+    }
+    if (!schools.length) {
+      dropdown.innerHTML = '<li class="school-option school-option--info">Žádná škola nenalezena — zkuste URL ručně</li>';
+      dropdown.classList.add('is-open');
+      return;
+    }
+    dropdown.innerHTML = schools.map(s =>
+      `<li class="school-option" role="option" tabindex="0"
+           data-url="${escAttr(s.url)}"
+           data-name="${escAttr(s.name)}">
+        <span class="school-option__name">${escHtml(s.name)}</span>
+        <span class="school-option__city">${escHtml(s.city)}</span>
+       </li>`
+    ).join('');
+    dropdown.classList.add('is-open');
+
+    dropdown.querySelectorAll('.school-option[data-url]').forEach(el => {
+      el.addEventListener('click',   () => selectSchool(el));
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { selectSchool(el); e.preventDefault(); }
+        if (e.key === 'ArrowDown') { el.nextElementSibling?.focus(); e.preventDefault(); }
+        if (e.key === 'ArrowUp')   {
+          (el.previousElementSibling ? el.previousElementSibling : searchInput).focus();
+          e.preventDefault();
+        }
+        if (e.key === 'Escape') closeDropdown();
+      });
+    });
+  }
+
+  function selectSchool(el) {
+    const url  = el.dataset.url;
+    const name = el.dataset.name;
+    searchInput.value = name;
+    hiddenUrl.value   = url;
+    closeDropdown();
+    // Schools from the directory are already validated — go straight to credentials
+    setTimeout(() => goTo(2), 120);
+  }
+
+  function closeDropdown() {
+    dropdown.classList.remove('is-open');
+    dropdown.innerHTML = '';
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.school-search-wrap')) closeDropdown();
+  });
+
+  /* ── Step 2: Manual URL validation ──────────────────────── */
+  const urlInput    = document.getElementById('school-url-input');
   const urlStatus   = document.getElementById('url-status');
   const btnValidate = document.getElementById('btn-validate');
 
-  // Reset validation if the user edits the URL after a successful check
   urlInput.addEventListener('input', function () {
     hiddenUrl.value = '';
     urlInput.classList.remove('is-valid', 'has-error');
     urlStatus.style.display = 'none';
+    // Clear search selection when user edits manual URL
+    searchInput.value = '';
   });
 
   urlInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); runValidation(); }
   });
 
-  btnValidate.addEventListener('click', runValidation);
+  btnValidate.addEventListener('click', function () {
+    // If URL already confirmed by school search — just advance
+    if (hiddenUrl.value) { goTo(2); return; }
+    runValidation();
+  });
 
   async function runValidation() {
     const raw = urlInput.value.trim();
-
     if (!raw) {
       urlInput.classList.add('has-error');
       urlInput.focus();
@@ -43,7 +135,6 @@
       return;
     }
 
-    // Start loading
     urlInput.classList.remove('is-valid', 'has-error');
     urlStatus.style.display  = 'none';
     btnValidate.disabled     = true;
@@ -59,7 +150,6 @@
         hiddenUrl.value = data.url;
         urlInput.classList.add('is-valid');
         setStatus('ok', '✓ Server nalezen: ' + data.url);
-        // Short pause so the user sees the green confirmation, then advance
         setTimeout(() => goTo(2), 500);
       } else {
         urlInput.classList.add('has-error');
@@ -85,7 +175,7 @@
   const form      = document.getElementById('login-form');
   const errorBox  = document.getElementById('login-error');
   const btnSubmit = document.getElementById('btn-connect');
-  let   submitting = false;  // guard against concurrent submissions
+  let   submitting = false;
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
@@ -104,7 +194,6 @@
     submitting = true;
     setSubmitLoading(true);
 
-    // Send only the three required fields — nothing else from the form
     const body = new FormData();
     body.append('school_url', hiddenUrl.value);
     body.append('username',   username);
@@ -116,15 +205,13 @@
       const resp = await fetch(form.action, { method: 'POST', body });
 
       if (resp.redirected) {
-        succeeded = true;  // keep spinner active during navigation
+        succeeded = true;
         try { localStorage.setItem('bakix-school', hiddenUrl.value); } catch (_) {}
         window.location.href = resp.url;
         return;
       }
 
       if (!resp.ok) {
-        // Attempt to parse the error JSON; fall back to a generic message
-        // if the server returned a non-JSON body (e.g. a 500 HTML error page)
         let msg;
         try {
           const data = await resp.json();
@@ -132,7 +219,6 @@
         } catch (_) {
           msg = null;
         }
-
         if (!msg) {
           msg = resp.status >= 500
             ? `Chyba serveru (${resp.status}). Zkuste to znovu.`
@@ -140,18 +226,15 @@
         } else if (resp.status >= 500) {
           msg = `Chyba serveru: ${msg}`;
         }
-
         showLoginError(msg);
         return;
       }
 
-      // 2xx without redirect — unexpected from this endpoint
       showLoginError('Neočekávaná odpověď serveru. Zkuste to znovu.');
     } catch (_) {
       showLoginError('Nepodařilo se spojit se serverem. Zkuste to znovu.');
     } finally {
       submitting = false;
-      // Leave the spinner on while the browser navigates to the dashboard
       if (!succeeded) setSubmitLoading(false);
     }
   });
@@ -171,5 +254,15 @@
     errorBox.textContent   = msg;
     errorBox.style.display = 'block';
   }
-})();
 
+  /* ── Utils ───────────────────────────────────────────────── */
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(s) { return escHtml(s); }
+})();

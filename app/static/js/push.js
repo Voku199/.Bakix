@@ -323,3 +323,21 @@
   });
 
 })();
+
+// ── Notification click navigation ────────────────────────────────────────────
+// SW sends { type:'push-navigate', url } when the user taps a notification
+// while the app is already open. Scroll to the target section if we're on the
+// dashboard; otherwise navigate to the URL.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'push-navigate') return;
+    var url   = e.data.url || '/';
+    var parts = url.split('#');
+    var hash  = parts[1] || '';
+    if (hash && window.location.pathname === '/') {
+      var el = document.getElementById(hash);
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    }
+    window.location.href = url;
+  });
+}

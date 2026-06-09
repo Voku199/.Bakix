@@ -235,3 +235,64 @@ body {
 .text-red     { color: var(--red); }
 .empty        { color: var(--muted); font-size: 0.82rem; }
 
+/* ── Logo page-transition overlay ────────────────────────────
+   Smooth full-screen curtain triggered from the header logo.
+   Timeline (2.6s total), driven by the keyframes below:
+     0.0s–1.2s  logo glides in from the TOP-LEFT to the centre,
+                growing + fading in
+     1.2s–1.8s  hold dead-centre
+     1.8s–2.6s  fade out in place
+     2.6s       JS performs the redirect to "/"                          */
+
+.logo-transition {
+  position:       fixed;
+  inset:          0;
+  z-index:        9999;
+  background:     #1a1612;          /* site's dark/near-black background */
+  overflow:       hidden;
+  opacity:        0;
+  pointer-events: none;
+}
+
+/* JS adds .is-playing to start the show */
+.logo-transition.is-playing {
+  pointer-events: all;
+  animation:      lt-overlay-in 0.25s ease-out forwards;
+}
+
+/* Full-viewport centring reference for the logo */
+.logo-transition__stage { position: absolute; inset: 0; }
+
+/* ── Main logo — glides in from top-left, holds, fades out ── */
+.logo-transition__logo {
+  position:         absolute;
+  top:              50%;
+  left:             50%;
+  width:            min(60vw, 460px);   /* bigger logo */
+  height:           auto;
+  transform:        translate(-50%, -50%);
+  transform-origin: center center;
+  opacity:          0;
+  will-change:      transform, opacity;
+}
+.is-playing .logo-transition__logo {
+  animation: lt-logo 2.6s cubic-bezier(.22, .61, .36, 1) forwards;
+}
+
+/* Overlay curtain fade-in */
+@keyframes lt-overlay-in { to { opacity: 1; } }
+
+/* Logo timeline: start off-screen top-left, slide+grow to centre,
+   hold, then fade out in place. */
+@keyframes lt-logo {
+  0%   { transform: translate(calc(-50% - 42vw), calc(-50% - 42vh)) scale(.55); opacity: 0; }
+  46%  { transform: translate(-50%, -50%) scale(1);                             opacity: 1; }
+  69%  { transform: translate(-50%, -50%) scale(1);                             opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.04);                          opacity: 0; }
+}
+
+/* Respect reduced-motion: never show the curtain (JS navigates directly) */
+@media (prefers-reduced-motion: reduce) {
+  .logo-transition { display: none !important; }
+}
+

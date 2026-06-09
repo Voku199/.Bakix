@@ -197,6 +197,7 @@ def _send_evening_reminders() -> None:
                 user_id,
                 "Bakix – Zítřejší rozvrh",
                 f"Zítra máš {count} hodin: {preview}",
+                url="/#events-body",
                 tag="bakix-schedule",
             )
 
@@ -265,7 +266,7 @@ def _poll_substitutions(user_id: str, svc, token, push_svc) -> "str | None":
                     if count == 1 else
                     f"{count} změn v rozvrhu {when} (první: {first['subject']})"
                 )
-                push_svc.send_to_user(user_id, "Změna v rozvrhu", body, tag="bakix-subs")
+                push_svc.send_to_user(user_id, "Změna v rozvrhu", body, url="/#events-body", tag="bakix-subs")
                 log.info("scheduler: subs: push user=%.8s when=%s novel=%d", user_id, when, count)
 
     updated = seen_ids | all_sub_ids
@@ -323,7 +324,7 @@ def _poll_marks(user_id: str, svc, token, push_svc, prefs: dict) -> "str | None"
             body    = f"{first['subject']}: {first['text']}{caption}"
         else:
             body = f"{count} nových známek (první: {first['subject']} {first['text']})"
-        push_svc.send_to_user(user_id, "Nová známka v Bakixu", body, tag="bakix-marks")
+        push_svc.send_to_user(user_id, "Nová známka v Bakixu", body, url="/#marks-body", tag="bakix-marks")
         log.info("scheduler: marks: push user=%.8s novel=%d", user_id, count)
 
     updated = seen_ids | current_ids
@@ -500,7 +501,7 @@ def _poll_all_users() -> None:
                                 body = f"{subj} – odevzdat do {due}"
                             else:
                                 body = f"Máš {count} nových úkolů"
-                            push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body, tag="bakix-hw")
+                            push_svc.send_to_user(user_id, "Nový úkol v Bakixu", body, url="/#homeworks-body", tag="bakix-hw")
                             log.info("scheduler: poll: hw push user=%.8s novel=%d", user_id, len(novel_ids))
                         cache_set(user_id, "push_seen_hw", list(hw_ids | seen_ids))
 
@@ -539,7 +540,7 @@ def _poll_all_users() -> None:
                             text_preview = (first["Text"] or "")[:80]
                             title_t      = (first["Title"] or "Zpráva")[:60]
                             body         = f"{sender}: {text_preview}" if text_preview else f"{sender}: {title_t}"
-                            push_svc.send_to_user(user_id, "Nová zpráva v Bakixu", body, tag="bakix-komens")
+                            push_svc.send_to_user(user_id, "Nová zpráva v Bakixu", body, url="/#komens-body", tag="bakix-komens")
                             log.info("scheduler: poll: komens push user=%.8s", user_id)
                         updated = seen_ids | msg_ids
                         if updated != seen_ids:

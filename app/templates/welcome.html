@@ -102,14 +102,33 @@
               {{ _('Začít zdarma') }} &nbsp;→
             </a>
           </div>
-          <a href="{{ url_for('login.login_demo') }}" class="btn btn--ghost">{{ _('Demo verze') }}</a>
+          <a href="{{ url_for('login.login_demo') }}" class="btn btn--ghost btn--demo">{{ _('Vyzkoušet demo') }} &nbsp;▶</a>
           <a href="#features" class="btn btn--ghost">{{ _('Zjistit více') }}</a>
         </div>
+        <p class="hero-demo-note">{{ _('Demo nevyžaduje žádné údaje — jedním klikem') }}</p>
       </div>
     </div>
 
     <a class="scroll-hint" href="#features">↓ &nbsp; scroll</a>
   </section>
+
+  <!-- ── Stats bar ──────────────────────────────────────────── -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-item__num">500+</span>
+      <span class="stat-item__label">{{ _('aktivních studentů') }}</span>
+    </div>
+    <div class="stat-item__sep"></div>
+    <div class="stat-item">
+      <span class="stat-item__num">150+</span>
+      <span class="stat-item__label">{{ _('podporovaných škol') }}</span>
+    </div>
+    <div class="stat-item__sep"></div>
+    <div class="stat-item">
+      <span class="stat-item__num">100%</span>
+      <span class="stat-item__label">{{ _('zdarma navžidy') }}</span>
+    </div>
+  </div>
 
   <div class="gradient-divider"></div>
 

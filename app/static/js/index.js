@@ -676,6 +676,7 @@ document.addEventListener('DOMContentLoaded', function () {
         mrow.appendChild(mv); mrow.appendChild(cap); mrow.appendChild(meta);
         detail.appendChild(mrow);
       });
+      detail.addEventListener('click', function (e) { e.stopPropagation(); });
       row.appendChild(detail);
 
       row.addEventListener('click', function () { row.classList.toggle('open'); });

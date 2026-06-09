@@ -654,3 +654,56 @@
       .site-footer { justify-content: center; text-align: center; }
       .footer__links { gap: 1.25rem; }
     }
+
+
+/* ── Stats bar ──────────────────────────────────────────────── */
+.stats-bar {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             2.5rem;
+  padding:         1.5rem 2rem;
+  border-top:      1px solid var(--border);
+  border-bottom:   1px solid var(--border);
+}
+
+.stat-item {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            0.2rem;
+}
+
+.stat-item__num {
+  font-size:   1.4rem;
+  font-weight: 700;
+  color:       var(--accent);
+  line-height: 1;
+}
+
+.stat-item__label {
+  font-size:      10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color:          var(--muted);
+}
+
+.stat-item__sep {
+  width:      1px;
+  height:     36px;
+  background: var(--border);
+}
+
+@media (max-width: 480px) {
+  .stats-bar { gap: 1.25rem; }
+  .stat-item__num { font-size: 1.1rem; }
+}
+
+/* ── Hero demo note ─────────────────────────────────────────── */
+.hero-demo-note {
+  font-size:   0.74rem;
+  color:       var(--muted);
+  margin-top:  0.6rem;
+  opacity:     0.8;
+  text-align:  center;
+}

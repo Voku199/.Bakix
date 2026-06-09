@@ -57,9 +57,12 @@ self.addEventListener('notificationclick', function (e) {
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-      for (var i = 0; i < list.length; i++) {
-        var c = list[i];
-        if (c.url === targetUrl && 'focus' in c) return c.focus();
+      if (list.length > 0) {
+        // App already open — focus it and tell the page to scroll/navigate.
+        var c = list[0];
+        return c.focus().then(function () {
+          c.postMessage({ type: 'push-navigate', url: targetUrl });
+        });
       }
       if (clients.openWindow) return clients.openWindow(targetUrl);
     })

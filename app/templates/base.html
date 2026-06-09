@@ -68,7 +68,7 @@
 <body>
 
   <header class="header">
-    <a class="header__logo" href="/">
+    <a class="header__logo" href="/" id="header-logo">
       <img src="{{ url_for('static', filename='bakix.svg') }}" alt="Bakix logo" class="header__logo-img">
       <span class="header__logo-text">Bakix</span>
     </a>
@@ -88,7 +88,20 @@
     {% block content %}{% endblock %}
   </main>
 
+  <!-- ── Logo page-transition overlay ──────────────────────────
+       Full-screen dark curtain played when the header logo is
+       clicked. `hidden` until JS activates it; the logo glides in
+       from the top-left to centre, holds, then fades out
+       (see .logo-transition in base.css). -->
+  <div id="logo-transition" class="logo-transition" aria-hidden="true" hidden>
+    <div class="logo-transition__stage">
+      <img class="logo-transition__logo"
+           src="{{ url_for('static', filename='bakix.svg') }}" alt="">
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/logo-transition.js') }}"></script>
   <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
 
   {% block scripts %}{% endblock %}

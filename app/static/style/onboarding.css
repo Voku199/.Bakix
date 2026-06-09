@@ -224,3 +224,83 @@
 /* ── Submit button disabled while navigating ───────────────── */
 #btn-connect:disabled { cursor: not-allowed; }
 
+/* ── School search dropdown ────────────────────────────────── */
+.school-search-wrap { position: relative; }
+
+.school-dropdown {
+  display:       none;
+  position:      absolute;
+  top:           calc(100% + 4px);
+  left:          0;
+  right:         0;
+  background:    var(--bg2);
+  border:        1px solid var(--border);
+  border-radius: var(--radius);
+  list-style:    none;
+  padding:       4px 0;
+  max-height:    220px;
+  overflow-y:    auto;
+  z-index:       200;
+  box-shadow:    0 6px 20px rgba(0,0,0,.14);
+}
+
+.school-dropdown.is-open { display: block; }
+
+.school-option {
+  display:        flex;
+  flex-direction: column;
+  padding:        8px 12px;
+  cursor:         pointer;
+  outline:        none;
+  transition:     background .1s;
+  border-left:    2px solid transparent;
+}
+
+.school-option:hover,
+.school-option:focus {
+  background:   var(--bg);
+  border-color: var(--accent);
+}
+
+.school-option__name {
+  font-size:   12px;
+  font-weight: 600;
+  color:       var(--text);
+  line-height: 1.3;
+}
+
+.school-option__city {
+  font-size:  10px;
+  color:      var(--muted);
+  margin-top: 2px;
+  letter-spacing: .3px;
+}
+
+.school-option--info {
+  font-size: 11px;
+  color:     var(--muted);
+  cursor:    default;
+  padding:   10px 12px;
+  border-left: none;
+}
+
+/* ── "nebo zadat URL ručně" divider ────────────────────────── */
+.url-divider {
+  display:     flex;
+  align-items: center;
+  gap:         0.75rem;
+  margin:      1.1rem 0 0.8rem;
+  color:       var(--muted);
+  font-size:   10px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.url-divider::before,
+.url-divider::after {
+  content:    '';
+  flex:       1;
+  height:     1px;
+  background: var(--border);
+}
+

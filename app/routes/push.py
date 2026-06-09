@@ -163,7 +163,7 @@ def send_push():
         try:
             webpush(
                 subscription_info=sub_info,
-                data=json.dumps({"title": title, "body": message}),
+                data=json.dumps({"title": title, "body": message, "url": "/"}),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims={"sub": VAPID_MAILTO},
                 content_encoding="aes128gcm",   # RFC 8291; required by iOS APNs
@@ -189,14 +189,17 @@ _DEBUG_PAYLOADS = {
     "grade": (
         "Nová známka v Bakixu",
         "1 z Matematiky – písemka, kapitola 3",
+        "/#marks-body",
     ),
     "homework": (
         "Nový úkol v Bakixu",
         "Cvičení z Angličtiny – odevzdat do pozítří",
+        "/#homeworks-body",
     ),
     "komens": (
         "Nová zpráva v Bakixu",
         "Třídní učitel: Pozvánka na třídní schůzky",
+        "/#komens-body",
     ),
 }
 
@@ -214,8 +217,8 @@ def debug_push(push_type):
         return jsonify({"error": "Unknown push type", "valid": list(_DEBUG_PAYLOADS)}), 400
 
     from app.services.push_service import PushNotificationService
-    title, body = _DEBUG_PAYLOADS[push_type]
-    sent = PushNotificationService().send_to_user(user_id, title, body)
+    title, body, url = _DEBUG_PAYLOADS[push_type]
+    sent = PushNotificationService().send_to_user(user_id, title, body, url=url)
     log.info("debug_push: type=%s user=%.8s sent=%d", push_type, user_id, sent)
     return jsonify({"ok": True, "sent": sent})
 

@@ -76,19 +76,27 @@ main.container {
   transform: translateX(100%);
   transition: transform .4s cubic-bezier(.4,0,.2,1);
   will-change: transform;
+  /* Slowly drifting gradient so the background never feels static */
+  background-size: 220% 220%;
+  animation: wx-grad 16s ease-in-out infinite;
 }
 
 .wx-card--active { transform: translateX(0); }
 .wx-card--past   { transform: translateX(-100%); }
 
-/* ── Themes ───────────────────────────────────────────────── */
-.wx-card--intro  { background: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
-.wx-card--blue   { background: linear-gradient(150deg,#1a4a7a 0%,#060f22 100%); }
-.wx-card--green  { background: linear-gradient(150deg,#155f3e 0%,#032215 100%); }
-.wx-card--purple { background: linear-gradient(150deg,#4e2880 0%,#1a0838 100%); }
-.wx-card--gold   { background: linear-gradient(150deg,#7d4f0e 0%,#2a1600 100%); }
-.wx-card--teal   { background: linear-gradient(150deg,#0f6565 0%,#022222 100%); }
-.wx-card--outro  { background: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
+@keyframes wx-grad {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── Themes (background-image so the animated size/position sticks) ── */
+.wx-card--intro  { background-image: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
+.wx-card--blue   { background-image: linear-gradient(150deg,#1a4a7a 0%,#060f22 100%); }
+.wx-card--green  { background-image: linear-gradient(150deg,#155f3e 0%,#032215 100%); }
+.wx-card--purple { background-image: linear-gradient(150deg,#4e2880 0%,#1a0838 100%); }
+.wx-card--gold   { background-image: linear-gradient(150deg,#7d4f0e 0%,#2a1600 100%); }
+.wx-card--teal   { background-image: linear-gradient(150deg,#0f6565 0%,#022222 100%); }
+.wx-card--outro  { background-image: linear-gradient(150deg,#c0491c 0%,#60180a 100%); }
 
 /* Soft radial light at center */
 .wx-card::before {
@@ -295,6 +303,44 @@ main.container {
   font-size: .72rem;
   font-family: var(--font);
 }
+
+/* ── Mute / unmute hudby ──────────────────────────────────── */
+.wx-mute {
+  position: absolute;
+  top: 24px;
+  right: 12px;
+  z-index: 55;            /* nad progress bary (50), pod loadingem (60) */
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s, transform .15s;
+}
+.wx-mute:hover  { background: rgba(255,255,255,.22); }
+.wx-mute:active { transform: scale(.92); }
+
+/* ── Konfety (outro) ──────────────────────────────────────── */
+.wx-confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 45;           /* nad kartami, ale taps propadnou (pointer-events) */
+  pointer-events: none;
+}
+
+/* ── Respekt k reduced-motion ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .wx-card,
+  .wx-intro-cta__arrow { animation: none !important; }
+}
 </style>
 {% endblock %}
 
@@ -321,6 +367,15 @@ main.container {
   {# Cards container #}
   <div id="wx-cards"></div>
 
+  {# Konfety (outro) #}
+  <canvas class="wx-confetti" id="wx-confetti"></canvas>
+
+  {# Hudba na pozadí + mute tlačítko #}
+  <audio id="wx-audio" loop preload="auto"
+         src="{{ url_for('static', filename='audio/wrap.mp3') }}"></audio>
+  <button id="wx-mute" class="wx-mute" type="button"
+          aria-label="{{ _('Ztlumit hudbu') }}" title="{{ _('Hudba') }}">🔊</button>
+
   {# Tap zones #}
   <div class="wx-tap wx-tap--prev" id="wx-prev" role="button" aria-label="Předchozí" tabindex="0"></div>
   <div class="wx-tap wx-tap--next" id="wx-next" role="button" aria-label="Další"     tabindex="0"></div>
@@ -342,6 +397,12 @@ var loadEl   = document.getElementById('wx-loading');
 var errorEl  = document.getElementById('wx-error');
 var prevBtn  = document.getElementById('wx-prev');
 var nextBtn  = document.getElementById('wx-next');
+var audio          = document.getElementById('wx-audio');
+var muteBtn        = document.getElementById('wx-mute');
+var confettiCanvas = document.getElementById('wx-confetti');
+var audioStarted   = false;
+var reduceMotion   = window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 var cards   = [];
 var current = 0;
@@ -427,7 +488,7 @@ function buildDefs(d) {
     emoji: '⭐',
     number: d.top_feature,
     isNum: false,
-    label: 'nejoblibenejší funkce',
+    label: 'nejoblíbenější funkce',
     ctx: CTX.feature(d.top_feature)
   });
 
@@ -437,7 +498,7 @@ function buildDefs(d) {
       emoji: '📆',
       number: d.most_active_weekday,
       isNum: false,
-      label: 'nejoblibenejší den',
+      label: 'nejoblíbenější den',
       ctx: 'V tento den jsi byl(a) nejproduktivnější.'
     });
   }
@@ -551,8 +612,12 @@ function goTo(idx, animate) {
   barElapsed   = 0;
   paused       = false;
 
-  // Animate number if applicable
+  // Jemná haptika při přechodu + konfety na finální kartě
+  if (animate && navigator.vibrate) navigator.vibrate(8);
   var def = cards[idx].def;
+  if (def.id === 'outro') fireConfetti();
+
+  // Animate number if applicable
   if (def.isNum && animate) {
     var el = document.getElementById('wxn-' + def.id);
     if (el) {
@@ -605,6 +670,7 @@ function pauseBar() {
   barElapsed += Date.now() - barStartTime;
   var b = barFillEls[current];
   if (b) b.bar.classList.add('wx-bar--paused');
+  if (audioStarted) audio.pause();
 }
 
 function resumeBar() {
@@ -613,6 +679,7 @@ function resumeBar() {
   barStartTime = Date.now();
   var b = barFillEls[current];
   if (b) b.bar.classList.remove('wx-bar--paused');
+  if (audioStarted && !document.hidden) audio.play();
   var remaining = CARD_DURATION - barElapsed;
   if (remaining > 0 && current < cards.length - 1) {
     timer = setTimeout(function () { if (!paused) next(); }, remaining);
@@ -662,6 +729,103 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'ArrowRight' || e.key === ' ')  { e.preventDefault(); next(); }
   if (e.key === 'ArrowLeft')                    { e.preventDefault(); prev(); }
 });
+
+// ── Hudba na pozadí ─────────────────────────────────────────────────────────────
+if (audio) audio.volume = 0;
+
+function startAudio() {
+  if (audioStarted || !audio) return;
+  audioStarted = true;
+  audio.play().then(function () {
+    // Plynulý fade-in hlasitosti (méně agresivní start)
+    var v = 0;
+    var fade = setInterval(function () {
+      v = Math.min(v + 0.04, 0.55);
+      audio.volume = v;
+      if (v >= 0.55) clearInterval(fade);
+    }, 60);
+  }).catch(function () {
+    // Autoplay zablokován nebo soubor chybí — zkusíme to při dalším gestu
+    audioStarted = false;
+  });
+}
+
+// Browsery vyžadují user-gesture: první tap/klávesa hudbu rozjede.
+['pointerdown', 'keydown'].forEach(function (ev) {
+  document.addEventListener(ev, startAudio, { once: true });
+});
+
+// Mute tlačítko — stopPropagation, ať se neproklikne tap zóna pod ním.
+function toggleMute(e) {
+  e.stopPropagation();
+  if (!audioStarted) startAudio();
+  audio.muted = !audio.muted;
+  muteBtn.textContent = audio.muted ? '🔇' : '🔊';
+}
+muteBtn.addEventListener('click', toggleMute);
+['touchstart', 'touchend', 'pointerdown'].forEach(function (ev) {
+  muteBtn.addEventListener(ev, function (e) { e.stopPropagation(); });
+});
+
+// Hudba běží jen když je záložka vidět.
+document.addEventListener('visibilitychange', function () {
+  if (!audioStarted) return;
+  if (document.hidden) audio.pause();
+  else if (!paused)    audio.play();
+});
+
+// ── Konfety na outro kartě ──────────────────────────────────────────────────────
+var cctx        = confettiCanvas.getContext('2d');
+var confParts   = [];
+var confRAF     = null;
+var CONF_COLORS = ['#ffffff', '#ffd34e', '#ff7a3c', '#7ad1ff', '#9b7aff', '#5fe39b'];
+
+function fireConfetti() {
+  if (reduceMotion) return;
+  var rect = wxEl.getBoundingClientRect();
+  confettiCanvas.width  = rect.width;
+  confettiCanvas.height = rect.height;
+  confParts = [];
+  for (var i = 0; i < 130; i++) {
+    confParts.push({
+      x: rect.width / 2, y: rect.height * 0.4,
+      vx: (Math.random() - 0.5) * 10,
+      vy: Math.random() * -12 - 4,
+      g:  0.26 + Math.random() * 0.12,
+      size: 5 + Math.random() * 6,
+      rot: Math.random() * 6.28,
+      vr:  (Math.random() - 0.5) * 0.45,
+      color: CONF_COLORS[i % CONF_COLORS.length],
+      life: 0
+    });
+  }
+  if (confRAF) cancelAnimationFrame(confRAF);
+  confTick();
+}
+
+function confTick() {
+  cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  var alive = false;
+  for (var i = 0; i < confParts.length; i++) {
+    var p = confParts[i];
+    p.vy += p.g;
+    p.vx *= 0.99;
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.rot += p.vr;
+    p.life++;
+    if (p.y < confettiCanvas.height + 24) alive = true;
+    cctx.save();
+    cctx.translate(p.x, p.y);
+    cctx.rotate(p.rot);
+    cctx.globalAlpha = Math.max(0, 1 - p.life / 170);
+    cctx.fillStyle = p.color;
+    cctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.62);
+    cctx.restore();
+  }
+  if (alive) confRAF = requestAnimationFrame(confTick);
+  else cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
 
 // ── Fetch and boot ──────────────────────────────────────────────────────────────
 fetch('/api/wrap/data')

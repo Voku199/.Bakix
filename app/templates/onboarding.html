@@ -37,18 +37,18 @@
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">{{ _('Přihlašovací údaje šifrované') }}</div>
+              <div class="security-item__title">{{ _('Heslo nikdy nevidíme') }}</div>
               <div class="security-item__desc">
-                {{ _('Bakix uloží vaše přihlašovací údaje v šifrované podobě (Fernet / AES-128) výhradně pro automatické obnovení přístupu po vypršení tokenu. Heslo v čitelné podobě není nikdy logováno ani sdíleno třetím stranám.') }}
+                {{ _('Vaše heslo ukládáme pouze v zašifrované podobě — nikdo z Bakixu ho nemůže přečíst. Slouží výhradně k automatickému obnovení přístupu, pokud vás Bakaláře odhlásí.') }}
               </div>
             </div>
           </li>
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">{{ _('Přihlašovací tokeny v session') }}</div>
+              <div class="security-item__title">{{ _('Funguje jako mobilní aplikace') }}</div>
               <div class="security-item__desc">
-                {{ _('Bakix funguje stejně jako mobilní aplikace Bakalářů — uchovává dočasný token platný 8 hodin. Po odhlášení je smazán.') }}
+                {{ _('Bakix pracuje stejně jako aplikace Bakaláři — získá dočasný token platný 8 hodin. Po odhlášení ho ihned smaže.') }}
               </div>
             </div>
           </li>
@@ -64,9 +64,9 @@
           <li class="security-item">
             <span class="security-item__icon">✓</span>
             <div>
-              <div class="security-item__title">{{ _('Data přímo ze školy') }}</div>
+              <div class="security-item__title">{{ _('Data jdou přímo ze školy') }}</div>
               <div class="security-item__desc">
-                {{ _('Bakix volá přímo Bakaláře API vaší školy — data neprocházejí žádnou třetí stranou.') }}
+                {{ _('Bakix volá přímo server vaší školy — žádná třetí strana vaše data nevidí.') }}
               </div>
             </div>
           </li>
@@ -79,13 +79,29 @@
         </div>
       </div>
 
-      {# ── Step 2: School URL + validation ─────────────────────── #}
+      {# ── Step 2: School search + URL fallback ─────────────────── #}
       <div class="step panel" id="step-1">
         <div class="panel__title">{{ _('Adresa školy') }}</div>
         <p style="font-size:.81rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.7;">
-          {{ _('Zadejte URL adresu vaší školy. Bakix ověří, zda na ní běží server Bakaláře, a teprve poté vás vyzve k zadání přihlašovacích údajů.') }}
+          {{ _('Vyhledejte svou školu — nebo zadejte URL ručně.') }}
         </p>
 
+        {# Primary: school name / city search #}
+        <div class="field school-search-field">
+          <label class="field__label" for="school-search-input">{{ _('Vyhledat školu') }}</label>
+          <div class="school-search-wrap">
+            <input type="text" id="school-search-input" class="field__input"
+                   placeholder="{{ _('Město nebo název školy…') }}"
+                   autocomplete="off" spellcheck="false">
+            <ul class="school-dropdown" id="school-dropdown"
+                role="listbox" aria-label="{{ _('Výsledky hledání') }}"></ul>
+          </div>
+        </div>
+
+        {# Divider #}
+        <div class="url-divider"><span>{{ _('nebo zadat URL ručně') }}</span></div>
+
+        {# Fallback: manual URL #}
         <div class="field">
           <label class="field__label" for="school-url-input">{{ _('URL školy') }}</label>
           <input type="text" id="school-url-input" class="field__input"
@@ -95,7 +111,7 @@
           <div class="url-status" id="url-status" aria-live="polite" style="display:none;"></div>
         </div>
 
-        {# populated by JS after successful validation #}
+        {# populated by JS #}
         <input type="hidden" id="school_url" name="school_url">
 
         <div class="step-nav">
