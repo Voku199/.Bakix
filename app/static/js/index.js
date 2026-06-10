@@ -40,7 +40,7 @@
           subDesc.textContent = desc;
         }
         // Free → buy, Premium → extend. Both go through the real payment flow.
-        if (subBtn)   { subBtn.textContent = isPrem ? 'Prodloužit Premium — 50 Kč' : 'Aktivovat Premium ✦ — 50 Kč'; subBtn.className = 'btn btn--primary'; subBtn.style.width = '100%'; }
+        if (subBtn)   { subBtn.textContent = isPrem ? 'Prodloužit Premium — 50 Kč' : 'Aktivovat Premium ✦ — 50 Kč'; subBtn.className = 'btn btn--primary'; subBtn.style.width = '100%'; subBtn.disabled = isPrem; }
         if (subSt)    subSt.textContent = '';
 
         status.textContent = '';
