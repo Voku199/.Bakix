@@ -119,6 +119,8 @@ class BakalariService:
                 "_reauth_from_db: refresh_token failed (%s), falling back to full login for user=%.8s",
                 result.get("error"), user_id,
             )
+            from app.services.wrap_service import log_activity
+            log_activity(user_id, "refresh_token_failed")
 
         # ── Attempt 2: full re-login from encrypted credentials ───────────────
         try:
@@ -134,6 +136,8 @@ class BakalariService:
 
         update_tokens(user_id, result["access_token"], result.get("refresh_token"))
         log.info("_reauth_from_db: tokens refreshed via full login for user=%.8s", user_id)
+        from app.services.wrap_service import log_activity
+        log_activity(user_id, "full_reauth_used")
         return result["access_token"]
 
     # ── Auth & API ───────────────────────────────────────────────────────────
@@ -161,8 +165,10 @@ class BakalariService:
                 "detail":      response.text,
             }
         data = response.json()
+        log.debug("LOGIN RESPONSE FIELDS: %s", list(
+            data.keys()))  # ← přidej toto
         return {
-            "access_token":  data.get("access_token"),
+            "access_token": data.get("access_token"),
             "refresh_token": data.get("refresh_token"),
         }
 

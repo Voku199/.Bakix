@@ -40,6 +40,9 @@ def _compile_translations(app) -> None:
 def create_app():
     app = Flask(__name__)
 
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
     _debug = os.getenv("DEBUG", "False").strip().lower() in ("1", "true", "yes")
 
     app.config.update(
@@ -124,7 +127,10 @@ def create_app():
         if lang in ("cs", "en"):
             session["language"] = lang
             session.modified = True
-        return redirect(request.referrer or url_for("welcome"))
+        ref = request.referrer or ""
+        if ref and ref.startswith(request.host_url):
+            return redirect(ref)
+        return redirect(url_for("welcome"))
 
     @app.route("/prompt")
     def prompt():
@@ -197,6 +203,13 @@ def create_app():
             "display_name": (row.get("display_name") or "") if row else "",
             "vapid_public_key": vapid_public_key,
         }
+
+    @app.after_request
+    def _security_headers(resp):
+        resp.headers["X-Frame-Options"] = "DENY"
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return resp
 
     @app.before_request
     def _check_auth():
