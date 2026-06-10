@@ -1591,3 +1591,118 @@ html, body {
 .calc-achieved { color: var(--muted); }
 .calc-achieved strong { color: var(--text); }
 
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE UX — mobil & desktop friendly dashboard
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Safe area (iPhone notch / home indicator) ───────────── */
+.ai-fab {
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right:  calc(1.5rem + env(safe-area-inset-right, 0px));
+}
+
+/* ── Keyboard users (desktop): visible focus ─────────────── */
+.btn:focus-visible,
+.btn--lang:focus-visible,
+.ai-fab:focus-visible,
+.msg-modal__close:focus-visible,
+.ai-chat__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Desktop: prostornější AI chat na velkých monitorech ── */
+@media (min-width: 1440px) {
+  .ai-sidebar { width: min(460px, 100vw); }
+}
+
+/* ── Touch zařízení: větší cíle, žádný flash, žádný zoom ── */
+@media (pointer: coarse) {
+  .btn,
+  .btn--lang,
+  .msg-item,
+  .project-link,
+  .task,
+  .ai-fab,
+  .marks-sum-row__header {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* min. ~40px touch target (Apple HIG doporučuje 44pt) */
+  .btn--icon {
+    min-width:  40px;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+  }
+  .chart-nav__arrow { width: 44px; height: 44px; }
+  .msg-modal__close { padding: 6px 12px; }
+  .ai-chat__send    { padding: 10px 16px; }
+  .chat-mode-btn,
+  .ai-mode-btn      { padding: 6px 10px; }
+  .ai-model-opt     { padding: 11px 12px; }
+  #compose-open     { min-width: 40px; min-height: 34px; justify-content: center; }
+}
+
+/* iOS Safari zoomuje při fokusu na input < 16px — všechna pole */
+@media (hover: none) and (pointer: coarse) {
+  .settings-field input,
+  .settings-field select,
+  .settings-row select,
+  .compose-field input,
+  .compose-field select,
+  .compose-field textarea,
+  .calc-field input,
+  .calc-field select { font-size: 16px; }
+}
+
+/* ── Mobil ≤ 640px ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* těsnější layout + místo dole, aby FAB nezakrýval obsah */
+  .container {
+    padding: 1.1rem .9rem calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .dash-grid { gap: .9rem; }
+
+  /* kompaktnější header */
+  .header          { padding: 0 .9rem; gap: .55rem; }
+  .header__actions { gap: .4rem; }
+
+  /* nastavení jako iOS bottom sheet */
+  .settings-overlay { align-items: flex-end; }
+  .settings-panel {
+    width:         100%;
+    max-width:     100%;
+    border-radius: 18px 18px 0 0;
+    border-left:   0;
+    border-right:  0;
+    border-bottom: 0;
+    max-height:    calc(100vh - 2.5rem);
+    max-height:    calc(100dvh - 2.5rem);
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* detail zprávy jako bottom sheet — na dosah palce */
+  .msg-modal { align-items: flex-end; padding: 0; }
+  .msg-modal__panel {
+    width:         100%;
+    max-height:    88vh;
+    max-height:    88dvh;
+    border-radius: 18px 18px 0 0;
+    border-left:   0;
+    border-right:  0;
+    border-bottom: 0;
+  }
+  .msg-modal__body    { padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* spodní okraje nad home indicatorem */
+  .compose-modal__body { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+  .ai-sidebar__footer  { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* velmi úzké displeje: logo text uvolní místo akcím */
+@media (max-width: 380px) {
+  .header__logo-text { display: none; }
+}
