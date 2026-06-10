@@ -50,6 +50,212 @@
 .compose-actions{display:flex;gap:.5rem;justify-content:flex-end;margin-top:.75rem;}
 .compose-status{font-size:.8rem;margin-top:.5rem;min-height:1.1em;color:var(--muted);}
 @media(max-width:480px){.compose-modal{bottom:0;right:0;left:0;}.compose-modal__panel{width:100%;border-radius:14px 14px 0 0;max-height:min(560px,calc(100vh - 3rem));}}
+
+/* ════════════════════════════════════════════════════════════
+   DASHBOARD — Apple-style polish (page-scoped, viz welcome.html)
+   earthy / terracotta / Space Mono — plynulé, rychlé, lehké
+   ════════════════════════════════════════════════════════════ */
+:root {
+  --dx-ease:   cubic-bezier(.22, 1, .36, 1);
+  --dx-spring: cubic-bezier(.34, 1.45, .44, 1);
+}
+
+::selection { background: var(--accent); color: var(--bg); }
+
+/* ── Scroll progress ────────────────────────────────────── */
+.dash-progress {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 1200;
+  pointer-events: none;
+}
+.dash-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ff8a4d));
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+}
+
+/* ── Ambient atmosphere: drifting glow + masked grid ────── */
+.dash-atmos {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dash-atmos::before {
+  content: '';
+  position: absolute;
+  top: -30vh; right: -18vw;
+  width: 75vw; height: 75vw;
+  max-width: 880px; max-height: 880px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--accent) 13%, transparent) 0%,
+    transparent 62%);
+  filter: blur(42px);
+  animation: dash-glow-drift 16s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes dash-glow-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-5%, 6%) scale(1.1); }
+}
+.dash-atmos::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 80%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: .15;
+  -webkit-mask-image: radial-gradient(ellipse 85% 55% at 50% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 85% 55% at 50% 0%, #000 0%, transparent 75%);
+}
+
+/* ── Film grain (stejná textura jako welcome) ───────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 3000;
+  opacity: .03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Hero greeting ──────────────────────────────────────── */
+.dash-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: .35rem .85rem;
+  border-radius: 100px;
+  margin-bottom: .9rem;
+}
+.dash-kicker__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: dash-pulse 2.2s ease-in-out infinite;
+}
+@keyframes dash-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 7px transparent; }
+}
+.dash-greeting {
+  font-size: clamp(1.45rem, 3.6vw, 2.3rem);
+  line-height: 1.12;
+  letter-spacing: -.03em;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1.4rem;
+}
+.dash-greeting strong { color: var(--accent); }
+
+/* ── Cards: welcome-panel look ──────────────────────────── */
+.card, .chart-panel {
+  border-radius: 16px;
+  background: linear-gradient(170deg,
+    color-mix(in srgb, var(--bg2) 96%, #fff) 0%,
+    var(--bg2) 70%);
+  box-shadow:
+    0 14px 34px -22px rgba(0, 0, 0, .35),
+    0 2px 5px rgba(0, 0, 0, .07),
+    inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  transition: border-color .5s var(--dx-ease);
+}
+.card:hover, .chart-panel:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.card__title, .chart-panel .panel__title {
+  letter-spacing: 2.5px;
+}
+.card__title::before, .chart-panel .panel__title::before {
+  content: '✦ ';
+  color: var(--accent);
+}
+.dash-grid { counter-reset: dashcard; }
+.dash-grid .card__title::before {
+  counter-increment: dashcard;
+  content: counter(dashcard, decimal-leading-zero) ' ✦ ';
+  color: var(--accent);
+}
+
+/* chart panel header: title + live pill */
+.chart-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+}
+.dash-pill {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  padding: 3px 9px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* ── Primary buttons: lift + sheen sweep ────────────────── */
+.btn--primary {
+  position: relative;
+  overflow: hidden;
+  transition: transform .45s var(--dx-spring), box-shadow .45s var(--dx-ease), opacity .15s;
+}
+.btn--primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.3) 50%, transparent 65%);
+  transform: translateX(-130%);
+  transition: transform .7s var(--dx-ease);
+}
+.btn--primary:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.btn--primary:hover::after { transform: translateX(130%); }
+.btn--primary:active { transform: translateY(0) scale(.97); }
+
+/* ── AI FAB: breathing terracotta glow ──────────────────── */
+.ai-fab {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, #ff8a4d), var(--accent));
+  animation: dash-fab-breathe 4s ease-in-out infinite;
+}
+@keyframes dash-fab-breathe {
+  0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,.25), 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+  50%      { box-shadow: 0 8px 28px rgba(0,0,0,.3), 0 0 26px 2px color-mix(in srgb, var(--accent) 38%, transparent); }
+}
+
+/* ── Reduced motion: vypnout vše nové ───────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dash-atmos::before,
+  .dash-kicker__dot,
+  .ai-fab { animation: none !important; }
+  .dash-progress { display: none; }
+  .btn--primary::after { display: none; }
+}
 </style>
 {% endblock %}
 
@@ -62,11 +268,16 @@
 
 {% block content %}
 
+  {# ── Apple-style chrome: scroll progress + ambient glow ── #}
+  <div class="dash-progress" data-bm-skip aria-hidden="true"><div class="dash-progress__bar" id="dash-progress-bar"></div></div>
+  <div class="dash-atmos" id="dash-atmos" data-bm-skip aria-hidden="true"></div>
+
   {# ── Grade trend chart (full width, above grid) ─────────── #}
   {% if chart_data_json is defined and chart_data_json != '[]' %}
   <div class="panel chart-panel" style="margin-bottom:1.25rem;">
     <div class="chart-panel__header">
       <div class="panel__title">{{ _('Trend známek') }}</div>
+      <span class="dash-pill">{{ _('Live z Bakalářů') }}</span>
     </div>
     <div class="chart-nav">
       <button class="btn btn--icon chart-nav__arrow" id="chart-prev" aria-label="{{ _('Předchozí předmět') }}">‹</button>
@@ -91,6 +302,7 @@
 
   {% else %}
 
+  <div class="dash-kicker" aria-hidden="true"><span class="dash-kicker__dot"></span><span id="dash-kicker-date"></span></div>
   <p id="dash-greeting" class="dash-greeting"></p>
 
   {# Push invite — push.js shows this when APIs available + not yet subscribed #}
@@ -718,6 +930,40 @@
     var panel = modal.querySelector('.compose-modal__panel');
     if (!panel.contains(e.target) && !openBtn.contains(e.target)) closeCompose();
   });
+})();
+</script>
+<script>
+/* ── Apple-style chrome: kicker date + scroll progress + glow parallax ── */
+(function () {
+  'use strict';
+
+  var kickerDate = document.getElementById('dash-kicker-date');
+  if (kickerDate) {
+    var lang = (document.documentElement.lang || 'cs').indexOf('en') === 0 ? 'en-GB' : 'cs-CZ';
+    try {
+      kickerDate.textContent = new Date().toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch (_) {
+      kickerDate.textContent = new Date().toLocaleDateString();
+    }
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var bar   = document.getElementById('dash-progress-bar');
+  var atmos = document.getElementById('dash-atmos');
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      var max = document.documentElement.scrollHeight - window.innerHeight;
+      if (bar)   bar.style.transform = 'scaleX(' + (max > 0 ? window.scrollY / max : 0) + ')';
+      if (atmos) atmos.style.transform = 'translateY(' + (window.scrollY * -0.06).toFixed(1) + 'px)';
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 })();
 </script>
 {% endblock %}
