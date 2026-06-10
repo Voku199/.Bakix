@@ -166,12 +166,47 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function isWindowed() { return sidebar.classList.contains('ai-sidebar--windowed'); }
 
+  /* Na mobilu input nefokusovat — vyskočila by klávesnice hned
+     po kliknutí na ikonku a zakryla celý chat. */
+  var FINE_POINTER = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // ── Body scroll lock ──────────────────────────────────────
+  /* overflow:hidden na body se nepropaguje (html má overflow-x:hidden)
+     a na iOS nefunguje — position:fixed technika zamkne spolehlivě. */
+  var scrollLocked = false, scrollLockY = 0;
+  function lockScroll() {
+    if (scrollLocked) return;
+    scrollLocked = true;
+    scrollLockY = window.scrollY || document.documentElement.scrollTop || 0;
+    var s = document.body.style;
+    s.position = 'fixed';
+    s.top      = -scrollLockY + 'px';
+    s.left     = '0';
+    s.right    = '0';
+    s.width    = '100%';
+    s.overflow = 'hidden';
+  }
+  function unlockScroll() {
+    if (!scrollLocked) return;
+    scrollLocked = false;
+    var s = document.body.style;
+    s.position = ''; s.top = ''; s.left = ''; s.right = ''; s.width = ''; s.overflow = '';
+    var de = document.documentElement;
+    var prev = de.style.scrollBehavior;
+    de.style.scrollBehavior = 'auto'; /* base.css má smooth — návrat musí být okamžitý */
+    window.scrollTo(0, scrollLockY);
+    de.style.scrollBehavior = prev;
+  }
+
   // ── Sidebar open / close ──────────────────────────────────
 
   function openSidebar() {
     sidebar.classList.add('open');
-    if (!isWindowed()) overlay.classList.add('open');
-    if (input) input.focus();
+    if (!isWindowed()) {
+      overlay.classList.add('open');
+      lockScroll();
+    }
+    if (input && FINE_POINTER) input.focus();
 
     if (!initialRendered) {
       initialRendered = true;
@@ -237,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (d) renderInsights(d);
       else appendMsg('model', 'Nový chat — zeptej se mě na cokoliv ✦', false, null);
     });
-    if (input) input.focus();
+    if (input && FINE_POINTER) input.focus();
   }
 
   function refreshConversations() {
@@ -349,6 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function closeSidebar() {
     sidebar.classList.remove('open');
     overlay.classList.remove('open');
+    unlockScroll();
   }
 
   fab.addEventListener('click', openSidebar);
@@ -372,6 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     sidebar.classList.add('ai-sidebar--windowed');
     overlay.classList.remove('open');
+    unlockScroll(); /* okenní režim nechává stránku scrollovat */
 
     if (popoutBtn) { popoutBtn.textContent = '⊟'; popoutBtn.title = 'Zpět do postranního panelu'; }
     if (!sidebar.classList.contains('open')) openSidebar();
@@ -383,7 +420,10 @@ document.addEventListener('DOMContentLoaded', function () {
     sidebar.style.removeProperty('--chat-y');
     sidebar.style.removeProperty('width');
 
-    if (sidebar.classList.contains('open')) overlay.classList.add('open');
+    if (sidebar.classList.contains('open')) {
+      overlay.classList.add('open');
+      lockScroll();
+    }
     if (popoutBtn) { popoutBtn.textContent = '⊞'; popoutBtn.title = 'Okenní režim'; }
   }
 

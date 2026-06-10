@@ -686,6 +686,7 @@ html, body {
   opacity:         0;
   pointer-events:  none;
   transition:      opacity .2s ease;
+  overscroll-behavior: contain;
 }
 .msg-modal.open { opacity: 1; pointer-events: auto; }
 .msg-modal__panel {
@@ -694,6 +695,7 @@ html, body {
   border-radius: 12px;
   width:         min(580px, 100%);
   max-height:    80vh;
+  max-height:    80dvh; /* mobil: respektuje dynamickou lištu prohlížeče */
   display:       flex;
   flex-direction: column;
   overflow:      hidden;
@@ -740,6 +742,8 @@ html, body {
   word-break:  break-word;
   overflow-y:  auto;
   flex:        1;
+  overscroll-behavior: contain;          /* scroll se nepřelije na stránku */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Marks summary ────────────────────────────────────── */
@@ -919,6 +923,8 @@ html, body {
   gap:             0.45rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  overscroll-behavior: contain;          /* scroll se nepřelije na stránku */
+  -webkit-overflow-scrolling: touch;
 }
 .ai-sidebar__thread::-webkit-scrollbar       { width: 4px; }
 .ai-sidebar__thread::-webkit-scrollbar-track { background: transparent; }

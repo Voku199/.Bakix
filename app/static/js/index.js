@@ -757,17 +757,42 @@ function msgToHtml(text) {
 
   function fmtDate(iso) { return iso ? iso.substring(0, 10) : ''; }
 
+  /* Body scroll lock — plain overflow:hidden nepropaguje na viewport,
+     protože html má overflow-x:hidden (a na iOS nefunguje vůbec).
+     position:fixed technika zamkne stránku spolehlivě všude. */
+  var lockY = 0;
+  function lockScroll() {
+    lockY = window.scrollY || document.documentElement.scrollTop || 0;
+    var s = document.body.style;
+    s.position = 'fixed';
+    s.top      = -lockY + 'px';
+    s.left     = '0';
+    s.right    = '0';
+    s.width    = '100%';
+    s.overflow = 'hidden';
+  }
+  function unlockScroll() {
+    var s = document.body.style;
+    s.position = ''; s.top = ''; s.left = ''; s.right = ''; s.width = ''; s.overflow = '';
+    var de = document.documentElement;
+    var prev = de.style.scrollBehavior;
+    de.style.scrollBehavior = 'auto'; /* base.css má smooth — návrat musí být okamžitý */
+    window.scrollTo(0, lockY);
+    de.style.scrollBehavior = prev;
+  }
+
   window.openMsgModal = function (m) {
     modalTitle.textContent = m.Title  || '—';
     modalMeta.textContent  = (m.Sender || '—') + ' · ' + fmtDate(m.SentDate);
     modalBody.innerHTML = msgToHtml(m.Text || '');
     modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    modalBody.scrollTop = 0;
+    lockScroll();
   };
 
   function close() {
     modal.classList.remove('open');
-    document.body.style.overflow = '';
+    unlockScroll();
   }
 
   closeBtn.addEventListener('click', close);
