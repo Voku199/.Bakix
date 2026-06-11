@@ -6,7 +6,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from app.secret import get_secret_key
+from app.secret import get_credentials_key
 
 log = logging.getLogger(__name__)
 
@@ -17,10 +17,11 @@ _active_secret: str = ""
 
 
 def _get_fernet() -> Fernet:
-    # Use the same key as the Flask session (see app/secret.py) so credentials
-    # encrypted on one install can always be decrypted by it — no hidden default.
+    # Derive from the dedicated credentials key (falls back to SECRET_KEY when
+    # CREDENTIALS_KEY is unset — see app/secret.py), so data encrypted on one
+    # install can always be decrypted by it. No hidden default.
     global _fernet, _active_secret
-    secret = get_secret_key()
+    secret = get_credentials_key()
     if _fernet is None or secret != _active_secret:
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=_SALT, iterations=480_000)
         _fernet = Fernet(base64.urlsafe_b64encode(kdf.derive(secret.encode())))

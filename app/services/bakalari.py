@@ -1,6 +1,8 @@
+import ipaddress
 import logging
 import os
-from urllib.parse import quote
+import socket
+from urllib.parse import quote, urlsplit
 
 import requests
 
@@ -15,6 +17,41 @@ if not _VERIFY_SSL:
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     log.warning("BAKALARI_INSECURE_SSL is set — TLS verification DISABLED (dev only)")
+
+
+def is_safe_school_url(url: str) -> bool:
+    """Reject URLs that would let a user point Bakix at internal infrastructure.
+
+    The school URL is attacker-controlled and gets fetched server-side, so it is
+    a classic SSRF vector — a user could aim it at cloud metadata
+    (169.254.169.254), localhost, or a private LAN host and probe it through our
+    server. We require http(s), resolve the host, and refuse if *any* resolved
+    address is loopback/private/link-local/reserved/multicast.
+
+    The dev escape hatch (BAKALARI_INSECURE_SSL, used to hit a local test
+    server) intentionally bypasses this — it is already a "dev only" switch.
+    """
+    if not _VERIFY_SSL:
+        return True
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        return False
+    try:
+        infos = socket.getaddrinfo(parts.hostname, parts.port or
+                                   (443 if parts.scheme == "https" else 80),
+                                   proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError, ValueError):
+        return False  # can't resolve → fail closed
+    if not infos:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_loopback or ip.is_private or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            log.warning("blocked SSRF-unsafe school_url host=%s ip=%s",
+                        parts.hostname, ip)
+            return False
+    return True
 
 
 class BakalariService:
@@ -41,6 +78,8 @@ class BakalariService:
     def validate_school_url(base_url: str) -> bool:
         """Return True if base_url serves a Bakaláře API (contains ApiVersion)."""
         base = base_url.rstrip("/")
+        if not is_safe_school_url(base):
+            return False
         for path in ("/api/3", "/api"):
             try:
                 r = requests.get(f"{base}{path}", timeout=6, verify=_VERIFY_SSL)
@@ -143,6 +182,8 @@ class BakalariService:
     # ── Auth & API ───────────────────────────────────────────────────────────
 
     def login(self, username: str, password: str) -> dict:
+        if not is_safe_school_url(self._base):
+            return {"error": "Neplatná adresa školy."}
         try:
             response = self._session.post(
                 f"{self._base}{self._LOGIN}",

@@ -221,11 +221,33 @@ def create_app():
             "vapid_public_key": vapid_public_key,
         }
 
+    # Allowlist mirrors the only external origins the templates load: jsDelivr
+    # (KaTeX, Chart.js) and Google Fonts. 'unsafe-inline' is still needed for the
+    # app's inline <script>/onclick blocks — tightening that out is a separate
+    # refactor — but the policy already blocks injected external scripts, frames
+    # and plugins, which is the defence-in-depth layer behind HTML sanitization.
+    _CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+        "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+
     @app.after_request
     def _security_headers(resp):
         resp.headers["X-Frame-Options"] = "DENY"
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        resp.headers["Content-Security-Policy"] = _CSP
+        # HSTS only in production — in local debug the app may run over plain
+        # HTTP, and HSTS would pin the browser to https for a year.
+        if not _debug:
+            resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return resp
 
     @app.before_request

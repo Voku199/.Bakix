@@ -46,12 +46,14 @@ try:
     def _sanitize_html(html: str) -> str:
         return _nh3.clean(html, tags=_SANITIZE_TAGS, attributes=_SANITIZE_ATTRS)
 except ImportError:
-    def _sanitize_html(html: str) -> str:  # fallback: strip only obvious dangers
-        import re
-        html = re.sub(r'<script[\s\S]*?</script>', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', html, flags=re.IGNORECASE)
-        html = re.sub(r'javascript:', '', html, flags=re.IGNORECASE)
-        return html
+    from markupsafe import escape as _escape
+
+    def _sanitize_html(html: str) -> str:
+        # Fail closed: a regex "sanitizer" is bypassable (e.g. onload= without a
+        # space, entity-encoded handlers), so without nh3 we don't pretend to
+        # clean — we escape everything and render the AI output as inert text.
+        log.error("nh3 not installed — AI HTML rendered as escaped text (install nh3)")
+        return str(_escape(html))
 
 from app.database.db import fetch_row, get_settings as _db_get_settings, save_settings as _db_save_settings, upsert_all, update_display_name as _db_update_display_name, cache_get, cache_set
 from app.extensions import limiter

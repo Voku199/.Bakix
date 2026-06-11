@@ -26,4 +26,22 @@ def get_secret_key() -> str:
         return _KEY_PATH.read_text().strip()
     new_key = secrets.token_hex(32)
     _KEY_PATH.write_text(new_key)
+    # This file is the master secret (session signing + credential encryption).
+    # Lock it down so other users/processes on the host can't read it.
+    try:
+        os.chmod(_KEY_PATH, 0o600)
+    except OSError:
+        pass
     return new_key
+
+
+def get_credentials_key() -> str:
+    """Key used to encrypt stored Bakaláře credentials (see crypto.py).
+
+    Defaults to SECRET_KEY so existing installs keep decrypting unchanged, but a
+    deployment can set CREDENTIALS_KEY to a *separate* secret — then a leaked
+    session-signing key can't also decrypt everyone's stored passwords, and the
+    two can be rotated independently.
+    """
+    return os.getenv("CREDENTIALS_KEY") or get_secret_key()
+
