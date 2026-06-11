@@ -243,6 +243,40 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_generated_pages_user
             ON generated_pages (user_id, created_at DESC)
         """)
+        # ── OAuth 2.0 provider ("Přihlásit se přes Bakix") ─────────────────────
+        # Secrets are stored hashed (sha256) — see app/database/oauth_db.py.
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_clients (
+                client_id          TEXT PRIMARY KEY,
+                client_secret_hash TEXT NOT NULL,
+                name               TEXT NOT NULL,
+                redirect_uris      TEXT NOT NULL,
+                created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_codes (
+                code_hash      TEXT PRIMARY KEY,
+                client_id      TEXT NOT NULL,
+                user_id        TEXT NOT NULL,
+                redirect_uri   TEXT NOT NULL,
+                code_challenge TEXT NOT NULL,
+                scope          TEXT NOT NULL DEFAULT 'profile',
+                expires_at     TEXT NOT NULL,
+                used_at        TEXT
+            )
+        """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS oauth_tokens (
+                token_hash TEXT PRIMARY KEY,
+                client_id  TEXT NOT NULL,
+                user_id    TEXT NOT NULL,
+                scope      TEXT NOT NULL DEFAULT 'profile',
+                code_hash  TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                revoked_at TEXT
+            )
+        """)
         _migrate_generated_pages_from_files(db)
         # Migration for existing DBs that have the old sub_json schema.
         # SQLite cannot ALTER a NOT NULL constraint, so we rename + recreate.

@@ -2,6 +2,8 @@ import logging
 import os
 from datetime import timedelta
 from pathlib import Path
+
+import click
 from flask import Flask, redirect, render_template, request, session, url_for
 from flask_babel import Babel, _
 
@@ -81,12 +83,14 @@ def create_app():
     from app.routes.auth_routes import auth_bp
     from app.routes.bakalari_routes import bakalari_bp
     from app.routes.login import login_bp
+    from app.routes.oauth_provider import oauth_bp  # "Přihlásit se přes Bakix"
     from app.routes.proxy_routes import proxy_bp  # PROXY_Bakix-mirrored endpoints
     from app.routes.push import push_bp            # push.py — definitive blueprint
     from app.routes.payment_routes import payment_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(bakalari_bp)
     app.register_blueprint(login_bp)
+    app.register_blueprint(oauth_bp)
     app.register_blueprint(proxy_bp)
     app.register_blueprint(push_bp)
     app.register_blueprint(payment_bp)
@@ -94,6 +98,19 @@ def create_app():
     # The Stripe webhook is a server-to-server POST with no session cookie and
     # its own HMAC signature check — CSRF would only ever reject it.
     csrf.exempt(app.view_functions["payment.webhook"])
+    # Same for the OAuth token exchange: authenticated by client_secret + PKCE.
+    csrf.exempt(app.view_functions["oauth.token"])
+
+    @app.cli.command("oauth-client-create")
+    @click.argument("name")
+    @click.argument("redirect_uris", nargs=-1, required=True)
+    def oauth_client_create(name, redirect_uris):
+        """Register an OAuth client app (e.g. Knowix). Prints the secret ONCE."""
+        from app.database.oauth_db import create_client
+        client_id, client_secret = create_client(name, list(redirect_uris))
+        click.echo(f"client_id={client_id}")
+        click.echo(f"client_secret={client_secret}")
+        click.echo("Store the secret now — only its hash is kept in the DB.")
 
     # ── Page routes ──────────────────────────────────────────────────────────
     # Endpoints are "welcome" / "onboarding" so url_for("welcome") works in
@@ -216,7 +233,10 @@ def create_app():
         if (request.path in _AUTH_EXEMPT
                 or request.path.startswith("/static/")
                 or request.path.startswith("/api/")
-                or request.path.startswith("/set-language/")):
+                or request.path.startswith("/set-language/")
+                # /oauth/authorize redirects to login itself (with ?next= back),
+                # token+userinfo are authenticated by client secret / Bearer token.
+                or request.path.startswith("/oauth/")):
             return None
         if not session.get("user_id"):
             return redirect(url_for("welcome"))

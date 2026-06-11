@@ -88,7 +88,9 @@
     let succeeded = false;
 
     try {
-      const resp = await fetch('/login', { method: 'POST', body });
+      // Keep the query string (?next= from the OAuth flow) on the POST so the
+      // server can send the user back to the consent screen after login.
+      const resp = await fetch('/login' + window.location.search, { method: 'POST', body });
 
       if (resp.redirected) {
         succeeded = true;

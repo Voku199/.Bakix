@@ -14,6 +14,16 @@ log = logging.getLogger(__name__)
 login_bp = Blueprint("login", __name__)
 
 
+def _post_login_target() -> str:
+    """Where to go after login. Only the OAuth consent screen may override the
+    dashboard — a relative /oauth/authorize path, so ?next= can't become an
+    open redirect."""
+    nxt = request.args.get("next", "")
+    if nxt.startswith("/oauth/authorize"):
+        return nxt
+    return url_for("bakalari.index")
+
+
 def _restore_session_language(user_id: str) -> None:
     """Copy the user's saved language preference into the session so _get_locale() picks it up."""
     try:
@@ -70,7 +80,7 @@ def login():
     session["user_id"] = user_id
     _restore_session_language(user_id)
 
-    return redirect(url_for("bakalari.index"))
+    return redirect(_post_login_target())
 
 
 @login_bp.route("/login/now", methods=["GET", "POST"])
