@@ -49,8 +49,10 @@ def app():
     with get_connection() as db:
         db.execute(
             "INSERT OR REPLACE INTO saved_credentials "
-            "(user_id, school_url, enc_creds, display_name) VALUES (?, ?, ?, ?)",
-            (TEST_USER, "https://test.example", "dummy", "Test Student"),
+            "(user_id, school_url, enc_creds, display_name, access_token, refresh_token) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (TEST_USER, "https://test.example", "dummy", "Test Student",
+             "bk-access-token", "bk-refresh-token"),
         )
     return application
 
@@ -83,9 +85,9 @@ def _authorize_params(oauth_client, challenge, **over):
     }
 
 
-def _get_code(browser, oauth_client):
+def _get_code(browser, oauth_client, scope="profile"):
     verifier, challenge = _pkce_pair()
-    params = _authorize_params(oauth_client, challenge)
+    params = _authorize_params(oauth_client, challenge, scope=scope)
     resp = browser.post("/oauth/authorize", data={**params, "decision": "allow"})
     assert resp.status_code == 302
     query = parse_qs(urlparse(resp.headers["Location"]).query)
@@ -216,9 +218,52 @@ def test_valid_exchange_and_userinfo(browser, oauth_client):
     assert profile["sub"] == TEST_USER
     assert profile["display_name"] == "Test Student"
     assert profile["subscription_tier"] in ("free", "premium")
-    # credentials and Bakaláře tokens must never leak through userinfo
-    for forbidden in ("enc_creds", "access_token", "refresh_token", "settings_json"):
+    # without the "bakalare" scope, credentials and Bakaláře tokens must
+    # never leak through userinfo
+    for forbidden in ("enc_creds", "access_token", "refresh_token",
+                      "bakalare_access_token", "bakalare_refresh_token",
+                      "settings_json"):
         assert forbidden not in profile
+
+
+# ── scopes ─────────────────────────────────────────────────────────────────────
+
+def test_unknown_scope_rejected(browser, oauth_client):
+    _, challenge = _pkce_pair()
+    resp = browser.get("/oauth/authorize", query_string=_authorize_params(
+        oauth_client, challenge, scope="profile email"))
+    assert resp.status_code == 302
+    assert "error=invalid_scope" in resp.headers["Location"]
+
+
+def test_scope_without_profile_rejected(browser, oauth_client):
+    _, challenge = _pkce_pair()
+    resp = browser.get("/oauth/authorize", query_string=_authorize_params(
+        oauth_client, challenge, scope="bakalare"))
+    assert resp.status_code == 302
+    assert "error=invalid_scope" in resp.headers["Location"]
+
+
+def test_consent_screen_mentions_bakalare_scope(browser, oauth_client):
+    _, challenge = _pkce_pair()
+    resp = browser.get("/oauth/authorize", query_string=_authorize_params(
+        oauth_client, challenge, scope="profile bakalare"))
+    assert resp.status_code == 200
+    assert "přístup k tvým Bakalářům".encode() in resp.data
+
+
+def test_bakalare_scope_shares_tokens(browser, oauth_client):
+    code, verifier = _get_code(browser, oauth_client, scope="profile bakalare")
+    resp = _token_request(browser, oauth_client, code, verifier)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert "bakalare" in body["scope"].split()
+
+    info = browser.get("/oauth/userinfo", headers={
+        "Authorization": f"Bearer {body['access_token']}"})
+    profile = info.get_json()
+    assert profile["bakalare_access_token"] == "bk-access-token"
+    assert profile["bakalare_refresh_token"] == "bk-refresh-token"
 
 
 def test_code_replay_revokes_tokens(browser, oauth_client):

@@ -7,8 +7,11 @@ Authorization Code flow with mandatory PKCE (S256) for confidential clients:
     POST /oauth/token      → server-to-server code exchange (client_secret + PKCE)
     GET  /oauth/userinfo   → profile for a Bearer token (sub, name, school, tier)
 
-Only the profile is ever shared — Bakaláře credentials and tokens never leave
-this app. Storage details live in app/database/oauth_db.py.
+Scopes: "profile" (always required) shares only the profile. A client that
+also needs the user's Bakaláře tokens must request "bakalare" — the consent
+screen then says so explicitly, and userinfo includes the tokens only for
+tokens minted with that scope. Bakaláře passwords never leave this app.
+Storage details live in app/database/oauth_db.py.
 """
 
 import base64
@@ -27,7 +30,18 @@ log = logging.getLogger(__name__)
 
 oauth_bp = Blueprint("oauth", __name__)
 
-_ALLOWED_SCOPE = "profile"
+# "profile" is the mandatory base scope; "bakalare" additionally shares the
+# user's Bakaláře access+refresh tokens and is called out on the consent screen.
+_ALLOWED_SCOPES = frozenset({"profile", "bakalare"})
+
+
+def _normalize_scope(raw: str) -> str | None:
+    """Canonical scope string ("profile" / "bakalare profile"), or None when
+    the request asks for an unknown scope or omits "profile"."""
+    requested = set((raw or "profile").split())
+    if "profile" not in requested or requested - _ALLOWED_SCOPES:
+        return None
+    return " ".join(sorted(requested))
 
 
 def _redirect_back(redirect_uri: str, **params) -> "Response":
@@ -54,21 +68,26 @@ def _validated_request():
             message="Neplatná aplikace nebo návratová adresa.",
         ), 400)
 
+    scope = _normalize_scope(values.get("scope", ""))
+
     params = {
         "response_type": values.get("response_type", ""),
         "client_id": client_id,
         "redirect_uri": redirect_uri,
-        "scope": values.get("scope", _ALLOWED_SCOPE),
+        "scope": scope or "",
         "state": values.get("state", ""),
         "code_challenge": values.get("code_challenge", ""),
         "code_challenge_method": values.get("code_challenge_method", ""),
     }
 
+    if scope is None:
+        return None, None, _redirect_back(
+            redirect_uri, error="invalid_scope", state=params["state"])
+
     if (params["response_type"] != "code"
             or not params["state"]
             or not params["code_challenge"]
-            or params["code_challenge_method"] != "S256"
-            or params["scope"] != _ALLOWED_SCOPE):
+            or params["code_challenge_method"] != "S256"):
         return None, None, _redirect_back(
             redirect_uri, error="invalid_request", state=params["state"])
 
@@ -96,7 +115,8 @@ def authorize():
 
     if request.method == "GET":
         return render_template("oauth_consent.html", client_name=client["name"],
-                               params=params)
+                               params=params,
+                               wants_bakalare="bakalare" in params["scope"].split())
 
     # POST — the consent decision (CSRF-protected form).
     if request.form.get("decision") != "allow":
@@ -164,11 +184,17 @@ def userinfo():
 
     user_id = token_row["user_id"]
     row = fetch_row(user_id) or {}
-    resp = jsonify({
+    profile = {
         "sub": user_id,
         "display_name": row.get("display_name") or "",
         "school_url": row.get("school_url") or "",
         "subscription_tier": get_subscription_tier(user_id),
-    })
+    }
+    # Bakaláře tokens are shared only when the user consented to the
+    # "bakalare" scope — the consent screen names it explicitly.
+    if "bakalare" in (token_row["scope"] or "").split():
+        profile["bakalare_access_token"] = row.get("access_token") or ""
+        profile["bakalare_refresh_token"] = row.get("refresh_token") or ""
+    resp = jsonify(profile)
     resp.headers["Cache-Control"] = "no-store"
     return resp

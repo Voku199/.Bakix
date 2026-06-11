@@ -407,6 +407,16 @@ def _is_quota_error(exc: Exception) -> bool:
     return any(t in msg for t in ("429", "quota", "rate_limit", "resource_exhausted", "too many request"))
 
 
+def _strip_degenerate_tail(text: str) -> str:
+    """Free models sometimes lock into a repetition loop and pad the end of
+    the response with the same short token over and over ("</</</…",
+    "ano ano ano…"). A short chunk repeated 6+ times at the very end is never
+    legitimate output — cut the loop, then drop a dangling "<"/"</" fragment
+    the loop may have left behind."""
+    s = re.sub(r"([^\n]{1,16}?)(?:\1){5,}\s*$", r"\1", text.strip())
+    return re.sub(r"\s*</?\s*$", "", s)
+
+
 def _call_openrouter(
     system_instruction: str,
     contents: str,
@@ -431,7 +441,15 @@ def _call_openrouter(
                 "content": h["text"],
             })
     messages.append({"role": "user", "content": contents})
-    body: dict = {"model": model, "messages": messages}
+    body: dict = {
+        "model": model,
+        "messages": messages,
+        # Free models are prone to repetition loops ("</</</…") — conservative
+        # sampling plus a repetition penalty keeps them on the rails.
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "repetition_penalty": 1.1,
+    }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
     if max_tokens:
@@ -453,7 +471,7 @@ def _call_openrouter(
 
     resp.raise_for_status()
     raw = resp.json()
-    content = raw["choices"][0]["message"]["content"]
+    content = _strip_degenerate_tail(raw["choices"][0]["message"]["content"] or "")
     tokens_in  = (raw.get("usage") or {}).get("prompt_tokens", "?")
     tokens_out = (raw.get("usage") or {}).get("completion_tokens", "?")
     print(f"[OR] ← {elapsed:.2f}s  tokens={tokens_in}→{tokens_out}  response_chars={len(content)}")
@@ -1401,16 +1419,22 @@ def _parse_ai_response(text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
+    # Third attempt: the JSON broke mid-stream (degenerate model output,
+    # truncation). Salvage at least the "message" string so the user gets the
+    # text instead of the raw {"message": …} wrapper.
+    m = re.search(r'"message"\s*:\s*"((?:[^"\\]|\\.)*)', s)
+    if m and m.group(1).strip():
+        try:
+            salvaged = json.loads('"' + m.group(1) + '"')
+        except json.JSONDecodeError:
+            salvaged = m.group(1)
+        log.warning("_parse_ai_response: salvaged message from broken JSON, "
+                    "first 120 chars: %s", s[:120])
+        return _chat_reply(_strip_degenerate_tail(salvaged))
+
     # Fallback: treat the whole response as a plain-text chat message
     log.warning("_parse_ai_response: falling back to plain-text wrap, first 120 chars: %s", s[:120])
-    return {
-        "message": text,
-        "intent": "chat",
-        "page_title": None,
-        "page_content_html": None,
-        "action_label": None,
-        "is_test": False,
-    }
+    return _chat_reply(_strip_degenerate_tail(text))
 
 
 def _chat_reply(message: str) -> dict:

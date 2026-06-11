@@ -658,6 +658,24 @@ body::after {
       <button class="btn btn--icon" id="ai-popout-btn" title="Okenní režim" aria-label="Přepnout do okenního režimu">⊞</button>
       <button class="btn btn--icon" id="ai-sidebar-close" aria-label="{{ _('Zavřít') }}">×</button>
     </div>
+    <div id="ai-knowix-tip" class="ai-knowix-tip"
+         style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;font-size:12.5px;border-bottom:1px solid var(--border,#cec7bc);background:var(--bg2,#faf8f5);color:var(--muted,#6b6560);">
+      <span>💡 {{ _('Vyzkoušej') }}
+        <a href="https://knowix.bakix.cz" target="_blank" rel="noopener" style="font-weight:700;">Knowix</a>
+        {{ _('— pokročilejší chat, který ti pomůže s učením.') }}
+      </span>
+      <span style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        {{ _('Tipy:') }}
+        <button type="button" class="ai-tip-cmd" data-cmd="/skill"
+                style="border:1px solid var(--border,#cec7bc);background:transparent;border-radius:999px;padding:1px 10px;font-size:12px;cursor:pointer;font-family:inherit;color:inherit;">/skill</button>
+        <button type="button" class="ai-tip-cmd" data-cmd="/shrnutí"
+                style="border:1px solid var(--border,#cec7bc);background:transparent;border-radius:999px;padding:1px 10px;font-size:12px;cursor:pointer;font-family:inherit;color:inherit;">/shrnutí</button>
+        <button type="button" class="ai-tip-cmd" data-cmd="/shrnutí den"
+                style="border:1px solid var(--border,#cec7bc);background:transparent;border-radius:999px;padding:1px 10px;font-size:12px;cursor:pointer;font-family:inherit;color:inherit;">/shrnutí den</button>
+      </span>
+      <button type="button" id="ai-knowix-tip-close" aria-label="{{ _('Zavřít') }}"
+              style="margin-left:auto;border:0;background:transparent;cursor:pointer;font-size:15px;color:inherit;padding:0 2px;">×</button>
+    </div>
     <div class="ai-sidebar__thread" id="ai-thread"></div>
     <div class="ai-sidebar__footer">
       <div id="ai-suggestions" class="ai-suggestions"></div>

@@ -798,6 +798,28 @@ document.addEventListener('DOMContentLoaded', function () {
     showCmdPalette(filtered);
   });
 
+  // ── Knowix tip banner (link to the bigger chat + command hints) ────
+  var knowixTip = document.getElementById('ai-knowix-tip');
+  if (knowixTip) {
+    if (localStorage.getItem('bakix_knowix_tip_dismissed')) {
+      knowixTip.style.display = 'none';
+    }
+    var knowixTipClose = document.getElementById('ai-knowix-tip-close');
+    if (knowixTipClose) knowixTipClose.addEventListener('click', function () {
+      knowixTip.style.display = 'none';
+      localStorage.setItem('bakix_knowix_tip_dismissed', '1');
+    });
+    knowixTip.querySelectorAll('.ai-tip-cmd').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!input) return;
+        input.value = btn.dataset.cmd;
+        input.focus();
+        // Re-use the input listener so the command palette opens right away.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+  }
+
   if (input) input.addEventListener('keydown', function (e) {
     var paletteVisible = cmdPalette && cmdPalette.style.display !== 'none';
     if (paletteVisible) {

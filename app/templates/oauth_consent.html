@@ -21,9 +21,16 @@
         <li>{{ _('tvoje zobrazované jméno') }}</li>
         <li>{{ _('adresu tvé školy') }}</li>
         <li>{{ _('typ předplatného (free/premium)') }}</li>
+        {% if wants_bakalare %}
+        <li><strong>{{ _('přístup k tvým Bakalářům (známky, rozvrh, zápisy)') }}</strong></li>
+        {% endif %}
       </ul>
       <div style="margin-top:8px;color:var(--muted,#6b6560);">
+        {% if wants_bakalare %}
+        {{ _('Tvoje heslo do Bakalářů se nesdílí.') }}
+        {% else %}
         {{ _('Heslo ani data z Bakalářů se nesdílí.') }}
+        {% endif %}
       </div>
     </div>
 
