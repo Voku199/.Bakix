@@ -51,6 +51,22 @@ self.addEventListener('push', function (e) {
   e.waitUntil(self.registration.showNotification(title, options));
 });
 
+self.addEventListener('pushsubscriptionchange', function (e) {
+  e.waitUntil(
+    self.registration.pushManager.subscribe({
+      userVisibleOnly:      true,
+      applicationServerKey: e.oldSubscription.options.applicationServerKey,
+    }).then(function (sub) {
+      return fetch('/api/push/subscribe', {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body:        JSON.stringify(sub.toJSON()),
+      });
+    })
+  );
+});
+
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
   var targetUrl = (e.notification.data && e.notification.data.url) || '/';
