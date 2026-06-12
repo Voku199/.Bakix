@@ -83,6 +83,11 @@ body {
   transition:       background .2s, color .2s;
 }
 
+/* Bare links (no class) — theme accent instead of the browser default blue.
+   Classed anchors (.btn, .footer__links a, …) keep their own styling. */
+a:not([class]) { color: var(--accent); text-decoration: none; }
+a:not([class]):hover { text-decoration: underline; }
+
 /* ── Header ──────────────────────────────────────────────── */
 .header {
   position:         sticky;
