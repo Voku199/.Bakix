@@ -1,3 +1,11 @@
+"""GeminiService — the AI assistant core.
+
+Prompts live in ai_prompts.py, the model registry and rate-limit tiers in
+ai_models.py, the OpenRouter fallback client in openrouter.py and skill
+storage in skills_db.py. Public names from those modules are re-exported
+here so existing imports keep working.
+"""
+
 import datetime
 import hashlib
 import json
@@ -5,485 +13,47 @@ import logging
 import os
 import re
 
-import requests
 from google import genai
 from google.genai import types
 
 from app.database.connection import get_connection
+from app.services.ai_models import (  # noqa: F401 — re-exported
+    AI_MODE_NORMAL, AI_MODE_THINKING, RateLimitedError,
+    _DEFAULT_MODEL, _FREE_DEFAULT_MODEL, _FREE_MAX_SKILLS,
+    _FREEMIUM_GEMINI_DAILY, _FREEMIUM_OR_HISTORY, _FREEMIUM_OR_MAX_TOKENS,
+    _MODELS, _error_response, _rate_limited_response, _resolve_provider,
+    is_premium_model, is_valid_model, list_models, resolve_model_for_tier,
+)
+from app.services.ai_prompts import (
+    _AI_CHAT_PROMPT, _CHAT_PROMPT, _CONFIRMATION_KEYWORDS,
+    _CONFIRMATION_SENTINEL, _DAILY_SUMMARY_PROMPT, _EXPLAIN_PROMPT,
+    _GRADE_KEYWORDS, _HISTORY_CONTEXT, _HISTORY_KEEP, _INSIGHTS_PROMPT,
+    _LIVE_PAGE_PROMPT, _MODIFICATION_KEYWORDS, _MODIFY_PROMPT, _REGEN_PROMPT,
+    _SKILL_REFINE_PROMPT, _STUDY_PLAN_PROMPT, _WEEKLY_SUMMARY_PROMPT,
+    _detect_factual_request,
+)
+from app.services.openrouter import (
+    _call_openrouter, _is_quota_error, _or_status, _si_to_str,
+    _strip_degenerate_tail,
+)
+from app.services.skills_db import (  # noqa: F401 — re-exported
+    _clear_pending_skill, _get_pending_skill, _get_skill, _list_skills,
+    _save_skill, _delete_skill, _set_pending_skill, has_pending_skill,
+)
 
 log = logging.getLogger(__name__)
-
-# ── Rate-limit tiers ──────────────────────────────────────────────────────────
-_FREE_GEMINI_DAILY    = 5    # Gemini requests per 24 h (free)
-_PREMIUM_GEMINI_DAILY = 50   # Gemini requests per 24 h (premium)
-_OR_REQUESTS_PER_6H   = 50   # OpenRouter requests per 6 h (both tiers)
-_FREEMIUM_GEMINI_DAILY = 10  # Daily limit for gemini-2.5-flash-lite
-_FREEMIUM_OR_HISTORY    = 6    # Max history turns — Normal mode
-_FREEMIUM_OR_MAX_TOKENS = 800  # Max response tokens — Normal mode
-
-# ── AI response modes ─────────────────────────────────────────────────────────
-AI_MODE_NORMAL   = "normal"    # Fast: trimmed history + capped tokens
-AI_MODE_THINKING = "thinking"  # Full: 20 turns + unlimited tokens
-
-_DEFAULT_MODEL = "gemini-3.1-flash-lite"
-# Model handed to free users (and used when a free user requests a Pro model).
-# Belongs to the "freemium" group, so it stays within the free allowance.
-_FREE_DEFAULT_MODEL = "gemini-2.5-flash-lite"
-
-# Free-tier caps (Premium = unlimited). Pages/chats are enforced in the routes.
-_FREE_MAX_SKILLS = 1
-
-# ── Model registry ────────────────────────────────────────────────────────────
-_MODELS: "dict[str, dict]" = {
-    # Pro tier — count against normal Gemini/OpenRouter rate limits
-    "gemini-3.1-flash-lite":  {"display_name": "Gemini 3.1 Flash Lite",  "provider": "gemini",      "group": "pro"},
-    "gemini-3.5-flash":       {"display_name": "Gemini 3.5 Flash",       "provider": "gemini",      "group": "pro"},
-    "gemini-3-flash-preview": {"display_name": "Gemini 3 Flash Preview", "provider": "gemini",      "group": "pro"},
-    # Freemium tier — gemini-2.5-flash-lite has its own 10/day limit
-    "gemini-2.5-flash-lite":  {"display_name": "Gemini 2.5 Flash Lite",  "provider": "gemini",      "group": "freemium"},
-    # Freemium OpenRouter free models — bypass Gemini budget, go direct
-    "nvidia/nemotron-3-super-120b-a12b:free": {"display_name": "Nemotron 120B",  "provider": "openrouter", "group": "freemium"},
-    "poolside/laguna-m.1:free":               {"display_name": "Laguna M.1",     "provider": "openrouter", "group": "freemium"},
-    "openrouter/free":                        {"display_name": "OpenRouter Auto", "provider": "openrouter", "group": "freemium"},
-    "openai/gpt-oss-120b:free":               {"display_name": "GPT OSS 120B",   "provider": "openrouter", "group": "freemium"},
-    "qwen/qwen3-next-80b-a3b-instruct:free":  {"display_name": "Qwen3 80B",      "provider": "openrouter", "group": "freemium"},
-    "google/gemma-4-26b-a4b-it:free":         {"display_name": "Gemma 4 26B",    "provider": "openrouter", "group": "freemium"},
-}
-
-
-class RateLimitedError(Exception):
-    """Raised when a user has exhausted all available AI request budget."""
-    def __init__(self, tier: str, model_id: "str | None" = None) -> None:
-        self.tier = tier
-        self.model_id = model_id
-        super().__init__(f"rate_limited:{tier}:{model_id or ''}")
-
-
-def _resolve_provider(user_id: str) -> "tuple[str | None, str]":
-    """Return (provider, tier) for user_id.
-
-    provider is 'gemini' or None (daily quota exhausted).
-    OpenRouter is NOT used here — it only serves as a server-side fallback
-    when Gemini throws a quota error (handled in _generate_with_fallback).
-    """
-    from app.database.db import (
-        get_subscription_tier,
-        count_ai_requests,
-    )
-    tier = get_subscription_tier(user_id)
-    now = datetime.datetime.utcnow()
-    # SQLite stores datetime('now') as "YYYY-MM-DD HH:MM:SS" (space, no microseconds)
-    # — isoformat() uses 'T' separator which sorts differently, so we must match the format.
-    since_24h = (now - datetime.timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
-
-    gemini_limit = _PREMIUM_GEMINI_DAILY if tier == "premium" else _FREE_GEMINI_DAILY
-    used = count_ai_requests(user_id, "gemini", since_24h)
-
-    print(f"[RATE LIMIT] user={user_id[:8]} tier={tier} model=gemini used={used}/{gemini_limit}")
-
-    if used >= gemini_limit:
-        print(f"[RATE LIMIT] Dosaženo limitu! user={user_id[:8]} ({used}/{gemini_limit})")
-        return (None, tier)
-
-    return ("gemini", tier)
-
-
-def _si_to_str(config: "types.GenerateContentConfig") -> str:
-    """Extract the system instruction string from a GenerateContentConfig."""
-    si = config.system_instruction
-    if isinstance(si, str):
-        return si
-    if si is not None:
-        try:
-            return "".join(getattr(p, "text", "") for p in getattr(si, "parts", [si]))
-        except Exception:
-            pass
-    return ""
-
-
-def _or_status(exc: Exception) -> "int | None":
-    """Return the HTTP status code from a requests.HTTPError, or None."""
-    resp = getattr(exc, "response", None)
-    return getattr(resp, "status_code", None) if resp is not None else None
-
-
-# ── System prompts ────────────────────────────────────────────────────────────
-
-_INSIGHTS_PROMPT = (
-    "Jsi osobní AI asistent pro studenty. Analyzuj data z Bakalářů. Vše piš česky. "
-    "Pokud studenta upozorňuješ na horší známky, buď konstruktivní a navrhni konkrétní kroky. "
-    "Vždy přidej krátké cvičení a otázku pro pokračování v chatu. "
-    "Odpověz POUZE validním JSON objektem: "
-    '{"alert": "string", "recommendation": "string", "exercise": "string", "chat_prompt": "string"}'
-)
-
-_CHAT_PROMPT = (
-    "Jsi osobní AI asistent pro studenty. Odpovídej vždy česky. "
-    "Buď konstruktivní, přívětivý a konkrétní. Pomáhej studentovi pochopit látku a motivuj ho."
-)
-
-_REGEN_PROMPT = (
-    "Jsi AI generátor vzdělávacích HTML stránek. "
-    "Uprav poskytnutý HTML obsah stránky podle požadavku studenta. "
-    "Vrať POUZE čisté HTML tělo (bez <html>/<head>/<body> tagů, bez markdown bloků). "
-    "KRITICKÉ: NIKDY neměň předmět ani jazyk stránky — uprav POUZE formu, obtížnost nebo přidej "
-    "obsah ke stejnému tématu. Stránka o češtině zůstane o češtině, o matematice o matematice. "
-    "Zachovej gp-* CSS třídy (gp-article, gp-hero, gp-section, gp-label, gp-quiz, gp-q, "
-    "gp-opt, gp-btn, gp-result, gp-cards, gp-card atd.) a celkovou strukturu původního obsahu. "
-    "U kvízových otázek .gp-q zachovej atribut data-answer; NEpiš <script> ani onclick. "
-    "Matematiku piš/zachovej v LaTeXu ($...$ inline, $$...$$ blokově)."
-)
-
-_MODIFY_PROMPT = (
-    "Jsi AI editor vzdělávacích HTML stránek s přístupem k historii konverzace. "
-    "Uprav HTML stránku přesně podle aktuálního požadavku. "
-    "Zohledni předchozí instrukce z kontextu (např. moderní design, zaměření na konkrétní předmět). "
-    "Vrať POUZE čisté HTML tělo (bez <html>/<head>/<body> tagů, bez markdown bloků, bez komentářů). "
-    "KRITICKÉ: NIKDY neměň předmět ani jazyk stránky — uprav POUZE formu, obtížnost nebo přidej "
-    "obsah ke stejnému tématu. Pokud je stránka o češtině, zůstane o češtině. "
-    "Zachovej gp-* CSS třídy (gp-article, gp-hero, gp-section, gp-label, gp-quiz, gp-q, "
-    "gp-opt, gp-btn, gp-result, gp-cards, gp-card atd.) a celkovou strukturu, "
-    "pokud ji požadavek explicitně nemění. "
-    "U kvízových otázek .gp-q zachovej atribut data-answer; NEpiš <script> ani onclick. "
-    "Matematiku piš/zachovej v LaTeXu ($...$ inline, $$...$$ blokově)."
-)
-
-_AI_CHAT_PROMPT = (
-    "Jsi proaktivní AI vzdělávací asistent pro studenty středních a základních škol. "
-    "Vždy odpovídej česky. Buď podporující, konkrétní a akční.\n\n"
-
-    "ROZPOZNÁNÍ ZÁMĚRU — určuj VŽDY v tomto pořadí priority:\n"
-    "A) MODIFICATION (→ intent=create_page): uživatel žádá ÚPRAVU existujícího materiálu. "
-    "Signály: 'přidej', 'uprav', 'změň', 'modernější', 'více otázek', 'méně textu', "
-    "'zaměř se na', 'focus on', 'rewrite', 'make it', 'vylepši', 'přepiš'. "
-    "→ Okamžitě proveď požadovanou transformaci, NIKDY nezačínaj otázkou o vytvoření stránky.\n"
-    "B) CREATE (→ intent=create_page): student explicitně žádá NOVÝ studijní materiál nebo stránku.\n"
-    "C) GRADE_ANALYSIS: student zpráva obsahuje RAW data o známkách — konkrétní čísla s předměty "
-    "(vzor: 'Fyzika: 3', 'dostal jsem 2 z matiky', seznam hodnocení). "
-    "POUZE tehdy nabídni vytvoření stránky. Pokud jsou ke známkám přiložena témata, "
-    "použij je jako primární kontext. Pokud téma chybí NEBO je známka starší než 30 dní, "
-    "zeptej se: 'Z jakého učiva tato hodnocení pochází?'\n"
-    "D) CHAT: vše ostatní — obecný dotaz, pomoc, vysvětlení.\n\n"
-
-    "KRITICKÁ PRAVIDLA:\n"
-    "1. Záměr A (modification) přebíjí vše — i pokud jsou dostupná data o známkách.\n"
-    "2. Data o známkách v kontextu NEZPŮSOBÍ nabídku vytvoření stránky, pokud se na ně student "
-    "sám EXPLICITNĚ neptá (vzorem popsaným v C).\n"
-    "3. Nikdy neopakuj 'Vidím tvoje známky...' — tuto větu použij NEJVÝŠE JEDNOU za konverzaci.\n\n"
-
-    "PRAVIDLA GENEROVÁNÍ:\n"
-    "1. Vytvoř KOMPLETNÍ materiál: (a) výklad s příklady, "
-    "(b) kvíz NEBO kartičky (viz pravidlo 6), (c) sekci .gp-improve s návrhy.\n"
-    "2. HTML self-contained — žádné externí CSS/JS.\n"
-    "3. Kvíz: každá otázka .gp-q má atribut data-answer se správnou value (viz HTML STRUKTURA). "
-    "NEpiš žádný <script> ani onclick — kontrolu odpovědí zajistí šablona.\n"
-    "4. Nastav is_test=true pokud zpráva obsahuje 'test', 'prověrka' nebo 'kvíz'.\n"
-    "5. TÉMA LOCK: NIKDY neměň předmět ani jazyk stránky při úpravě — "
-    "uprav POUZE formu, obtížnost nebo přidej obsah ke STEJNÉMU tématu.\n"
-    "6. KARTIČKY: pokud žádá 'kartičky', 'flashcards' nebo 'karty' → "
-    "vytvoř sekci .gp-cards (přední strana = pojem, zadní = překlad/definice). "
-    "Nepřidávej kvíz, jen kartičky. Struktura viz HTML STRUKTURA níže.\n"
-    "7. SVG: kde pomůže diagram nebo schéma, přidej inline "
-    "<svg class='gp-svg' viewBox='0 0 W H' xmlns='http://www.w3.org/2000/svg'>. "
-    "Jednoduché tvary (rect, circle, line, text, path), max 400×200.\n"
-    "8. MATEMATIKA: vzorce, rovnice a výpočty piš v LaTeXu — vykreslí se přes KaTeX. "
-    "Inline mezi $...$, blokově (na samostatném řádku) mezi $$...$$. "
-    "Příklady: $c^2 = 117$, $$\\sqrt{117} \\approx 10{,}82\\text{ dm}$$. "
-    "Desetinnou čárku piš jako {,} (např. 10{,}82). Funguje to jak v 'message', "
-    "tak v 'page_content_html'.\n\n"
-
-    "FORMÁT ODPOVĚDI — vrať POUZE validní JSON:\n"
-    '  "message"           – odpověď česky (1-3 věty),\n'
-    '  "intent"            – "chat" nebo "create_page",\n'
-    '  "page_title"        – název stránky (jen pro create_page, jinak null),\n'
-    '  "page_content_html" – HTML tělo bez wrapper tagů (jen pro create_page, jinak null),\n'
-    '  "action_label"      – text tlačítka (jen pro create_page, jinak null),\n'
-    '  "is_test"           – true/false,\n'
-    '  "needs_search"      – true pokud potřebuješ aktuální/faktické info (text písně, data, definice, atd.),\n'
-    '  "search_query"      – přesný vyhledávací dotaz (string, nebo null).\n\n'
-
-    "KRITICKÉ — POVINNÉ VYHLEDÁVÁNÍ:\n"
-    "Pro JAKÝKOLI konkrétní text (píseň, báseň, citát, recept, článek, historická data) "
-    "MUSÍŠ nejprve vyhledat. NIKDY nevymýšlej text písně nebo básně ze své hlavy — "
-    "vždy nastav needs_search=true a search_query=přesný dotaz (jméno umělce + název díla + 'text'). "
-    "Například: user chce stránku o písni → needs_search=true, search_query='Karel Kryl Anděl text písně'. "
-    "Teprve po obdržení výsledků vytvoř stránku s reálným obsahem.\n\n"
-
-    "HTML STRUKTURA — používej přesně tyto CSS třídy (jsou stylizovány šablonou):\n"
-    "<article class='gp-article'>\n"
-    "  <div class='gp-hero'>\n"
-    "    <span class='gp-badge'>Studijní materiál</span>\n"
-    "    <h1 class='gp-title'>NADPIS TÉMATU</h1>\n"
-    "    <p class='gp-lead'>Stručný popis obsahu — 1 věta.</p>\n"
-    "  </div>\n"
-    "  <section class='gp-section'>\n"
-    "    <h2 class='gp-label'>📖 Výklad</h2>\n"
-    "    <!-- odstavce výkladu; klíčové pojmy ve <strong>; seznamy ve <ul class='gp-list'><li>...</li></ul>;\n"
-    "         definice ve <dl class='gp-defs'><dt>Pojem</dt><dd>Vysvětlení</dd></dl> -->\n"
-    "  </section>\n"
-    "  <section class='gp-section'>\n"
-    "    <h2 class='gp-label'>✏️ Otestuj se</h2>\n"
-    "    <div class='gp-quiz'>\n"
-    "      <div class='gp-q' id='q1' data-answer='b'>\n"
-    "        <p class='gp-qt'><strong>1.</strong> Znění otázky?</p>\n"
-    "        <label class='gp-opt'><input type='radio' name='q1' value='a'> Možnost A</label>\n"
-    "        <label class='gp-opt'><input type='radio' name='q1' value='b'> Správná možnost B</label>\n"
-    "        <label class='gp-opt'><input type='radio' name='q1' value='c'> Možnost C</label>\n"
-    "      </div>\n"
-    "      <!-- minimálně 3 otázky; každá .gp-q má unikátní id (q1, q2, q3...) "
-    "a data-answer = value správné odpovědi -->\n"
-    "    </div>\n"
-    "    <button class='gp-btn' data-gp-check>Zkontrolovat odpovědi ✓</button>\n"
-    "    <div class='gp-result' id='gp-res'></div>\n"
-    "  </section>\n"
-    "  <!-- ALTERNATIVA ke kvízu — použij pokud žádá kartičky (pravidlo 6): -->\n"
-    "  <!-- <section class='gp-section'>\n"
-    "    <h2 class='gp-label'>🃏 Kartičky</h2>\n"
-    "    <p class='gp-card-hint'>Klikni na kartičku pro otočení</p>\n"
-    "    <div class='gp-cards'>\n"
-    "      <div class='gp-card'><div class='gp-card-inner'>\n"
-    "        <div class='gp-card-front'>Přední strana (pojem)</div>\n"
-    "        <div class='gp-card-back'>Zadní strana (překlad / definice)</div>\n"
-    "      </div></div>\n"
-    "      <!-- opakuj pro každou kartičku -->\n"
-    "    </div>\n"
-    "  </section> -->\n"
-    "  <!-- SVG diagram (přidej volně kde pomůže — mimo sekce i uvnitř): -->\n"
-    "  <!-- <svg class='gp-svg' viewBox='0 0 300 120' xmlns='http://www.w3.org/2000/svg'>\n"
-    "    <rect x='10' y='10' width='80' height='40' rx='6' fill='#b5451b'/>\n"
-    "    <text x='50' y='35' text-anchor='middle' fill='#fff' font-size='12'>Pojem</text>\n"
-    "  </svg> -->\n"
-    "  <div class='gp-improve'>\n"
-    "    <ul>\n"
-    "      <li>Konkrétní návrh na rozšíření 1</li>\n"
-    "      <li>Konkrétní návrh na rozšíření 2</li>\n"
-    "    </ul>\n"
-    "  </div>\n"
-    "</article>"
-)
-
-_LIVE_PAGE_CONSTRAINTS = (
-    "\n\nKONTEXT ŽIVÉ STRÁNKY:\n"
-    "- Použij POUZE témata z nedávných známek (posledních 30 dní).\n"
-    "- Pokud je téma přiloženo ke známce, použij ho jako primární kontext.\n"
-    "- Pokud téma chybí nebo je známka starší 30 dní: zeptej se na aktuální učivo.\n"
-    "- Při úpravě stránky (modification): okamžitě proveď, nikdy se znovu neptej.\n"
-)
-
-_LIVE_PAGE_PROMPT = _AI_CHAT_PROMPT + _LIVE_PAGE_CONSTRAINTS
-
-_EXPLAIN_PROMPT = (
-    "Jsi AI tutor pro středoškolské studenty. "
-    "Student označil konkrétní text a chce ho vysvětlit. "
-    "Vždy odpovídej česky. Buď stručný (2–4 věty), jasný a srozumitelný pro studenta střední školy. "
-    "Nevracej otázky zpět. Nenavrhuj tvorbu studijní stránky. "
-    "Odpověz POUZE validním JSON objektem: "
-    '{"message": "string", "intent": "chat", '
-    '"page_title": null, "page_content_html": null, "action_label": null, "is_test": false}'
-)
-
-_SKILL_REFINE_PROMPT = (
-    "You are a system-prompt engineer. Based on the user's description, craft a concise, "
-    "effective system instruction defining an AI persona. Write in English. Max 120 words. "
-    "Return ONLY the system instruction text — no quotes, no explanation, no preamble."
-)
-
-_WEEKLY_SUMMARY_PROMPT = (
-    "Jsi AI tutor pro středoškolské studenty. Analyzuj výsledky studenta za uplynulý týden "
-    "a vytvoř personalizované shrnutí v češtině.\n\n"
-    "Zahrň:\n"
-    "1. Celkové hodnocení výkonu tohoto týdne (pochval za dobré výsledky)\n"
-    "2. Identifikaci slabých míst (předměty nebo témata s horší známkou ≥ 3)\n"
-    "3. Konkrétní studijní plán na příští týden\n\n"
-    "Pokud má student průměrnou známku horší než 3, nebo dostal čtyřku či pětku, nastav "
-    "poor_performance=true a přidej výzvu k akci: zeptej se, zda chce vygenerovat "
-    "studijní stránku pro problematické téma.\n\n"
-    "Odpověz POUZE validním JSON objektem:\n"
-    '{"summary": "string (celé shrnutí, 3-5 vět)", '
-    '"weak_subjects": ["string"], '
-    '"study_plan": "string (konkrétní kroky na příští týden)", '
-    '"poor_performance": bool, '
-    '"cta": "string nebo null"}'
-)
-
-_STUDY_PLAN_PROMPT = (
-    "Jsi AI studijní plánovač pro středoškolské studenty. Na základě rozvrhu, "
-    "domácích úkolů a slabých předmětů vytvoř realistický studijní plán "
-    "pro nadcházející dny v češtině.\n\n"
-    "Prioritizuj:\n"
-    "1. Úkoly s nejbližším termínem odevzdání\n"
-    "2. Opakování slabých předmětů (průměr ≥ 3)\n"
-    "3. Přípravu na předměty z rozvrhu\n\n"
-    "Navrhni konkrétní studijní bloky (den + aktivita) do volných oken po škole. "
-    "Předpokládej cca 1,5–2 hodiny studia denně a buď realistický.\n\n"
-    "Odpověz POUZE validním JSON objektem:\n"
-    '{"plan": "string (celý plán, 5-10 řádků s konkrétními bloky)", '
-    '"priority_tasks": ["string (max 5 nejdůležitějších úkolů)"], '
-    '"study_slots": "string (kdy má student největší prostor na studium)", '
-    '"tip": "string nebo null"}'
-)
-
-_DAILY_SUMMARY_PROMPT = (
-    "Jsi AI tutor pro středoškolské studenty. Analyzuj dnešní výsledky studenta "
-    "a vytvoř personalizované shrnutí dne v češtině.\n\n"
-    "Zahrň:\n"
-    "1. Co student dnes dostal za hodnocení (pochval za dobré výsledky)\n"
-    "2. Identifikaci slabých míst (předměty s horší známkou ≥ 3)\n"
-    "3. Konkrétní tip na dnešní večerní přípravu\n\n"
-    "Pokud student dnes dostal čtyřku či pětku, nastav poor_performance=true "
-    "a přidej výzvu k akci: zeptej se, zda chce vygenerovat studijní stránku.\n\n"
-    "Odpověz POUZE validním JSON objektem:\n"
-    '{"summary": "string (shrnutí dne, 2-4 věty)", '
-    '"weak_subjects": ["string"], '
-    '"study_plan": "string (konkrétní tip na dnešní večer)", '
-    '"poor_performance": bool, '
-    '"cta": "string nebo null"}'
-)
-
-# ── Python-side intent signals ────────────────────────────────────────────────
-
-_GRADE_KEYWORDS = frozenset([
-    "známky", "známku", "známek", "průměr", "hodnocení", "dostal jsem",
-    "dostala jsem", "bakalář", "bakaláři", "marks", "grades", "grade",
-    "špatná známka", "lepší průměr",
-])
-
-_MODIFICATION_KEYWORDS = frozenset([
-    "přidej", "přidejte", "uprav", "upravit", "uprav to", "změň", "změnit",
-    "udělej", "udělej to", "vylepši", "více otázek", "přidej otázky",
-    "méně textu", "modernější", "moderní design", "moderní", "make it",
-    "zaměř se", "zaměř na", "focus on", "add more", "rewrite", "improve",
-    "přepiš", "rozšiř", "zjednodušit", "více příkladů",
-])
-
-_CONFIRMATION_KEYWORDS = frozenset([
-    "ano", "jo", "yes", "jasně", "ok", "okay", "prosím", "chci",
-    "vytvoř", "vytvoř stránku", "studijní stránku", "live page", "create page",
-    "vytvořit stránku", "chci stránku",
-])
-
-_CONFIRMATION_SENTINEL = "Vidím tvoje známky"
-
-# Max turns kept per user in conversation_history
-_HISTORY_KEEP = 40
-# Turns sent to the model as context
-_HISTORY_CONTEXT = 20
-
-# ── Proactive search detection ────────────────────────────────────────────────
-
-_FACTUAL_KEYWORDS_RE = re.compile(
-    r"(píseň|písn[iíě]|písničk\w+|text\s+písn\w*|lyrics?\b|skladb\w+|refrén\w*"
-    r"|slova\s+písn\w*|básn[iíě]\w*|básničk\w+|citát\w*|recept\w*"
-    r"|naučit\s+se?\s+písn\w*|naučení\s+písn\w*|zpěvník\w*|\bsong\b"
-    r"|text\s+od\s+\w+|slova\s+od)",
-    re.IGNORECASE,
-)
-
-_QUERY_NOISE_RE = re.compile(
-    r"\b(udělej|vytvoř|napiš|mi|stránku?|stranku?|pro(?!\s+\w+\s+od)|naučení|naučit"
-    r"|chci|potřebuji|prosím|please|o\s+tom|k\s+tomu|ohledně|něco"
-    r"|stránk[ay]|page|quiz|kvíz|studijní|vzdělávac[íi]|materiál)\b",
-    re.IGNORECASE,
-)
-
-
-def _detect_factual_request(user_input: str) -> "tuple[bool, str]":
-    """Return (should_search, search_query) for proactive pre-search."""
-    if not _FACTUAL_KEYWORDS_RE.search(user_input):
-        return False, ""
-    # Strip instruction-style words to get a clean search query
-    query = _QUERY_NOISE_RE.sub(" ", user_input)
-    query = " ".join(query.split()).strip()
-    return True, query[:200]
-
-
-# ── OpenRouter fallback ───────────────────────────────────────────────────────
-
-_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-
-def _is_quota_error(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    return any(t in msg for t in ("429", "quota", "rate_limit", "resource_exhausted", "too many request"))
-
-
-def _strip_degenerate_tail(text: str) -> str:
-    """Free models sometimes lock into a repetition loop and pad the end of
-    the response with the same short token over and over ("</</</…",
-    "ano ano ano…"). A short chunk repeated 6+ times at the very end is never
-    legitimate output — cut the loop, then drop a dangling "<"/"</" fragment
-    the loop may have left behind."""
-    s = re.sub(r"([^\n]{1,16}?)(?:\1){5,}\s*$", r"\1", text.strip())
-    return re.sub(r"\s*</?\s*$", "", s)
-
-
-def _call_openrouter(
-    system_instruction: str,
-    contents: str,
-    history: "list[dict] | None" = None,
-    json_mode: bool = False,
-    model: "str | None" = None,
-    max_tokens: "int | None" = None,
-) -> str:
-    """Call OpenRouter as a drop-in fallback for Gemini. Returns raw response text."""
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY not set — cannot use OpenRouter fallback")
-    if model is None:
-        model = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
-    messages: list[dict] = []
-    if system_instruction:
-        messages.append({"role": "system", "content": system_instruction})
-    for h in (history or []):
-        if h.get("text"):
-            messages.append({
-                "role":    "assistant" if h.get("role") == "model" else "user",
-                "content": h["text"],
-            })
-    messages.append({"role": "user", "content": contents})
-    body: dict = {
-        "model": model,
-        "messages": messages,
-        # Free models are prone to repetition loops ("</</</…") — conservative
-        # sampling plus a repetition penalty keeps them on the rails.
-        "temperature": 0.6,
-        "top_p": 0.9,
-        "repetition_penalty": 1.1,
-    }
-    if json_mode:
-        body["response_format"] = {"type": "json_object"}
-    if max_tokens:
-        body["max_tokens"] = max_tokens
-
-    prompt_chars = sum(len(m["content"]) for m in messages)
-    history_turns = len(history) if history else 0
-    print(f"[OR] → model={model} json_mode={json_mode} turns={history_turns} prompt_chars={prompt_chars} max_tokens={max_tokens or '∞'}")
-
-    import time
-    t0 = time.perf_counter()
-    resp = requests.post(
-        _OPENROUTER_URL,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=body,
-        timeout=30,
-    )
-    elapsed = time.perf_counter() - t0
-
-    resp.raise_for_status()
-    raw = resp.json()
-    content = _strip_degenerate_tail(raw["choices"][0]["message"]["content"] or "")
-    tokens_in  = (raw.get("usage") or {}).get("prompt_tokens", "?")
-    tokens_out = (raw.get("usage") or {}).get("completion_tokens", "?")
-    print(f"[OR] ← {elapsed:.2f}s  tokens={tokens_in}→{tokens_out}  response_chars={len(content)}")
-    return content
-
 
 class GeminiService:
     def __init__(self):
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY not set")
-        self._client = genai.Client(api_key=api_key)
+        # Without a timeout a stalled Gemini call holds the request thread
+        # indefinitely; the OpenRouter fallback already uses timeout=30 s.
+        self._client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=60_000),  # ms
+        )
         self._model = os.environ.get("GEMINI_MODEL")
         self._insights_config = types.GenerateContentConfig(
             system_instruction=_INSIGHTS_PROMPT,
@@ -526,7 +96,7 @@ class GeminiService:
         effective_model = model_id or _DEFAULT_MODEL
         model_info = _MODELS.get(effective_model, _MODELS[_DEFAULT_MODEL])
 
-        print(f"[AI REQUEST] user={user_id[:8] if user_id else '?'} model={effective_model} group={model_info['group']}")
+        log.info("[AI REQUEST] user=%s model=%s group=%s", user_id[:8] if user_id else '?', effective_model, model_info['group'])
 
         # ── Freemium OpenRouter model: bypass Gemini budget, go direct ───────
         if model_info["group"] == "freemium" and model_info["provider"] == "openrouter":
@@ -535,7 +105,7 @@ class GeminiService:
             if ai_mode == AI_MODE_THINKING:
                 or_history   = history or []
                 or_max_tokens = None
-                print(f"[OR] mode=thinking — full history {len(or_history)} turns, unlimited tokens")
+                log.info("[OR] mode=thinking — full history %s turns, unlimited tokens", len(or_history))
             else:
                 or_history    = (history or [])[-_FREEMIUM_OR_HISTORY:]
                 or_max_tokens = _FREEMIUM_OR_MAX_TOKENS
@@ -774,7 +344,7 @@ class GeminiService:
         should_search, proactive_query = _detect_factual_request(user_input)
         if should_search and not any("VÝSLEDKY VYHLEDÁVÁNÍ" in p for p in context_parts):
             from app.services.search_service import web_search, format_search_context
-            print(f"[SEARCH proactive] '{proactive_query}'")
+            log.info("[SEARCH proactive] %r", proactive_query)
             hits = web_search(proactive_query, max_results=4)
             if hits:
                 context_parts = [format_search_context(hits, fetch_first=True)] + context_parts
@@ -1315,77 +885,6 @@ class GeminiService:
         return response.text
 
 
-# ── Module-level helpers ──────────────────────────────────────────────────────
-
-def _error_response() -> dict:
-    return {
-        "message": "Omlouvám se, nastala chyba. Zkus to prosím znovu.",
-        "intent": "chat",
-        "page_title": None,
-        "page_content_html": None,
-        "action_label": None,
-        "is_test": False,
-    }
-
-
-def _rate_limited_response(tier: str, model_id: "str | None" = None) -> dict:
-    if model_id == "gemini-2.5-flash-lite":
-        msg = (
-            "Denní limit Gemini 2.5 Flash Lite (10 požadavků) byl vyčerpán. "
-            "Zvol jiný model nebo zkus zítra."
-        )
-    elif model_id and _MODELS.get(model_id, {}).get("group") == "freemium":
-        msg = "Freemium model momentálně není dostupný. Zkus jiný model."
-    elif tier == "premium":
-        msg = (
-            "Dosáhl(a) jsi denního limitu Premium plánu (50 dotazů). "
-            "Limit se obnoví za 24 hodin."
-        )
-    else:
-        msg = (
-            "Dosáhl(a) jsi limitu bezplatné verze (5 AI dotazů za den). "
-            "Upgraduj na **Premium** pro 50 dotazů denně!"
-        )
-    return {
-        "message":      msg,
-        "intent":       "chat",
-        "page_title":   None,
-        "page_content_html": None,
-        "action_label": None,
-        "is_test":      False,
-        "rate_limited": True,
-        "tier":         tier,
-    }
-
-
-def list_models() -> list:
-    """Return all available models for the frontend."""
-    return [{"id": k, **v} for k, v in _MODELS.items()]
-
-
-def is_valid_model(model_id: str) -> bool:
-    return model_id in _MODELS
-
-
-def is_premium_model(model_id: "str | None") -> bool:
-    """True for models reserved for Premium (the 'pro' group)."""
-    info = _MODELS.get(model_id or "")
-    return bool(info and info["group"] == "pro")
-
-
-def resolve_model_for_tier(model_id: "str | None", tier: str) -> "tuple[str | None, bool]":
-    """Return (effective_model_id, was_downgraded) for the given tier.
-
-    Premium keeps its choice (None → _DEFAULT_MODEL). Free users may only use
-    'freemium' models; a Pro choice (or the Pro default) is swapped for
-    _FREE_DEFAULT_MODEL and flagged so the UI can nudge an upgrade.
-    """
-    if tier == "premium":
-        return model_id, False
-    if model_id and _MODELS.get(model_id, {}).get("group") == "freemium":
-        return model_id, False
-    return _FREE_DEFAULT_MODEL, True
-
 
 def _parse_ai_response(text: str) -> dict:
     """Parse an AI response string into the expected dict.
@@ -1446,90 +945,3 @@ def _chat_reply(message: str) -> dict:
         "action_label": None,
         "is_test": False,
     }
-
-
-# ── Skill DB helpers ──────────────────────────────────────────────────────────
-
-def has_pending_skill(user_id: str) -> bool:
-    return _get_pending_skill(user_id) is not None
-
-
-def _get_pending_skill(user_id: str) -> "dict | None":
-    try:
-        with get_connection() as db:
-            row = db.execute(
-                "SELECT step, data_json FROM pending_skills WHERE user_id = ?", (user_id,)
-            ).fetchone()
-        if row:
-            return {"step": row["step"], "data": json.loads(row["data_json"] or "{}")}
-    except Exception:
-        log.warning("_get_pending_skill failed for user=%.8s", user_id)
-    return None
-
-
-def _set_pending_skill(user_id: str, step: int, data: dict) -> None:
-    try:
-        with get_connection() as db:
-            db.execute(
-                "INSERT INTO pending_skills (user_id, step, data_json, updated_at) "
-                "VALUES (?, ?, ?, datetime('now')) "
-                "ON CONFLICT(user_id) DO UPDATE SET "
-                "  step = excluded.step, "
-                "  data_json = excluded.data_json, "
-                "  updated_at = excluded.updated_at",
-                (user_id, step, json.dumps(data, ensure_ascii=False)),
-            )
-    except Exception:
-        log.warning("_set_pending_skill failed for user=%.8s", user_id)
-
-
-def _clear_pending_skill(user_id: str) -> None:
-    try:
-        with get_connection() as db:
-            db.execute("DELETE FROM pending_skills WHERE user_id = ?", (user_id,))
-    except Exception:
-        log.warning("_clear_pending_skill failed for user=%.8s", user_id)
-
-
-def _get_skill(user_id: str, name: str) -> "str | None":
-    try:
-        with get_connection() as db:
-            row = db.execute(
-                "SELECT description FROM skills WHERE user_id = ? AND name = ?", (user_id, name)
-            ).fetchone()
-        return row["description"] if row else None
-    except Exception:
-        log.warning("_get_skill failed: user=%.8s name=%s", user_id, name)
-    return None
-
-
-def _list_skills(user_id: str) -> list:
-    try:
-        with get_connection() as db:
-            rows = db.execute(
-                "SELECT name FROM skills WHERE user_id = ? ORDER BY name", (user_id,)
-            ).fetchall()
-        return [{"name": r["name"]} for r in rows]
-    except Exception:
-        log.warning("_list_skills failed for user=%.8s", user_id)
-    return []
-
-
-def _save_skill(user_id: str, name: str, description: str) -> None:
-    with get_connection() as db:
-        db.execute(
-            "INSERT INTO skills (user_id, name, description) VALUES (?, ?, ?) "
-            "ON CONFLICT(user_id, name) DO UPDATE SET "
-            "  description = excluded.description, created_at = datetime('now')",
-            (user_id, name, description),
-        )
-
-
-def _delete_skill(user_id: str, name: str) -> bool:
-    try:
-        with get_connection() as db:
-            db.execute("DELETE FROM skills WHERE user_id = ? AND name = ?", (user_id, name))
-        return True
-    except Exception:
-        log.warning("_delete_skill failed: user=%.8s name=%s", user_id, name)
-        return False

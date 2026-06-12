@@ -221,9 +221,9 @@ class TestLanguageSwitchFlow:
             sess["user_id"] = "testuser"
             sess["language"] = "cs"
 
-        with patch("app.routes.bakalari_routes.fetch_row", return_value=None), \
-             patch("app.routes.bakalari_routes._db_save_settings"), \
-             patch("app.routes.bakalari_routes._db_get_settings", return_value={}):
+        with patch("app.routes.bakalari.settings.fetch_row", return_value=None), \
+             patch("app.routes.bakalari.settings._db_save_settings"), \
+             patch("app.routes.bakalari.settings._db_get_settings", return_value={}):
             resp = client.post(
                 "/api/settings",
                 data=json.dumps({"language": "en"}),
@@ -246,9 +246,9 @@ class TestLanguageSwitchFlow:
             sess["user_id"] = "testuser"
             sess["language"] = "en"
 
-        with patch("app.routes.bakalari_routes.fetch_row", return_value=None), \
-             patch("app.routes.bakalari_routes._db_save_settings"), \
-             patch("app.routes.bakalari_routes._db_get_settings", return_value={}):
+        with patch("app.routes.bakalari.settings.fetch_row", return_value=None), \
+             patch("app.routes.bakalari.settings._db_save_settings"), \
+             patch("app.routes.bakalari.settings._db_get_settings", return_value={}):
             resp = client.post(
                 "/api/settings",
                 data=json.dumps({"language": "en"}),

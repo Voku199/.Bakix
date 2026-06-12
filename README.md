@@ -39,14 +39,24 @@ app/
   routes/
     auth_routes.py            ← vyhledávání a validace škol
     login.py                  ← přihlašovací flow, demo uživatel
-    bakalari_routes.py        ← dashboard, AI chat, studijní stránky, skilly, wrap
+    bakalari/                 ← blueprint rozdělený podle domén:
+      school_api.py           ←   známky, úkoly, Komens, rozvrh, absence
+      ai_chat.py              ←   AI insights, chat, konverzace
+      pages.py                ←   AI studijní stránky (CRUD, regen, modify)
+      settings.py             ←   nastavení, subscription, cache
+      views.py                ←   dashboard, wrap, týdenní shrnutí
+      helpers.py              ←   sanitizace HTML, push dedupe, sdílené utility
+    oauth_provider.py         ← "Přihlásit se přes Bakix" (OAuth 2.0 provider)
     push.py                   ← správa Web Push subscriptions
-    push_routes.py            ← debug push endpointy
     payment_routes.py         ← Stripe checkout + webhook
     proxy_routes.py           ← proxy pro Bakaláře API endpointy
   services/
     bakalari.py               ← BakalariService — celé REST API Bakalářů
-    gemini_service.py         ← GeminiService — AI, skilly, studijní stránky
+    gemini_service.py         ← GeminiService — jádro AI asistenta
+    ai_models.py              ← registr modelů, rate-limit tiery
+    ai_prompts.py             ← systémové prompty, detekce záměru
+    openrouter.py             ← OpenRouter fallback klient
+    skills_db.py              ← úložiště vlastních AI skillů
     push_service.py           ← PushNotificationService — Web Push (VAPID)
     scheduler.py              ← APScheduler — všechny background joby
     crypto.py                 ← AES šifrování credentials
