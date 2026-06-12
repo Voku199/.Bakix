@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Bakix — Jak nakládáme s tvým heslem') }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .legal { max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  .legal h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  .legal .legal__meta { font-size: .8rem; color: var(--muted); margin-bottom: 2rem; }
+  .legal h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+  .legal p, .legal li { font-size: .9rem; line-height: 1.7; color: var(--text); }
+  .legal ul, .legal ol { padding-left: 1.25rem; margin: .4rem 0; }
+  .legal li { margin-bottom: .25rem; }
+  .legal .legal__back { display: inline-block; margin-bottom: 1.5rem; font-size: .85rem; color: var(--muted); text-decoration: none; }
+  .legal .legal__back:hover { color: var(--accent); }
+  .legal code { font-size: .85em; background: rgba(127,127,127,.12); padding: .1em .35em; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal">
+  <a class="legal__back" href="javascript:history.back()">← {{ _('Zpět') }}</a>
+
+  <h1>{{ _('Jak nakládáme s tvým heslem') }}</h1>
+  <p class="legal__meta">{{ _('Srozumitelně a bez žargonu — co se s heslem do Bakalářů děje od chvíle, kdy ho zadáš.') }}</p>
+
+  <p>{{ _('Chápeme, že zadat heslo do školního systému cizí aplikaci chce důvěru. Tahle stránka popisuje přesně, co s ním děláme — a co s ním naopak neděláme nikdy.') }}</p>
+
+  <h2>{{ _('Proč heslo vůbec potřebujeme') }}</h2>
+  <p>{{ _('Bakix se přihlašuje do Bakalářů stejně jako oficiální mobilní aplikace: výměnou jména a hesla získá dočasný přístupový token (platí 8 hodin). Bakaláři bohužel nenabízejí přihlášení třetích stran bez hesla (např. OAuth), takže jiná cesta neexistuje. Heslo si ukládáme jen proto, abychom token mohli automaticky obnovit a ty ses nemusel(a) přihlašovat každý den znovu.') }}</p>
+
+  <h2>{{ _('Co se s heslem děje krok za krokem') }}</h2>
+  <ol>
+    <li>{{ _('Heslo se z tvého prohlížeče přenese šifrovaně přes HTTPS přímo na server Bakixu.') }}</li>
+    <li>{{ _('Server ho předá pouze serveru tvé školy (oficiální Bakaláři API) a ověří přihlášení.') }}</li>
+    <li>{{ _('Poté se heslo okamžitě zašifruje a v této podobě uloží do databáze. V čitelné (plaintext) podobě se nikdy neukládá — ani do logů.') }}</li>
+    <li>{{ _('Při běžném provozu se používá jen dočasný token. Šifrované heslo se rozšifruje jedině ve chvíli, kdy token vyprší a je potřeba ho obnovit.') }}</li>
+  </ol>
+
+  <h2>{{ _('Jak konkrétně šifrujeme') }}</h2>
+  <ul>
+    <li>{{ _('Šifrování: Fernet (AES-128-CBC + HMAC-SHA256) — standardní, prověřená kryptografie, žádná vlastní výroba.') }}</li>
+    <li>{{ _('Šifrovací klíč se odvozuje funkcí PBKDF2-HMAC-SHA256 (480 000 iterací) z tajného klíče serveru.') }}</li>
+    <li>{{ _('Šifrovací klíč není uložen v databázi — i kdyby databáze unikla, hesla z ní bez klíče serveru přečíst nejdou.') }}</li>
+  </ul>
+
+  <h2>{{ _('Co s heslem neděláme nikdy') }}</h2>
+  <ul>
+    <li>{{ _('Neukládáme ho v čitelné podobě a nelogujeme ho.') }}</li>
+    <li>{{ _('Neposíláme ho nikam jinam než na server tvé školy — žádné třetí strany, žádná AI. Asistent dostává jen tvoje známky a rozvrh, nikdy přihlašovací údaje.') }}</li>
+    <li>{{ _('Nikdo z týmu Bakixu ho nemůže zobrazit — neexistuje na to žádná funkce ani administrace.') }}</li>
+    <li>{{ _('Nepoužíváme ho k ničemu jinému než k přihlášení do Bakalářů tvé školy.') }}</li>
+  </ul>
+
+  <h2>{{ _('Jak heslo smazat') }}</h2>
+  <p>{{ _('Při smazání účtu se šifrované heslo i všechny tokeny nenávratně odstraní. O smazání můžeš požádat kdykoli na') }} <a href="mailto:vojta.kurinec@gmail.com">vojta.kurinec@gmail.com</a>.</p>
+
+  <h2>{{ _('Doporučení pro tebe') }}</h2>
+  <ul>
+    <li>{{ _('Používej pro Bakaláře unikátní heslo, které nemáš nikde jinde — to platí pro jakoukoli službu.') }}</li>
+    <li>{{ _('Pokud máš podezření, že heslo uniklo, změň si ho v Bakalářích a přihlas se do Bakixu znovu.') }}</li>
+  </ul>
+
+  <p>{{ _('Víc o tom, jaká další data ukládáme, najdeš v') }} <a href="/privacy">{{ _('zásadách ochrany osobních údajů') }}</a>.</p>
+</div>
+{% endblock %}

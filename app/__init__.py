@@ -15,9 +15,26 @@ log = logging.getLogger(__name__)
 _AUTH_EXEMPT = frozenset({
     "/welcome", "/onboarding",
     "/login", "/login/now", "/login-demo", "/logout",
-    "/cookies", "/privacy", "/tos",
-    "/robots.txt", "/sitemap.xml",
+    "/cookies", "/privacy", "/tos", "/security",
+    "/robots.txt", "/sitemap.xml", "/sw.js",
 })
+
+# API endpoints reachable without a session. Everything else under /api/ is
+# behind the auth gate by default, so a new endpoint can't be exposed by
+# forgetting a session check.
+_AUTH_EXEMPT_API = frozenset({
+    "/api/schools/search",          # onboarding runs before login
+    "/api/validate-school",
+    "/api/payment/webhook",         # Stripe server-to-server, HMAC-signed
+    "/api/push/vapid-public-key",   # public by definition
+})
+
+_AUTH_EXEMPT_PREFIXES = (
+    "/static/", "/set-language/",
+    # /oauth/authorize redirects to login itself (with ?next= back),
+    # token+userinfo are authenticated by client secret / Bearer token.
+    "/oauth/",
+)
 
 
 def _compile_translations(app) -> None:
@@ -81,7 +98,7 @@ def create_app():
     start_scheduler(app)
 
     from app.routes.auth_routes import auth_bp
-    from app.routes.bakalari_routes import bakalari_bp
+    from app.routes.bakalari import bakalari_bp
     from app.routes.login import login_bp
     from app.routes.oauth_provider import oauth_bp  # "Přihlásit se přes Bakix"
     from app.routes.proxy_routes import proxy_bp  # PROXY_Bakix-mirrored endpoints
@@ -114,7 +131,7 @@ def create_app():
 
     # ── Page routes ──────────────────────────────────────────────────────────
     # Endpoints are "welcome" / "onboarding" so url_for("welcome") works in
-    # Python code (bakalari_routes.py, login.py).
+    # Python code (app/routes/bakalari/, login.py).
 
     @app.route("/welcome")
     def welcome():
@@ -149,15 +166,9 @@ def create_app():
             return redirect(ref)
         return redirect(url_for("welcome"))
 
-    @app.route("/prompt")
-    def prompt():
-        txt_path = os.path.join(app.static_folder, "macaly.txt")
-        try:
-            with open(txt_path, encoding="utf-8") as f:
-                content = f.read()
-        except OSError:
-            content = ""
-        return render_template("prompt.html", content=content)
+    @app.route("/security")
+    def security():
+        return render_template("security.html")
 
     @app.route("/sw.js")
     def service_worker():
@@ -177,7 +188,6 @@ def create_app():
             "Disallow: /payment/\n"
             "Disallow: /wrap\n"
             "Disallow: /set-language/\n"
-            "Disallow: /prompt\n"
             f"\nSitemap: {base}/sitemap.xml\n"
         )
         return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
@@ -190,6 +200,7 @@ def create_app():
         pages = [
             {"loc": f"{base}/welcome",    "changefreq": "monthly", "priority": "1.0", "lastmod": today},
             {"loc": f"{base}/onboarding", "changefreq": "monthly", "priority": "0.8", "lastmod": today},
+            {"loc": f"{base}/security",   "changefreq": "yearly",  "priority": "0.5", "lastmod": today},
             {"loc": f"{base}/cookies",    "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
             {"loc": f"{base}/privacy",    "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
             {"loc": f"{base}/tos",        "changefreq": "yearly",  "priority": "0.2", "lastmod": today},
@@ -252,15 +263,15 @@ def create_app():
 
     @app.before_request
     def _check_auth():
-        if (request.path in _AUTH_EXEMPT
-                or request.path.startswith("/static/")
-                or request.path.startswith("/api/")
-                or request.path.startswith("/set-language/")
-                # /oauth/authorize redirects to login itself (with ?next= back),
-                # token+userinfo are authenticated by client secret / Bearer token.
-                or request.path.startswith("/oauth/")):
+        path = request.path
+        if (path in _AUTH_EXEMPT
+                or path in _AUTH_EXEMPT_API
+                or path.startswith(_AUTH_EXEMPT_PREFIXES)):
             return None
         if not session.get("user_id"):
+            # API callers expect JSON, not a redirect to an HTML page.
+            if path.startswith("/api/"):
+                return {"error": "unauthorized"}, 401
             return redirect(url_for("welcome"))
         # Renew permanent flag on every request so the 30-day TTL keeps sliding.
         session.permanent = True

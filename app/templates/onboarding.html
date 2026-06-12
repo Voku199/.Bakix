@@ -72,6 +72,11 @@
           </li>
         </ul>
 
+        <p style="font-size:.78rem;color:var(--muted);margin-top:1rem;line-height:1.6;">
+          {{ _('Detailní popis, co se s heslem děje krok za krokem, najdete na stránce') }}
+          <a href="/security" target="_blank" rel="noopener">{{ _('Jak nakládáme s tvým heslem') }}</a>.
+        </p>
+
         <div class="step-nav step-nav--end">
           <button type="button" class="btn btn--primary" onclick="goTo(1)">
             {{ _('Rozumím, pokračovat →') }}
@@ -127,6 +132,7 @@
         <div class="panel__title">{{ _('Přihlašovací údaje') }}</div>
         <p style="font-size:.81rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.7;">
           {{ _('Stejné údaje jako do mobilní aplikace nebo webových Bakalářů.') }}
+          <a href="/security" target="_blank" rel="noopener">{{ _('Jak s heslem nakládáme?') }}</a>
         </p>
 
         <div id="login-error" class="alert alert--error"></div>
