@@ -298,23 +298,6 @@
       active: swReg.active ? swReg.active.state : 'none',
     });
 
-    // Re-sync any live subscription to the server on every page load.
-    // Covers silent browser-side token renewal (browser may update the
-    // subscription object without notifying the page).
-    swReg.pushManager.getSubscription().then(function (sub) {
-      if (!sub) { _d('no active subscription on page load'); return; }
-      _d('re-syncing existing subscription');
-      fetch('/api/push/subscribe', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(sub.toJSON()),
-      }).then(function (r) {
-        _d('re-sync HTTP', r.status);
-      }).catch(function (err) {
-        _d('re-sync failed', String(err));
-      });
-    });
-
     readState(swReg).then(setUI);
   }).catch(function (err) {
     _d('serviceWorker.ready failed', String(err));
