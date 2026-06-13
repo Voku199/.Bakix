@@ -3,6 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  {# Production: silence console output so internal logs (push debug, SW state,
+     API traces) aren't exposed when a user opens DevTools (F12). Controlled by
+     DEBUG in .env — in dev (DEBUG=True) the console stays fully functional.
+     Must be the first <script> so it runs before anything can log. #}
+  {% if not config.DEBUG %}
+  <script>
+    (function () {
+      var noop = function () {};
+      ['log', 'debug', 'info', 'warn', 'trace', 'table', 'dir', 'dirxml',
+       'group', 'groupCollapsed', 'groupEnd', 'count', 'countReset',
+       'time', 'timeEnd', 'timeLog', 'assert', 'profile', 'profileEnd'
+      ].forEach(function (m) { try { console[m] = noop; } catch (e) {} });
+    })();
+  </script>
+  {% endif %}
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Bakix{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Bakix — AI studijní asistent pro studenty napojený na Bakaláře. Přehledný dashboard se známkami, rozvrhem, úkoly a Komens zprávami.{% endblock %}">

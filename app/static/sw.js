@@ -1,4 +1,4 @@
-const CACHE = 'bakix-v1';
+const CACHE = 'bakix-v2';
 const PRECACHE = ['/static/bakix.svg', '/static/js/main.js'];
 
 self.addEventListener('install', function (e) {
@@ -20,16 +20,33 @@ self.addEventListener('activate', function (e) {
 });
 
 self.addEventListener('fetch', function (e) {
-  if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return;
+  var req = e.request;
+  if (req.method !== 'GET') return;
+
+  var url = new URL(req.url);
+
+  // Only ever touch our own origin. Cross-origin assets (jsDelivr, Google Fonts)
+  // and browser-extension requests (chrome-extension:) must go straight to the
+  // network: re-fetching them here trips the page CSP (connect-src 'self') and
+  // cache.put() rejects unsupported schemes. The browser loads those <script>/
+  // <link> tags natively under script-src/style-src/font-src anyway.
+  if (url.origin !== self.location.origin) return;
+
+  // Never cache API traffic — always live.
+  if (url.pathname.indexOf('/api/') === 0) return;
+
   e.respondWith(
-    fetch(e.request)
+    fetch(req)
       .then(function (r) {
         var clone = r.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, clone); });
+        caches.open(CACHE).then(function (c) { c.put(req, clone); });
         return r;
       })
-      .catch(function () { return caches.match(e.request); })
+      // Offline / network failure: serve from cache, or a clean error response
+      // (returning undefined here is what threw "Failed to convert value to 'Response'").
+      .catch(function () {
+        return caches.match(req).then(function (cached) { return cached || Response.error(); });
+      })
   );
 });
 

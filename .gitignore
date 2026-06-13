@@ -2,6 +2,10 @@
 *.pyc
 __pycache__/
 
+# Virtual environments
+.venv/
+venv/
+
 # Secrets & local config
 .env
 .certs/
@@ -21,4 +25,5 @@ bakalari-api-v3-master/
 check_tokens.py
 app/__pycache__/__init__.cpython-312.pyc
 /app/services/__pycache__
+instance/app.db
 instance/app.db

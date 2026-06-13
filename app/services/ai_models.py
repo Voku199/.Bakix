@@ -40,6 +40,11 @@ _MODELS: "dict[str, dict]" = {
     "openai/gpt-oss-120b:free":               {"display_name": "GPT OSS 120B",   "provider": "openrouter", "group": "freemium"},
     "qwen/qwen3-next-80b-a3b-instruct:free":  {"display_name": "Qwen3 80B",      "provider": "openrouter", "group": "freemium"},
     "google/gemma-4-26b-a4b-it:free":         {"display_name": "Gemma 4 26B",    "provider": "openrouter", "group": "freemium"},
+    # Freemium Mistral models (Mistral SDK) — bypass Gemini budget, go direct.
+    # Requires MISTRAL_API_KEY; calling code lives in services/mistral.py.
+    "ministral-3b-2512":   {"display_name": "Ministral 3B",   "provider": "mistral", "group": "freemium"},
+    "ministral-8b-2512":   {"display_name": "Ministral 8B",   "provider": "mistral", "group": "freemium"},
+    "mistral-small-2603":  {"display_name": "Mistral Small",  "provider": "mistral", "group": "freemium"},
 }
 
 

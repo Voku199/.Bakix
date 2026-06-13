@@ -84,10 +84,16 @@ def create_app():
     babel = Babel()
     app.config["BABEL_TRANSLATION_DIRECTORIES"] = str(Path(app.root_path).parent / "translations")
     def _get_locale():
+        # Czech is the default: Bakix is a Czech-student product, so a visitor
+        # who hasn't explicitly picked a language gets Czech — matching the
+        # header's language switcher, which also defaults to "cs". English is
+        # opt-in via the switcher (stored in session["language"]); we
+        # deliberately do NOT auto-switch on the browser's Accept-Language,
+        # which would render the page in English while the header shows CS.
         lang = session.get("language")
         if lang in ("cs", "en"):
             return lang
-        return request.accept_languages.best_match(["cs", "en"], default="cs")
+        return "cs"
     babel.init_app(app, locale_selector=_get_locale)
     _compile_translations(app)
 
@@ -243,7 +249,9 @@ def create_app():
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
         "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
-        "connect-src 'self'; "
+        # jsDelivr included so DevTools can fetch source maps (*.map) for the
+        # CDN scripts — those load over connect-src, not script-src.
+        "connect-src 'self' https://cdn.jsdelivr.net; "
         "object-src 'none'; "
         "base-uri 'self'; "
         "frame-ancestors 'none'"

@@ -36,6 +36,7 @@ from app.services.openrouter import (
     _call_openrouter, _is_quota_error, _or_status, _si_to_str,
     _strip_degenerate_tail,
 )
+from app.services.mistral import _call_mistral
 from app.services.skills_db import (  # noqa: F401 — re-exported
     _clear_pending_skill, _get_pending_skill, _get_skill, _list_skills,
     _save_skill, _delete_skill, _set_pending_skill, has_pending_skill,
@@ -98,33 +99,37 @@ class GeminiService:
 
         log.info("[AI REQUEST] user=%s model=%s group=%s", user_id[:8] if user_id else '?', effective_model, model_info['group'])
 
-        # ── Freemium OpenRouter model: bypass Gemini budget, go direct ───────
-        if model_info["group"] == "freemium" and model_info["provider"] == "openrouter":
+        # ── Freemium direct-call model (OpenRouter / Mistral): bypass Gemini budget ──
+        if model_info["group"] == "freemium" and model_info["provider"] in ("openrouter", "mistral"):
+            provider  = model_info["provider"]
             json_mode = getattr(config, "response_mime_type", "") == "application/json"
             # Thinking mode: full history + no token cap. Normal: trimmed + capped.
             if ai_mode == AI_MODE_THINKING:
-                or_history   = history or []
-                or_max_tokens = None
-                log.info("[OR] mode=thinking — full history %s turns, unlimited tokens", len(or_history))
+                direct_history    = history or []
+                direct_max_tokens = None
+                log.info("[%s] mode=thinking — full history %s turns, unlimited tokens", provider, len(direct_history))
             else:
-                or_history    = (history or [])[-_FREEMIUM_OR_HISTORY:]
-                or_max_tokens = _FREEMIUM_OR_MAX_TOKENS
+                direct_history    = (history or [])[-_FREEMIUM_OR_HISTORY:]
+                direct_max_tokens = _FREEMIUM_OR_MAX_TOKENS
+            backend = _call_mistral if provider == "mistral" else _call_openrouter
             try:
-                result = _call_openrouter(
-                    _si_to_str(config), contents, or_history, json_mode,
-                    model=effective_model, max_tokens=or_max_tokens,
+                result = backend(
+                    _si_to_str(config), contents, direct_history, json_mode,
+                    model=effective_model, max_tokens=direct_max_tokens,
                 )
-            except Exception as _or_exc:
-                if _or_status(_or_exc) == 402:
+            except Exception as _direct_exc:
+                # OpenRouter reports "out of credit" as HTTP 402 → surface it as a
+                # rate-limit so the UI nudges an upgrade instead of erroring.
+                if provider == "openrouter" and _or_status(_direct_exc) == 402:
                     _tier = "free"
                     if user_id:
                         from app.database.db import get_subscription_tier
                         _tier = get_subscription_tier(user_id)
                     log.warning("OpenRouter 402 on freemium model %s", effective_model)
-                    raise RateLimitedError(_tier, effective_model) from _or_exc
+                    raise RateLimitedError(_tier, effective_model) from _direct_exc
                 raise
             if user_id:
-                log_ai_request(user_id, "openrouter")
+                log_ai_request(user_id, provider)
             return result
 
         # ── gemini-2.5-flash-lite: separate 10/day limit ─────────────────────
@@ -557,17 +562,19 @@ class GeminiService:
         ])
         hist_list = [{"role": h["role"], "text": h["text"]} for h in history]
 
-        # ── Freemium OpenRouter model ─────────────────────────────────────────
-        if model_info["group"] == "freemium" and model_info["provider"] == "openrouter":
+        # ── Freemium direct-call model (OpenRouter / Mistral) ──────────────────
+        if model_info["group"] == "freemium" and model_info["provider"] in ("openrouter", "mistral"):
+            provider = model_info["provider"]
+            backend  = _call_mistral if provider == "mistral" else _call_openrouter
             try:
-                new_html = _call_openrouter(_MODIFY_PROMPT, full_prompt, hist_list, model=effective_model)
-            except Exception as _or_exc:
-                if _or_status(_or_exc) == 402:
+                new_html = backend(_MODIFY_PROMPT, full_prompt, hist_list, model=effective_model)
+            except Exception as _direct_exc:
+                if provider == "openrouter" and _or_status(_direct_exc) == 402:
                     log.warning("OpenRouter 402 in modify_page model=%s user=%.8s", effective_model, user_id)
                     from app.database.db import get_subscription_tier
-                    raise RateLimitedError(get_subscription_tier(user_id)) from _or_exc
+                    raise RateLimitedError(get_subscription_tier(user_id)) from _direct_exc
                 raise
-            log_ai_request(user_id, "openrouter")
+            log_ai_request(user_id, provider)
             self._save_exchange(user_id, conversation_id, prompt, f"[page modified: {prompt[:120]}]")
             return new_html
 

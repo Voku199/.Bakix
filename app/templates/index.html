@@ -730,6 +730,18 @@ body::after {
             <span class="ai-model-opt__name">Gemma 4 26B</span>
             <span class="ai-model-opt__desc">Free · OpenRouter</span>
           </button>
+          <button class="ai-model-opt" data-model="ministral-3b-2512" data-name="Ministral 3B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Ministral 3B</span>
+            <span class="ai-model-opt__desc">Free · Mistral</span>
+          </button>
+          <button class="ai-model-opt" data-model="ministral-8b-2512" data-name="Ministral 8B" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Ministral 8B</span>
+            <span class="ai-model-opt__desc">Free · Mistral</span>
+          </button>
+          <button class="ai-model-opt" data-model="mistral-small-2603" data-name="Mistral Small" data-group="freemium" role="option">
+            <span class="ai-model-opt__name">Mistral Small</span>
+            <span class="ai-model-opt__desc">Free · Mistral</span>
+          </button>
         </div>
         <div class="ai-mode-toggle" role="group" aria-label="Režim odpovědi">
           <button class="ai-mode-btn active"              id="ai-mode-normal"   data-aimode="normal"   title="Rychlá odpověď">Normal</button>
@@ -846,7 +858,15 @@ body::after {
 <script>const GRADE_DATA = {{ chart_data_json | safe }};</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  // Only init the chart if Chart.js actually loaded — on networks that block the
+  // CDN (some school wifi) this avoids a "Chart is not defined" crash in main.js.
+  if (window.Chart) {
+    var _chartScript = document.createElement('script');
+    _chartScript.src = "{{ url_for('static', filename='js/main.js') }}";
+    document.body.appendChild(_chartScript);
+  }
+</script>
 {% endif %}
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 <script>const USER_PROJECTS = {{ user_projects | tojson | safe }};</script>

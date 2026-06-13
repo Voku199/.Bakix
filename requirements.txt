@@ -3,6 +3,7 @@ requests
 cryptography
 python-dotenv
 google-genai
+mistralai>=1.0,<2
 pywebpush
 APScheduler
 waitress
