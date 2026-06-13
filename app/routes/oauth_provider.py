@@ -195,20 +195,25 @@ def userinfo():
     if "bakalare" in (token_row["scope"] or "").split():
         profile["bakalare_access_token"] = ""
         profile["bakalare_refresh_token"] = ""
-        # The stored access_token column can be NULL (accounts created before the
-        # column existed, or a login where upsert_all failed) or expired. Handing
-        # that to the client makes it think Bakaláře isn't linked. get_token
-        # transparently refreshes / re-logs in from the stored encrypted
-        # credentials, so the client always receives a usable token. Re-read the
-        # row afterwards to pick up the refresh_token get_token may have rotated.
+        profile["bakalare_username"] = ""
+        # Always call reauth() — not get_token() — so the client receives a
+        # guaranteed-fresh token. reauth() tries refresh_token first (cheap),
+        # then falls back to full re-login from encrypted credentials. Re-read
+        # the row afterwards to pick up tokens reauth() may have rotated.
         school_url = row.get("school_url") or ""
         if school_url:
             from app.services.bakalari import BakalariService
-            access_token = BakalariService(base_url=school_url).get_token(user_id)
+            from app.services.crypto import decrypt_json
+            access_token = BakalariService(base_url=school_url).reauth(user_id)
             if access_token:
                 fresh = fetch_row(user_id) or row
                 profile["bakalare_access_token"] = access_token
                 profile["bakalare_refresh_token"] = fresh.get("refresh_token") or ""
+                try:
+                    creds = decrypt_json(fresh.get("enc_creds") or row.get("enc_creds", ""))
+                    profile["bakalare_username"] = creds.get("username") or ""
+                except Exception:
+                    pass
     resp = jsonify(profile)
     resp.headers["Cache-Control"] = "no-store"
     return resp

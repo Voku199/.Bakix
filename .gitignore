@@ -27,3 +27,4 @@ app/__pycache__/__init__.cpython-312.pyc
 /app/services/__pycache__
 instance/app.db
 instance/app.db
+*.db
