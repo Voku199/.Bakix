@@ -49,4 +49,4 @@ if __name__ == "__main__":
         # ── Produkce ──────────────────────────────────────────────────────
         from waitress import serve
         log.info("Production server (waitress): http://0.0.0.0:9994")
-        serve(app, host="0.0.0.0", port=9994, threads=4)
+        serve(app, host="0.0.0.0", port=9995, threads=4)
