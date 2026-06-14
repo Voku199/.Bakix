@@ -870,8 +870,6 @@ class GeminiService:
         user_id: "str | None" = None,
     ) -> str:
         """Stateless page regen — no history. Raises RateLimitedError when budget is exhausted."""
-        from app.database.db import log_ai_request
-
         parts = []
         if student_data:
             parts.append("Studentova data: " + json.dumps(student_data, ensure_ascii=False))
@@ -880,16 +878,7 @@ class GeminiService:
         contents = "\n\n".join(parts)
         config = types.GenerateContentConfig(system_instruction=_REGEN_PROMPT)
 
-        if user_id:
-            provider, tier = _resolve_provider(user_id)
-            if provider is None:
-                raise RateLimitedError(tier)
-            log_ai_request(user_id, "gemini")
-
-        response = self._client.models.generate_content(
-            model=self._model, config=config, contents=contents,
-        )
-        return response.text
+        return self._generate_with_fallback(config, contents, user_id=user_id)
 
 
 

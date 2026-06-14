@@ -206,8 +206,6 @@ class BakalariService:
                 "detail":      response.text,
             }
         data = response.json()
-        log.debug("LOGIN RESPONSE FIELDS: %s", list(
-            data.keys()))  # ← přidej toto
         return {
             "access_token": data.get("access_token"),
             "refresh_token": data.get("refresh_token"),

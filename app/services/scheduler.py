@@ -31,10 +31,11 @@ _SUB_LABELS = {
 #   Weekend day   → occasional updates from diligent teachers (10 min)
 #   Weekend night → nothing, save API quota (30 min)
 
-_PRAGUE_TZ = datetime.timezone(datetime.timedelta(hours=1))   # CET; DST handled by APScheduler
+from zoneinfo import ZoneInfo
+_PRAGUE_TZ = ZoneInfo("Europe/Prague")
 
 def _adaptive_interval_minutes() -> int:
-    now     = datetime.datetime.now()   # scheduler timezone is Europe/Prague
+    now     = datetime.datetime.now(_PRAGUE_TZ)
     hour    = now.hour
     weekday = now.weekday()             # 0=Mon … 6=Sun
 
