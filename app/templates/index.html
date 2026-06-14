@@ -248,6 +248,19 @@ body::after {
   50%      { box-shadow: 0 8px 28px rgba(0,0,0,.3), 0 0 26px 2px color-mix(in srgb, var(--accent) 38%, transparent); }
 }
 
+/* ── PWA install tutorial card ──────────────────────────── */
+.pwa-tutorial{border:1px solid var(--border);border-radius:14px;background:var(--bg2);margin-bottom:1.25rem;overflow:hidden;}
+.pwa-tutorial__hdr{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border);}
+.pwa-tutorial__icon{font-size:1.25rem;flex-shrink:0;}
+.pwa-tutorial__title{font-weight:700;font-size:.875rem;margin-bottom:.1rem;}
+.pwa-tutorial__sub{font-size:.72rem;color:var(--muted);}
+.pwa-tutorial__body{padding:.9rem 1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.9rem 1.4rem;}
+.pwa-tutorial__os{}
+.pwa-tutorial__os-lbl{font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem;}
+.pwa-tutorial__steps{display:flex;flex-direction:column;gap:.22rem;}
+.pwa-tutorial__step{display:flex;gap:.5rem;font-size:.78rem;align-items:center;line-height:1.4;}
+.pwa-tutorial__step-n{width:16px;height:16px;border-radius:50%;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent);font-size:8px;font-weight:700;display:grid;place-items:center;flex-shrink:0;}
+
 /* ── Reduced motion: vypnout vše nové ───────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .dash-atmos::before,
@@ -324,6 +337,42 @@ body::after {
         <span class="push-prompt__text">Klepni na <strong>Sdilet</strong> ↑ a pak <strong>Pridat na plochu</strong></span>
       </div>
       <button class="btn btn--icon push-prompt__dismiss" id="ios-prompt-dismiss" aria-label="Zavrit">×</button>
+    </div>
+  </div>
+
+  {# PWA install tutorial — JS shows it when not in standalone mode and not yet dismissed #}
+  <div id="pwa-tutorial" class="pwa-tutorial" style="display:none;" role="region" aria-label="{{ _('Instalace aplikace') }}">
+    <div class="pwa-tutorial__hdr">
+      <span class="pwa-tutorial__icon" aria-hidden="true">📲</span>
+      <div style="flex:1;min-width:0;">
+        <div class="pwa-tutorial__title">{{ _('Přidej Bakix na plochu') }}</div>
+        <div class="pwa-tutorial__sub">PWA · {{ _('bez App Storu') }} · {{ _('funguje i offline') }}</div>
+      </div>
+      <button class="btn btn--icon" id="pwa-tutorial-close" title="{{ _('Zavřít') }}" aria-label="{{ _('Zavřít') }}" style="flex-shrink:0;">×</button>
+    </div>
+    <div class="pwa-tutorial__body">
+      <div class="pwa-tutorial__os">
+        <div class="pwa-tutorial__os-lbl">🍎 iOS — Safari</div>
+        <div class="pwa-tutorial__steps">
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">1</span><span>{{ _('Otevři Bakix v') }} <strong>Safari</strong></span></div>
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">2</span><span>{{ _('Klepni na') }} <strong>{{ _('Sdílet') }} ↑</strong></span></div>
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">3</span><span>{{ _('Vyber') }} <strong>{{ _('Přidat na plochu') }}</strong></span></div>
+        </div>
+      </div>
+      <div class="pwa-tutorial__os">
+        <div class="pwa-tutorial__os-lbl">🤖 Android — Chrome</div>
+        <div class="pwa-tutorial__steps">
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">1</span><span>{{ _('Klepni na menu') }} <strong>⋮</strong></span></div>
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">2</span><span>{{ _('Vyber') }} <strong>{{ _('Přidat na plochu') }}</strong></span></div>
+        </div>
+      </div>
+      <div class="pwa-tutorial__os">
+        <div class="pwa-tutorial__os-lbl">💻 {{ _('Desktop') }} — Chrome / Edge</div>
+        <div class="pwa-tutorial__steps">
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">1</span><span>{{ _('Klikni na') }} <strong>⊞</strong> {{ _('v adresním řádku') }}</span></div>
+          <div class="pwa-tutorial__step"><span class="pwa-tutorial__step-n">2</span><span>{{ _('Klikni') }} <strong>{{ _('Nainstalovat') }}</strong></span></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1003,6 +1052,23 @@ body::after {
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
+})();
+</script>
+<script>
+/* PWA install tutorial: show unless already in standalone mode or previously dismissed */
+(function () {
+  'use strict';
+  var KEY = 'bakix-pwa-tutorial-v1';
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (navigator.standalone) return;
+  try { if (localStorage.getItem(KEY)) return; } catch (_) {}
+  var card = document.getElementById('pwa-tutorial');
+  if (!card) return;
+  card.style.display = '';
+  document.getElementById('pwa-tutorial-close').addEventListener('click', function () {
+    card.style.display = 'none';
+    try { localStorage.setItem(KEY, '1'); } catch (_) {}
+  });
 })();
 </script>
 {% endblock %}
