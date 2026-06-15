@@ -191,8 +191,10 @@ def create_app():
             "Disallow: /login/now\n"
             "Disallow: /login-demo\n"
             "Disallow: /logout\n"
+            "Disallow: /oauth/\n"
             "Disallow: /payment/\n"
             "Disallow: /wrap\n"
+            "Disallow: /shrnut%C3%AD\n"
             "Disallow: /set-language/\n"
             f"\nSitemap: {base}/sitemap.xml\n"
         )

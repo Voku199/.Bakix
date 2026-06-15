@@ -13,3 +13,4 @@ Flask-Limiter
 nh3
 ddgs
 stripe
+resend
