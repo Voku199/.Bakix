@@ -118,7 +118,7 @@ def index():
 
     if "error" in marks_data:
         subjects    = None
-        marks_error = f"Nepodařilo se načíst známky ({marks_data['status_code']})"
+        marks_error = f"Nepodařilo se načíst známky ({marks_data.get('status_code', 'timeout')})"
     else:
         subjects    = marks_data.get("Subjects", [])
         marks_error = None
@@ -126,7 +126,7 @@ def index():
     subs_raw = svc.get_substitutions_from_timetable(token)
     if isinstance(subs_raw, dict) and "error" in subs_raw:
         substitutions = None
-        subs_error    = f"Nepodařilo se načíst suplování ({subs_raw['status_code']})"
+        subs_error    = f"Nepodařilo se načíst suplování ({subs_raw.get('status_code', 'timeout')})"
     else:
         substitutions = subs_raw
         subs_error    = None
