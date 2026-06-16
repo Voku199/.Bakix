@@ -271,6 +271,17 @@ def create_app():
             resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return resp
 
+    if not _debug:
+        @app.errorhandler(Exception)
+        def _handle_unhandled(exc):
+            from werkzeug.exceptions import HTTPException
+            if isinstance(exc, HTTPException):
+                return exc
+            log.exception("Neošetřená výjimka [%s %s]", request.method, request.path)
+            if request.path.startswith("/api/"):
+                return {"error": "Interní chyba serveru"}, 500
+            return "Interní chyba serveru", 500
+
     @app.before_request
     def _check_auth():
         path = request.path

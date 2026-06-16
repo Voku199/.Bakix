@@ -142,19 +142,23 @@ def index():
 
     _is_holiday, _days_until_school, _school_start_date = _holiday_info()
 
-    return render_template(
-        "index.html",
-        error=None,
-        subjects=subjects,
-        marks_error=marks_error,
-        substitutions=substitutions,
-        subs_error=subs_error,
-        chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
-        user_projects=get_user_projects(user_id),
-        display_name=display_name,
-        is_premium=_is_premium,
-        show_wrap=_show_wrap,
-        is_holiday=_is_holiday,
-        days_until_school=_days_until_school,
-        school_start_date=_school_start_date,
-    )
+    try:
+        return render_template(
+            "index.html",
+            error=None,
+            subjects=subjects,
+            marks_error=marks_error,
+            substitutions=substitutions,
+            subs_error=subs_error,
+            chart_data_json=json.dumps(chart_datasets, ensure_ascii=False),
+            user_projects=get_user_projects(user_id),
+            display_name=display_name,
+            is_premium=_is_premium,
+            show_wrap=_show_wrap,
+            is_holiday=_is_holiday,
+            days_until_school=_days_until_school,
+            school_start_date=_school_start_date,
+        )
+    except Exception:
+        log.exception("index: render_template selhalo pro user=%.8s", user_id)
+        raise

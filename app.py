@@ -15,6 +15,19 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
+_instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance")
+os.makedirs(_instance_dir, exist_ok=True)
+_log_file = os.path.join(_instance_dir, "bakix.log")
+
+from logging.handlers import RotatingFileHandler as _RFH
+_fh = _RFH(_log_file, maxBytes=5_000_000, backupCount=3, encoding="utf-8")
+_fh.setLevel(logging.DEBUG if _debug else logging.INFO)
+_fh.setFormatter(logging.Formatter(
+    "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+))
+logging.getLogger().addHandler(_fh)
+
 _log = logging.getLogger("bakix.startup")
 
 app = create_app()
