@@ -39,3 +39,29 @@ def decrypt_json(token: str) -> dict:
     except InvalidToken:
         log.error("decrypt_json: InvalidToken — key mismatch or corrupted data (SECRET_KEY changed?)")
         raise ValueError("Credentials cannot be decrypted with the current SECRET_KEY")
+
+
+def encrypt_str(value: "str | None") -> "str | None":
+    """Encrypt a single string (e.g. a Bakaláři access/refresh token) at rest.
+
+    Returns None unchanged so NULL columns stay NULL.
+    """
+    if value is None:
+        return None
+    return _get_fernet().encrypt(value.encode()).decode()
+
+
+def decrypt_str(token: "str | None") -> "str | None":
+    """Inverse of :func:`encrypt_str`.
+
+    Backwards-compatible: tokens written before encryption-at-rest are stored as
+    plaintext JWTs, which fail Fernet's version+HMAC check. Rather than break
+    those sessions we return the value unchanged — it gets re-encrypted on the
+    next token write (login / refresh).
+    """
+    if token is None:
+        return None
+    try:
+        return _get_fernet().decrypt(token.encode()).decode()
+    except InvalidToken:
+        return token

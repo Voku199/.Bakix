@@ -14,6 +14,7 @@ def upsert_all(
     access_token: "str | None" = None,
     refresh_token: "str | None" = None,
 ) -> None:
+    from app.services.crypto import encrypt_str
     with get_connection() as db:
         db.execute("""
             INSERT INTO saved_credentials
@@ -24,7 +25,8 @@ def upsert_all(
                 enc_creds     = excluded.enc_creds,
                 access_token  = excluded.access_token,
                 refresh_token = excluded.refresh_token
-        """, (user_id, school_url, enc_creds, access_token, refresh_token))
+        """, (user_id, school_url, enc_creds,
+              encrypt_str(access_token), encrypt_str(refresh_token)))
     log.info("DB write: user=%.8s school=%s", user_id, school_url)
 
 
@@ -33,22 +35,29 @@ def update_tokens(
     access_token: str,
     refresh_token: "str | None",
 ) -> None:
+    from app.services.crypto import encrypt_str
     with get_connection() as db:
         db.execute(
             "UPDATE saved_credentials SET access_token = ?, refresh_token = ? WHERE user_id = ?",
-            (access_token, refresh_token, user_id),
+            (encrypt_str(access_token), encrypt_str(refresh_token), user_id),
         )
     log.debug("DB tokens updated: user=%.8s", user_id)
 
 
 def fetch_row(user_id: str) -> "dict | None":
+    from app.services.crypto import decrypt_str
     with get_connection() as db:
         row = db.execute(
             "SELECT * FROM saved_credentials WHERE user_id = ?", (user_id,)
         ).fetchone()
     if row:
         log.debug("DB read hit: user=%.8s", user_id)
-        return dict(row)
+        # Tokens are encrypted at rest — decrypt transparently so callers
+        # (BakalariService.get_token / reauth) always see usable plaintext.
+        data = dict(row)
+        data["access_token"]  = decrypt_str(data.get("access_token"))
+        data["refresh_token"] = decrypt_str(data.get("refresh_token"))
+        return data
     log.debug("DB read miss: user=%.8s", user_id)
     return None
 

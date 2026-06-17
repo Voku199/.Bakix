@@ -1,16 +1,19 @@
 """One-shot script: register an OAuth client in the Bakix database.
 
-Usage — register Knowix's existing credentials:
+Usage — register a client with your own credentials:
     python register_oauth_client.py \
         --name "Bakix Knowix" \
-        --client-id ***REMOVED-LEAKED-CLIENT-ID*** \
-        --client-secret ***REMOVED-LEAKED-SECRET*** \
+        --client-id <YOUR_CLIENT_ID> \
+        --client-secret <YOUR_CLIENT_SECRET> \
         --redirect-uri https://knowix.bakix.cz/auth/bakix/callback
 
-Usage — generate fresh credentials (then update Knowix .env):
+Usage — generate fresh credentials (then update the client's .env):
     python register_oauth_client.py \
         --name "Bakix Knowix" \
         --redirect-uri https://knowix.bakix.cz/auth/bakix/callback
+
+Never commit real client secrets to source control — pass them on the command
+line and store only the printed values in the client's .env.
 """
 
 import argparse
