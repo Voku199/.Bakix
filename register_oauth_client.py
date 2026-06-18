@@ -24,10 +24,13 @@ import os
 import secrets
 import sys
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # Make sure app/ is importable from this script's directory.
 sys.path.insert(0, os.path.dirname(__file__))
 
-from app.database.connection import get_connection
+from app.database.connection import DB_PATH, get_connection
 
 
 def _sha256(value: str) -> str:
@@ -44,6 +47,16 @@ def register(name: str, redirect_uris: list[str],
         client_secret = secrets.token_urlsafe(32)
 
     with get_connection() as db:
+        table = db.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'oauth_clients'"
+        ).fetchone()
+        if not table:
+            print(f"[!] No 'oauth_clients' table in {DB_PATH}.")
+            print("    This DB hasn't been initialized yet, or BAKIX_DB_PATH points "
+                  "somewhere unexpected. Run the app once (so init_db() creates the "
+                  "schema) or check BAKIX_DB_PATH in .env, then retry.")
+            sys.exit(1)
+
         existing = db.execute(
             "SELECT client_id FROM oauth_clients WHERE client_id = ?", (client_id,)
         ).fetchone()
@@ -79,6 +92,8 @@ def main() -> None:
     parser.add_argument("--rotate", action="store_true",
                         help="If --client-id already exists, replace its secret instead of erroring")
     args = parser.parse_args()
+
+    print(f"[i] Using database: {DB_PATH}")
 
     client_id, client_secret = register(
         name=args.name,
