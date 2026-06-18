@@ -60,7 +60,9 @@ def create_app():
     app = Flask(__name__)
 
     from werkzeug.middleware.proxy_fix import ProxyFix
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    # x_proto=1 trusts Caddy's X-Forwarded-Proto so request.url/base_url/host_url
+    # report https — without it canonical/OG tags and the sitemap report http://.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     _debug = os.getenv("DEBUG", "False").strip().lower() in ("1", "true", "yes")
 

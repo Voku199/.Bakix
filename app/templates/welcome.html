@@ -36,6 +36,22 @@
   "sameAs": []
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Bakix",
+  "url": "{{ request.host_url }}",
+  "description": "AI studijní asistent pro české studenty napojený na Bakaláře.",
+  "applicationCategory": "EducationApplication",
+  "operatingSystem": "Web, iOS, Android",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CZK"
+  }
+}
+</script>
 <link rel="icon" href="{{ url_for('static', filename='bakix.svg') }}" type="image/svg+xml">
 <meta name="theme-color" content="#16120e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
