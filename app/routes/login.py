@@ -76,6 +76,7 @@ def login():
     except Exception:
         log.exception("login: failed to persist credentials for user=%.8s", user_id)
 
+    session.clear()
     session.permanent = True
     session["user_id"] = user_id
     _restore_session_language(user_id)
@@ -126,6 +127,7 @@ def login_now():
         access_token=result["access_token"],
         refresh_token=result["refresh_token"],
     )
+    session.clear()
     session.permanent  = True
     session["user_id"] = user_id
     _restore_session_language(user_id)
@@ -137,6 +139,7 @@ DEMO_USER_ID = "demo"
 
 @login_bp.route("/login-demo")
 def login_demo():
+    session.clear()
     session.permanent = True
     session["user_id"] = DEMO_USER_ID
     session["is_demo"] = True
