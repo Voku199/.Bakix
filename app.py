@@ -108,4 +108,14 @@ if __name__ == "__main__":
         from waitress import serve
         threading.Thread(target=_check_public_availability, daemon=True).start()
         log.info("Production server (waitress): http://0.0.0.0:9994")
-        serve(app, host="0.0.0.0", port=9995, threads=4)
+        serve(
+            app,
+            host="0.0.0.0",
+            port=9995,
+            threads=4,
+            # Trust Caddy (127.0.0.1) as a proxy so X-Forwarded-For reaches Flask.
+            # Without this, Waitress strips all proxy headers by default.
+            trusted_proxy="127.0.0.1",
+            trusted_proxy_headers=["x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"],
+            clear_untrusted_proxy_headers=True,
+        )
