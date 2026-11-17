@@ -1,0 +1,46 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, mark, page_header, attention_tip, load_error %}
+{% block title %}Známky{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {{ page_header("Známky", kicker="známky", lead="Průměr u předmětu je ten, který počítá škola.") }}
+
+    {% if error %}{{ load_error(error) }}{% endif %}
+
+    {% if attention %}
+      <section class="stack" aria-label="Na čem zapracovat">
+        <h2>Na čem zapracovat</h2>
+        <div class="grid-cards">
+          {% for item in attention %}{{ attention_tip(item, space, profile.is_parent) }}{% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="stack" aria-label="Předměty">
+      {% if attention %}<h2>Předměty</h2>{% endif %}
+      <div class="grid-cards">
+        {% for s in subjects %}
+          <a class="card card-link" href="{{ url_for('.subject', subject_id=s.id) }}">
+            <span class="subject-head">
+              <span class="grow">
+                <span class="item-title">{{ s.name }}</span>
+                {% if s.trend == "up" %}<span class="trend trend-up">{{ icon("trending-up") }} zlepšuje se</span>
+                {% elif s.trend == "down" %}<span class="trend trend-down">{{ icon("trending-down") }} zhoršuje se</span>
+                {% else %}<span class="item-sub">{{ plural(s.marks|length, "známka", "známky", "známek") }}</span>{% endif %}
+              </span>
+              {% if s.average_text %}<span class="average" title="Průměr">{{ s.average_text }}</span>{% endif %}
+            </span>
+            <span class="marks-row" aria-label="Známky od nejnovější">
+              {% for m in s.marks[:10] %}{{ mark(m, "sm") }}{% endfor %}
+              {% if s.marks|length > 10 %}<span class="chip">+{{ s.marks|length - 10 }}</span>{% endif %}
+            </span>
+          </a>
+        {% else %}
+          {% if not error %}<p class="empty">Zatím žádné známky.</p>{% endif %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <p><a href="{{ url_for('.absence') }}">Absence {{ icon("arrow-right") }}</a></p>
+  </div>
+{% endblock %}

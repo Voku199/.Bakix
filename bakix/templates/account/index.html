@@ -1,0 +1,53 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, page_header %}
+{% block title %}Účet{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {{ page_header(profile.name or "Účet", kicker="účet") }}
+
+    <section class="card stack" aria-labelledby="h-kdo">
+      <h2 id="h-kdo">Přihlášený účet</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <tr><th scope="row">Škola</th><td>{{ profile.school_name or "–" }}</td></tr>
+          <tr><th scope="row">Třída</th><td>{{ profile.class_name or "–" }}</td></tr>
+          <tr><th scope="row">Typ účtu</th><td>{{ "Rodič" if profile.is_parent else "Žák" }}</td></tr>
+          <tr><th scope="row">V Bakixu od</th><td>{{ created_at.date()|date(year=True) }}</td></tr>
+          {% if ai_enabled %}<tr><th scope="row">AI dnes</th><td>zbývá {{ ai_remaining }} odpovědí</td></tr>{% endif %}
+        </table>
+      </div>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-secondary" type="submit">{{ icon("log-out") }} Odhlásit se</button>
+      </form>
+    </section>
+
+    <section class="card stack" aria-labelledby="h-data">
+      <h2 id="h-data">Co si Bakix pamatuje</h2>
+      <div class="table-wrap">
+        <table class="table">
+          {% for what, how_long in retention %}
+            <tr><th scope="row">{{ what }}</th><td>{{ how_long }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <p class="small"><a href="{{ url_for('public.privacy_policy') }}">Celé zásady ochrany soukromí</a></p>
+    </section>
+
+    <section class="card stack" aria-labelledby="h-pryc">
+      <h2 id="h-pryc">Odhlášení a smazání</h2>
+      <p class="muted">Odhlášení všude zneplatní přihlášení na všech zařízeních (třeba po ztrátě telefonu). Smazání odstraní všechno, co o tobě Bakix má. Data ve škole se nezmění.</p>
+      <div class="row">
+        <form method="post" action="{{ url_for('account.logout_everywhere') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-secondary" type="submit">Odhlásit ze všech zařízení</button>
+        </form>
+        <form method="post" action="{{ url_for('account.delete') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger" type="submit" data-confirm="Opravdu smazat účet v Bakixu?">{{ icon("trash-2") }} Smazat účet</button>
+        </form>
+      </div>
+    </section>
+  </div>
+{% endblock %}

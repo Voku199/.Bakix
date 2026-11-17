@@ -1,0 +1,113 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, page_header, attention_tip, alert %}
+{% block title %}Učení{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {{ page_header("Zadání pro AI", kicker="učení", lead="Bakix ví, co se teď probírá. Sepíše zadání, které si vložíš do AI, a ta tě látku naučí krok za krokem.") }}
+
+    <div class="grid-overview">
+      <form method="get" class="card stack" action="{{ url_for('.study_page') }}">
+        <h2>Co se chceš naučit</h2>
+        {% if subjects %}
+          <label class="field"><span>Předmět</span>
+            <select class="select" name="predmet" required>
+              <option value="">Vyber předmět…</option>
+              {% for s in subjects %}
+                <option value="{{ s.id }}"{% if selected and s.id == selected.id %} selected{% endif %}>{{ s.name }}{% if s.average_text %} (průměr {{ s.average_text }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% else %}
+          <label class="field"><span>Předmět</span>
+            <input class="input" name="predmet_text" value="{{ req.subject }}" maxlength="60" required placeholder="např. Matematika">
+          </label>
+        {% endif %}
+        <label class="field"><span>Téma</span>
+          <input class="input" name="tema" value="{{ req.topic }}" maxlength="120" placeholder="např. Pythagorova věta">
+          <span class="hint">Nech prázdné a Bakix vezme to, co se probíralo naposledy.</span>
+        </label>
+        <fieldset class="stack stack-sm">
+          <legend class="label">Co potřebuješ</legend>
+          <div class="choices">
+            {% for value, label in goals.items() %}
+              <label class="choice"><input type="radio" name="cil" value="{{ value }}"{% if req.goal == value %} checked{% endif %}><span>{{ label }}</span></label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <fieldset class="stack stack-sm">
+          <legend class="label">Pro koho</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="pro" value="ja"{% if not req.for_parent %} checked{% endif %}><span>Pro mě (žák)</span></label>
+            <label class="choice"><input type="radio" name="pro" value="rodic"{% if req.for_parent %} checked{% endif %}><span>Jsem rodič</span></label>
+          </div>
+        </fieldset>
+        {% if req.mark %}<input type="hidden" name="znamka" value="{{ req.mark }}">{% endif %}
+        <button class="btn btn-primary" type="submit">{{ icon("sparkles") }} Sepsat zadání</button>
+      </form>
+
+      <div class="stack">
+        {% if prompt %}
+          <section class="card stack" aria-labelledby="h-zadani">
+            <div class="card-head">
+              <h2 id="h-zadani">Tvoje zadání</h2>
+              <button class="btn btn-secondary btn-sm" type="button" data-copy="#zadani" data-copied="Zkopírováno" hidden>{{ icon("copy") }} <span>Zkopírovat</span></button>
+            </div>
+            <textarea class="textarea" id="zadani" readonly rows="14" aria-label="Zadání pro AI">{{ prompt }}</textarea>
+            <p class="hint">Zadání neobsahuje jméno, školu ani nic, podle čeho by tě šlo poznat.</p>
+            <div class="row">
+              {% for name, url in assistants %}
+                <a class="btn btn-secondary btn-sm" href="{{ url }}" target="_blank" rel="noopener noreferrer">Otevřít v {{ name }} {{ icon("external-link") }}</a>
+              {% endfor %}
+            </div>
+          </section>
+
+          {% if knowix %}
+            <div class="tip">
+              {{ icon("book-open") }}
+              <div class="tip-body">
+                <p class="item-title">{{ "Na tohle má Knowix cvičení" if knowix.exact else "Angličtinu procvičíš i na Knowixu" }}</p>
+                <p class="item-sub">{{ knowix.title }} · krátké hry a kvízy, bez přihlášení.</p>
+                <a class="btn btn-primary btn-sm" href="{{ knowix.url }}" rel="noopener">Procvičit na Knowixu {{ icon("external-link") }}</a>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if ai_enabled %}
+            <section class="card stack" aria-labelledby="h-hned">
+              <h2 id="h-hned">Vysvětlit hned tady</h2>
+              {% if answer %}
+                <div class="prose">{{ answer }}</div>
+                <p class="hint">Odpověď napsala AI a může se mýlit. Když něco nesedí s tím, co říká učitel, platí učitel.</p>
+              {% else %}
+                {% if answer_error %}{{ alert("error", answer_error) }}{% endif %}
+                <p class="muted">Krátké vysvětlení a tři příklady přímo v Bakixu. AI dostane jen předmět, téma a ročník.</p>
+                <form method="post" action="{{ url_for('.study_explain') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  {% if selected %}<input type="hidden" name="predmet" value="{{ selected.id }}">{% else %}<input type="hidden" name="predmet_text" value="{{ req.subject }}">{% endif %}
+                  <input type="hidden" name="tema" value="{{ req.topic }}">
+                  <input type="hidden" name="cil" value="{{ req.goal }}">
+                  <input type="hidden" name="pro" value="{{ 'rodic' if req.for_parent else 'ja' }}">
+                  <button class="btn btn-secondary" type="submit"{% if not ai_remaining %} disabled{% endif %}>{{ icon("sparkles") }} Vysvětlit</button>
+                  <span class="hint">Dnes zbývá {{ ai_remaining }}×.</span>
+                </form>
+              {% endif %}
+            </section>
+          {% endif %}
+        {% else %}
+          {% for item in attention %}
+            {{ attention_tip(item, space, profile.is_parent) }}
+          {% else %}
+            <div class="card stack">
+              <h2>Jak to funguje</h2>
+              <ol class="prose">
+                <li>Vyber předmět. Téma Bakix doplní podle poslední známky a probírané látky.</li>
+                <li>Zkopíruj hotové zadání do AI, kterou používáš.</li>
+                <li>AI se tě nejdřív zeptá, co už umíš, a pak tě látkou provede.</li>
+              </ol>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

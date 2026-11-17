@@ -1,0 +1,127 @@
+{#
+  Jediný layout celé aplikace. Bloky:
+    title        <title> stránky (bez " – Bakix", přidá se sám)
+    description  meta description (jen veřejné stránky)
+    head         další <link>/<meta>
+    (paleta: <html data-palette>, viz bakix/design.py)
+    page_class   šířka obsahu: "" (výchozí), "page-narrow" (formuláře), "page-reading" (texty)
+    content      obsah stránky
+  Proměnná `public_page` (True na veřejných stránkách) zapne canonical a Open Graph.
+  Žádné inline skripty ani styly: CSP je nepustí.
+#}
+{% from "components/ui.html" import icon, alert %}
+{%- set _endpoint = request.endpoint or "" -%}
+{%- set _in_app = account or in_demo -%}
+{%- set _tabs = [
+  ("overview", "Přehled", "house", ("overview",)),
+  ("marks", "Známky", "award", ("marks", "subject")),
+  ("timetable", "Rozvrh", "calendar", ("timetable",)),
+  ("homeworks", "Úkoly", "list-checks", ("homeworks",)),
+  ("messages", "Zprávy", "mail", ("messages", "message")),
+  ("study_page", "Učení", "sparkles", ("study_page", "study_explain")),
+] -%}
+{%- macro _current(names) -%}
+  {%- for name in names if _endpoint == space ~ "." ~ name %} aria-current="page"{% endfor -%}
+{%- endmacro -%}
+<!doctype html>
+<html lang="cs" data-palette="{{ palette.key }}" data-shape="{{ shape }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Bakaláři na jeden pohled{% endblock %} – Bakix</title>
+  {% if public_page %}
+    <meta name="description" content="{% block description %}Bakix ukáže známky, rozvrh, úkoly a zprávy z Bakalářů přehledně na jedné stránce. Pro žáky i rodiče, zdarma a bez ukládání hesla.{% endblock %}">
+    <link rel="canonical" href="{{ public_url(request.endpoint) }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Bakix">
+    <meta property="og:locale" content="cs_CZ">
+    <meta property="og:title" content="{{ self.title() }} – Bakix">
+    <meta property="og:description" content="{{ self.description() }}">
+    <meta property="og:url" content="{{ public_url(request.endpoint) }}">
+    <meta property="og:image" content="{{ public_url('static', filename='img/og-image.png') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+  {% else %}
+    <meta name="robots" content="noindex, nofollow">
+  {% endif %}
+  <meta name="theme-color" content="{{ palette.light_bg }}" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="{{ palette.dark_bg }}" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="{{ asset('img/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('img/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ asset('img/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('public.manifest') }}">
+  <link rel="preload" href="{{ url_for('static', filename='fonts/geist-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/newsreader-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+  <script src="{{ asset('js/app.js') }}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body{% if _in_app %} class="has-tabbar"{% endif %}>
+  <a class="skip-link" href="#obsah">Přeskočit na obsah</a>
+
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a class="wordmark" href="{{ url_for(space ~ '.overview') if _in_app else url_for('public.index') }}" aria-label="Bakix – domů"><span class="logo" aria-hidden="true"></span>Bakix</a>
+      {% if _in_app %}
+        <nav class="nav" aria-label="Hlavní">
+          {% for name, label, _icon, names in _tabs %}
+            <a href="{{ url_for(space ~ '.' ~ name) }}"{{ _current(names) }}>{{ label }}</a>
+          {% endfor %}
+        </nav>
+        <div class="header-end">
+          {% if in_demo %}
+            <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">Přihlásit se</a>
+          {% else %}
+            <a class="nav-link" href="{{ url_for('account.index') }}"{% if _endpoint.startswith('account.') %} aria-current="page"{% endif %}>Účet</a>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="header-end">
+          <a class="nav-link" href="{{ url_for('public.demo') }}">Ukázka</a>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">Přihlásit se</a>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if in_demo %}
+    <div class="demo-banner">
+      <div class="container">Tohle je ukázka s vymyšlenými daty. <a href="{{ url_for('auth.login') }}">Přihlas se</a> a uvidíš svoje.</div>
+    </div>
+  {% endif %}
+
+  <main id="obsah" class="container page {% block page_class %}{% endblock %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="stack stack-sm" role="status">
+          {% for category, message in messages %}{{ alert(category, message) }}{% endfor %}
+        </div>
+        <br>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container row row-between">
+      <p>Bakix není oficiální aplikace Bakalářů.</p>
+      <p class="row">
+        <a href="{{ url_for('public.security') }}">Bezpečnost</a>
+        <a href="{{ url_for('public.privacy_policy') }}">Soukromí</a>
+        <a href="{{ url_for('public.terms') }}">Podmínky</a>
+        {% if config.KNOWIX_URL %}<a href="{{ config.KNOWIX_URL }}" rel="noopener">Knowix – angličtina hrou</a>{% endif %}
+      </p>
+    </div>
+  </footer>
+
+  {% if _in_app %}
+    <nav class="tabbar" aria-label="Hlavní (mobil)">
+      {% for name, label, icon_name, names in _tabs %}
+        <a class="tab" href="{{ url_for(space ~ '.' ~ name) }}"{{ _current(names) }}>{{ icon(icon_name) }}<span>{{ label }}</span></a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,109 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, mark, lesson_list, mark_item, attention_tip, load_error, refresh_button %}
+{% block title %}Přehled{% endblock %}
+{% block content %}
+  <section class="glance">
+    <div class="row row-between">
+      <p class="kicker">{{ moment.date()|date(weekday=True) }}{% if profile.class_name %} · {{ profile.class_name }}{% endif %}</p>
+      {% if not in_demo %}{{ refresh_button(space) }}{% endif %}
+    </div>
+    <h1>{{ glance.title }}</h1>
+    {% if glance.notes %}
+      <ul class="glance-notes">
+        {% for note in glance.notes %}<li>{{ note }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+  <br>
+
+  <div class="grid-overview">
+    <div class="stack">
+      <section class="card" aria-labelledby="h-rozvrh">
+        <div class="card-head">
+          <h2 id="h-rozvrh">{{ focus.label if focus else "Rozvrh" }}{% if focus and not focus.is_today %} <span class="muted small">{{ focus.day.day|date }}</span>{% endif %}</h2>
+          <a href="{{ url_for('.timetable') }}">Celý týden</a>
+        </div>
+        {% if timetable_error %}
+          {{ load_error(timetable_error) }}
+        {% elif focus %}
+          {{ lesson_list(focus.day, states) }}
+        {% else %}
+          <p class="empty">Žádná výuka v rozvrhu. Užij si volno.</p>
+        {% endif %}
+      </section>
+
+      {% for item in attention[:1] %}
+        {{ attention_tip(item, space, profile.is_parent) }}
+      {% endfor %}
+
+      <section class="card" aria-labelledby="h-ukoly">
+        <div class="card-head">
+          <h2 id="h-ukoly">Úkoly</h2>
+          <a href="{{ url_for('.homeworks') }}">{{ "Všech " ~ homeworks_total if homeworks_total > homeworks|length else "Všechny" }}</a>
+        </div>
+        {% if homeworks_error %}
+          {{ load_error(homeworks_error) }}
+        {% elif homeworks %}
+          <ul class="list">
+            {% for hw in homeworks %}
+              <li class="item">
+                <span class="grow">
+                  <span class="item-title">{{ hw.subject }}</span>
+                  <span class="item-sub clamp-2">{{ hw.content }}</span>
+                </span>
+                {% if hw.due %}
+                  <span class="chip{% if hw.due < today %} chip-danger{% elif (hw.due - today).days <= 1 %} chip-warn{% endif %}">{{ hw.due|relative_day }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">Žádné úkoly. Hotovo.</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="h-znamky">
+        <div class="card-head">
+          <h2 id="h-znamky">Poslední známky</h2>
+          <a href="{{ url_for('.marks') }}">Všechny</a>
+        </div>
+        {% if marks_error %}
+          {{ load_error(marks_error) }}
+        {% elif marks %}
+          <ul class="list">{% for m in marks %}{{ mark_item(m) }}{% endfor %}</ul>
+        {% else %}
+          <p class="empty">Zatím žádné známky.</p>
+        {% endif %}
+      </section>
+
+      <section class="card" aria-labelledby="h-zpravy">
+        <div class="card-head">
+          <h2 id="h-zpravy">Zprávy{% if unread %} <span class="chip chip-primary">{{ unread }} {{ "nová" if unread == 1 else "nové" if unread < 5 else "nových" }}</span>{% endif %}</h2>
+          <a href="{{ url_for('.messages') }}">Všechny</a>
+        </div>
+        {% if messages_error %}
+          {{ load_error(messages_error) }}
+        {% elif messages %}
+          <ul class="list">
+            {% for m in messages %}
+              <li>
+                <a class="item" href="{{ url_for('.message', message_id=m.id) }}">
+                  <span class="dot{% if m.read %} dot-off{% endif %}"{% if not m.read %} role="img" aria-label="Nepřečtená"{% endif %}></span>
+                  <span class="grow">
+                    <span class="item-title">{{ m.title }}</span>
+                    <span class="item-sub">{{ m.sender }}</span>
+                  </span>
+                  {% if m.sent %}<span class="item-end">{{ m.sent.date()|relative_day }}</span>{% endif %}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">Žádné zprávy.</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

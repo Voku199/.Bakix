@@ -1,96 +1,100 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Pokyny pro práci v tomhle repozitáři.
 
-## What Bakix is
+## Co je Bakix
 
-AI study assistant for Czech students connected to their school's Bakaláři system. Fetches grades, schedule, homework, and messages via the Bakaláři v3 OAuth API. Generates AI study pages, sends push notifications, and sells a Premium tier via Stripe.
+Česká webová aplikace (Flask): přehled dat ze školního systému Bakaláři pro žáky a rodiče.
+Cíl je „kouknout a vědět": málo stránek, žádné nastavování, všechno čitelné na telefonu.
+Verze 2 je přepis od nuly. Architektura je podle sesterského projektu Knowix, vzhled podle
+autorova webu vokudev.cz.
 
-## Running the app
+## Příkazy
 
-```bash
-pip install -r requirements.txt
-python app.py
-```
+- Spuštění: `python app.py` (načte `.env`, provede migrace, spustí server; bez `BAKIX_ENV`
+  běží vývojový režim, v produkci waitress na `HOST`:`PORT`). Příkaz `flask --app wsgi …`
+  a gunicorn mají výchozí prostředí `production`, které vyžaduje `SECRET_KEY`,
+  `CREDENTIALS_KEY`, `DATABASE_URL` a `PRIVACY_*`.
+- Testy a lint: `pytest`, `ruff check .`, `ruff format --check .` (CI spouští totéž).
+- Schéma jen přes Alembic: `flask --app wsgi db migrate -m "..."`, pak `db upgrade`.
+  `tests/test_migrations.py` spadne, když se modely a migrace rozejdou.
+- Závislosti: `pyproject.toml`, zámek přes
+  `uv pip compile pyproject.toml [--group dev] --universal --python-version 3.13 -o requirements[-dev].txt`.
 
-- **Dev** (DEBUG=True): HTTP on port 9995; optionally HTTPS if `FLASK_SSL_CERT` + `FLASK_SSL_KEY` are set.
-- **Prod** (DEBUG=False): Waitress server on port 9994, 4 threads.
+## Vrstvy
 
-To auto-login on startup (dev only): set `AUTO_LOGIN_URL` + `AUTO_LOGIN_USER` in `.env` and hit `/login/now`.
+`routes/` (tenké, žádné SQL ani HTTP) → `services/` → `models.py`. Chyby jdou do jediného
+handleru v `errors.py`. Blueprint `routes/school.py` je registrovaný dvakrát: `app` (data
+přihlášeného účtu, `LiveSource`) a `demo` na `/ukazka` (`DemoSource`). Odkazy v jeho šablonách
+proto vždy `url_for('.něco')`, v layoutu `url_for(space ~ '.něco')`.
 
-## Tests
+## Pravidla, která se nesmí porušit
 
-No automated tests currently exist in this repo. If added, an i18n test validating Flask-Babel
-translation files (.po/.mo completeness, fuzzy entries, template string coverage, and the
-`/set-language/<lang>` route) would be a good first one given the multi-language UI.
+**Data a soukromí**
+- Heslo do Bakalářů se nikdy neukládá ani neloguje. Použije se jednou v `accounts.login`.
+- Školní data (známky, rozvrh, zprávy…) nejdou do databáze. Žijí jen v `services/cache.py`
+  (paměť procesu, `SCHOOL_CACHE_SECONDS`). Nová tabulka s daty žáka = změna zásad na
+  `/soukromi` (`services/privacy.py`, posuň `UPDATED_ON`).
+- Do logu nejde uživatelské jméno, obsah zpráv ani text odpovědi školy/AI. Účet jen jako
+  `account.uid[:8]`.
+- Do AI ani do zadání pro AI nejde jméno, škola ani třída s písmenem (jen ročník).
 
-After adding new `_('...')` strings, regenerate translations:
-```bash
-pybabel extract -F babel.cfg -o messages.pot .
-pybabel update -i messages.pot -d translations
-# edit translations/en/LC_MESSAGES/messages.po
-pybabel compile -d translations
-```
+**Odchozí požadavky (SSRF)**
+- Na adresu školy smí sahat jen `services/bakalari.py`. Adresa musí projít
+  `schools.resolve()` (oficiální seznam nebo `BAKALARI_EXTRA_SCHOOLS`).
+- Vždy `allow_redirects=False`, jen https, kontrola veřejné IP v `services/net.py`.
 
-## Key environment variables
+**Výstup (XSS)**
+- CSP je `default-src 'self'` bez `unsafe-inline`: žádné inline skripty, styly ani `on…=`
+  (hlídá `tests/test_design.py`). JS patří do `static/js/app.js`, stránky musí fungovat i bez něj.
+- HTML od školy se převádí na text (`school.html_to_text`), odpověď AI jde přes
+  `services/richtext.py` (escapuje a skládá jen pár značek). Filtr `|safe` jen na JSON-LD.
 
-| Variable | Purpose |
-|---|---|
-| `SECRET_KEY` | Flask sessions + credential encryption key (PBKDF2-derived). Changing it invalidates all stored credentials. |
-| `DEBUG` | `True` = dev mode (port 9995, debug toolbar, `/login/now`, TEST flag hides Stripe UI) |
-| `GEMINI_API_KEY` | Google AI Studio key for AI chat/generation |
-| `GEMINI_MODEL` | Defaults to `gemini-2.5-flash-lite`; set to `gemini-2.5-flash` for premium quality |
-| `OPENROUTER_API_KEY` | Fallback when Gemini returns 429 |
-| `MISTRAL_API_KEY` | Enables the freemium Mistral chat models (services/mistral.py) |
-| `VAPID_PRIVATE_KEY` / `VAPID_PUBLIC_KEY` | Web Push (base64url, no padding) |
-| `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` | Payments |
-| `BAKALARI_INSECURE_SSL` | Set to `true` only for schools with self-signed certs |
+**Formuláře a session**
+- Každý POST formulář má `csrf_token()` (hlídá test). Odhlášení a mazání jsou POST.
+- Session cookie nese jen `Account.session_token`. Výměna tokenu = odhlášení všude.
+- Po přihlášení `session.clear()` před zápisem (session fixation).
 
-## Architecture
+**SQLite**
+- Běží s `BEGIN IMMEDIATE`: otevřená transakce drží zámek pro zápis. Před voláním školy nebo
+  AI transakci ukonči (`commit`/`rollback`), viz komentáře v `services/accounts.py`.
+- Produkce = 1 worker × N vláken. Cache, zámky obnovy tokenů a rate limit jsou v paměti
+  procesu. Víc workerů znamená přesunout je do Redisu.
 
-### Blueprint layout
+## Design systém
 
-```
-app/__init__.py       create_app(): registers blueprints, inits DB, starts scheduler
-app/routes/
-  auth_routes.py      /api/schools/search  (municipality API + cache)  /api/validate-school
-  login.py            /onboarding  /login  /login/now  /login-demo  /logout
-  bakalari_routes.py  Everything after login: dashboard, AI chat, study pages, skills, wrap, settings
-  payment_routes.py   /api/payment/checkout  /api/payment/webhook  /payment/success
-  proxy_routes.py     Internal proxy: forwards Bakaláře API calls from the client
-  push.py             /api/push/subscribe  /api/push/unsubscribe
-```
+Styl je tiskovina, ne hračka: patkové nadpisy (Newsreader, váha 400), Geist pro rozhraní,
+Geist Mono pro drobné verzálkové popisky a časy. Žádné stíny, barva se používá úsporně.
+Hlavní tlačítko je inkoustové s posunutým stínem v barvě `--clay`.
 
-### Service layer
+Tvary jsou kulaté ve třech stupních: panely, tabulky a rámy s buňkami mírně
+(`--r-panel`, 16 px), tlačítka, pole a hlášky o něco míň (`--r-control`), štítky, volby,
+známky a tečky úplně (`--r-pill`). Tip „na čem zapracovat" má vlastní `--r-callout` a je
+bez linky, aby mezi panely vynikl. Nová komponenta si poloměr bere z těchhle tokenů, nikdy
+číslem; rám s buňkami oddělenými linkou potřebuje k poloměru i `overflow: hidden`.
 
-- **`BakalariService`** — Full Bakaláři v3 REST wrapper. OAuth client_id = `"ANDR"`. Token refresh strategy: try refresh_token first, fall back to full re-login from decrypted stored credentials. All data methods follow the same `get_<resource>(access_token) -> dict` pattern.
-- **`GeminiService`** — AI chat + HTML study page generation. Detects intent in this order: modify existing page → confirm pending generation → grade-related → general chat. Caches responses 1 hour (key = SHA-256 of user+prompt). On 429 falls back to OpenRouter automatically. Free users: 5 calls/day; premium: 50.
-- **`crypto.py`** — AES-256 Fernet with PBKDF2-derived key from `SECRET_KEY`. Used only for credential storage. Never change `SECRET_KEY` in production without migrating credentials.
-- **`scheduler.py`** — APScheduler background jobs (Europe/Prague TZ): adaptive Bakaláři polling (3–30 min depending on time of day), evening push at 18:00, weekly AI summary Sundays, summer countdown/token-keeper in Jul–Aug.
+- Ručně psané CSS v `static/css/app.css` (žádný build). Tokeny: `--bg`, `--paper`, `--sand`,
+  `--ink`, `--body`, `--muted`, `--hair`, `--line`, `--accent`, `--clay`, známky `--g1`…`--g5`.
+- Palety: `<html data-palette="…">` z `BAKIX_PALETTE`. Seznam je v `bakix/design.py`, barvy
+  v CSS (blok `:root[data-palette="…"]`, světlý i tmavý). Paleta mění jen tokeny; komponenty
+  nesmí obsahovat barvu natvrdo. Tmavý vzhled přes `prefers-color-scheme`.
+- Sady tvarů: `<html data-shape="…">` z `BAKIX_SHAPE` (`kulaty` výchozí, `mix`, `hranaty`),
+  stejný princip jako palety. Výchozí kombinace je `voku` + `kulaty`.
+- Komponenty: `.btn`, `.card`, `.chip`, `.mark`, `.lesson`, `.tip`, `.kicker`, `.stats`,
+  `.features`. Makra v `templates/components/ui.html`.
+- Známka je číslo v kroužku a není nikdy jen barva. Plnou barvu má jen pětka.
+- Statické soubory přes `asset('…')` (hash v URL, cache na rok). Ikony = sprite
+  `static/img/icons.svg` (Lucide); nová ikona = nový `<symbol>`.
+- Všechno včetně přepínače palet je vidět na `/styleguide` (jen ve vývoji).
 
-### Database
+## SEO
 
-SQLite at `instance/bakix.db`, WAL mode, 30 s timeout. Schema lives in `app/database/schema.py`; `init_db()` runs on every startup and applies non-destructive migrations (only `ADD COLUMN`, never `DROP`).
+Veřejné jsou jen `/`, `/bezpecnost`, `/soukromi`, `/podminky` (seznam `PUBLIC_ENDPOINTS`
+v `security.py` a `PAGES` v `services/seo.py`). Všechno ostatní dostane `noindex` a
+`no-store`. Veřejná šablona začíná `{% set public_page = True %}` a má vlastní `title`
+a `description`. Adresy se skládají z `PUBLIC_URL`, nikdy z hlavičky Host.
 
-Key tables: `saved_credentials` (user + encrypted creds + tokens + premium tier), `conversations` + `conversation_history` (chat, max 40 turns), `gemini_cache` (1 h TTL), `api_cache` (Bakaláři responses), `generated_pages` (AI study HTML), `skills` (custom AI personas), `payments` (Stripe audit, `session_id` UNIQUE for idempotency).
+## Texty
 
-### Auth flow
-
-`before_request` gates all routes except `/welcome`, `/onboarding`, `/login*`, `/static`, `/api/*`. Session key is `user_id` (SHA-256 of `school_url:username`). `get_token(user_id)` is the single entry point for getting a valid Bakaláři token — it handles the whole refresh/reauth chain transparently.
-
-### Premium & payments
-
-Stripe Checkout (one-time, 30 days by default via `PREMIUM_DAYS`). Fulfilment happens at `/payment/success` (redirect-based) and optionally at `/api/payment/webhook` (HMAC-verified, CSRF-exempt). Both paths are idempotent — second call on same `session_id` is a no-op.
-
-Free limits (enforced in `bakalari_routes.py`): 3 chats, 3 study pages, 1 skill. Premium removes all limits and unlocks Thinking mode + Pro model.
-
-### i18n
-
-Flask-Babel. Locale from `session["language"]` (set via `/set-language/<lang>` or `POST /api/settings`), falls back to `Accept-Language`, defaults to Czech (`cs`). All user-visible strings use `_('...')`.
-
-### Non-obvious conventions
-
-- **HTML sanitization**: Study page HTML is sanitized with `nh3` before storage and on render — no `<script>`, no event attributes, no `javascript:` hrefs.
-- **Logging privacy**: User IDs are always logged as `%.8s` (first 8 hex chars only).
-- **Summer mode**: July–August changes dashboard to a countdown banner, skips polling for homework/Komens/timetable (schools go offline), and runs `token_keeper` every Wednesday night to keep tokens alive for September.
-- **School search cache**: Municipality list and per-city school lists are cached 24 h in a module-level dict (thread-safe with `threading.Lock`). Cache is in-process only — restarting the app clears it.
+Česky, tykání, krátce. Žádné „AI asistent, který…" superlativy: popisuj, co stránka dělá.
+Rodič i žák čtou stejné stránky; kde se oslovení liší, rozhoduje `profile.is_parent`.

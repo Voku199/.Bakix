@@ -1,0 +1,148 @@
+{% extends "layouts/base.html" %}
+{% set public_page = True %}
+{% from "components/ui.html" import icon, mark, lesson_list, mark_item, attention_tip %}
+{% block title %}Bakaláři na jeden pohled: známky, rozvrh a úkoly{% endblock %}
+{% block description %}Bakix ukáže známky, rozvrh, úkoly a zprávy z Bakalářů přehledně na jedné stránce. Pro žáky i rodiče, zdarma, bez reklam a bez ukládání hesla.{% endblock %}
+{% block head %}<script type="application/ld+json">{{ json_ld|safe }}</script>{% endblock %}
+{% block content %}
+  <section class="hero">
+    <div class="stack stack-lg">
+      <div class="stack">
+        <p class="kicker">bakaláři pro žáky a rodiče</p>
+        <h1>Škola. Konečně <em>přehledně.</em></h1>
+        <p class="lead">Bakix se připojí k Bakalářům tvojí školy a ukáže to podstatné na jedné stránce: co je dnes, jaké přišly známky a co je potřeba udělat. Kouknout a vědět.</p>
+      </div>
+      <div class="row">
+        <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Přihlásit se přes Bakaláře {{ icon("arrow-right") }}</a>
+        <a class="btn btn-secondary" href="{{ url_for('public.demo') }}">{{ icon("eye") }} Ukázka</a>
+      </div>
+      <p class="muted small">Zdarma · bez reklam · heslo se neukládá</p>
+    </div>
+
+    <div class="preview" aria-label="Ukázka přehledu v Bakixu">
+      {% if focus %}
+        <div class="card">
+          <div class="card-head"><h2>{{ focus.label }}</h2><span class="chip">{{ plural(focus.day.taught|length, "hodina", "hodiny", "hodin") }}</span></div>
+          {{ lesson_list(focus.day, states) }}
+        </div>
+      {% endif %}
+      <div class="card">
+        <div class="card-head"><h2>Poslední známky</h2></div>
+        <ul class="list">{% for m in marks[:3] %}{{ mark_item(m) }}{% endfor %}</ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-co">
+    <p class="kicker">co uvidíš</p>
+    <h2 id="h-co">Všechno důležité bez hledání v menu</h2>
+    <div class="features">
+      <div class="feature">
+        {{ icon("calendar") }}
+        <h3>Dnešní rozvrh</h3>
+        <p>Kolik je hodin, kdy končíš a co se změnilo. Suplování a odpadlé hodiny jsou vidět hned.</p>
+      </div>
+      <div class="feature">
+        {{ icon("award") }}
+        <h3>Známky a průměry</h3>
+        <p>Nové známky nahoře, u každé z čeho byla. U předmětu průměr, trend a kalkulačka „co kdyby“.</p>
+      </div>
+      <div class="feature">
+        {{ icon("list-checks") }}
+        <h3>Úkoly podle termínu</h3>
+        <p>Co je na zítra, co do konce týdne a co už hoří. Seřazené tak, jak je potřeba je dělat.</p>
+      </div>
+      <div class="feature">
+        {{ icon("mail") }}
+        <h3>Zprávy ze školy</h3>
+        <p>Komens přehledně a čitelně i na telefonu. Nepřečtené zprávy poznáš na první pohled.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-uceni">
+    <p class="kicker">když se nedaří</p>
+    <h2 id="h-uceni">Špatná známka? Bakix ví, z čeho byla, a pomůže to dohnat</h2>
+    <div class="split">
+      <div class="stack">
+        <p class="lead">Dostaneš pětku z matematiky. Bakix z Bakalářů pozná, že šlo o Pythagorovu větu, a nabídne ti hotové zadání pro AI. Vložíš ho do ChatGPT, Claude nebo jiné AI, kterou používáš, a ta tě látkou provede krok za krokem.</p>
+        <ul class="stack stack-sm">
+          <li>{{ icon("check") }} Zadání vychází z toho, co se u vás ve třídě právě probírá.</li>
+          <li>{{ icon("check") }} AI se nejdřív zeptá, co už umíš, a neprozradí hned výsledek.</li>
+          <li>{{ icon("check") }} Do zadání nejde jméno ani škola. Kam ho vložíš, rozhoduješ ty.</li>
+          <li>{{ icon("check") }} Angličtinu rovnou procvičíš na sesterském <a href="{{ config.KNOWIX_URL or '#' }}" rel="noopener">Knowixu</a>.</li>
+        </ul>
+        {% if tip %}{{ attention_tip(tip, "demo") }}{% endif %}
+      </div>
+      <div class="stack stack-sm">
+        <p class="label">Takhle zadání vypadá</p>
+        <p class="prompt-sample">Jsem žák 8. třídy. V předmětu Matematika mi nejde látka z tématu „Pythagorova věta“. Naposledy jsem z toho dostal/a známku 5. Chci se to doopravdy naučit, ne jen opsat výsledek.
+
+Buď můj trpělivý doučovatel. Postupuj takhle:
+1. Nejdřív mi polož 3 krátké otázky, abys zjistil, co už umím…
+2. Vysvětli mi látku jednoduše a po malých krocích…
+3. Dej mi 5 příkladů od nejlehčího po těžší…</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-kdo">
+    <p class="kicker">pro koho</p>
+    <h2 id="h-kdo">Pro žáky i pro rodiče</h2>
+    <div class="features">
+      <div class="feature">
+        {{ icon("graduation-cap") }}
+        <h3>Jsi žák</h3>
+        <p>Ráno jedním pohledem zjistíš, co tě čeká. Večer víš, co je na zítra. A když něco nejde, máš po ruce plán, jak to dohnat.</p>
+      </div>
+      <div class="feature">
+        {{ icon("users") }}
+        <h3>Jsi rodič</h3>
+        <p>Přihlásíš se rodičovským účtem a vidíš známky, absenci a zprávy od učitelů bez proklikávání. Zadání pro AI umí Bakix napsat i pro tebe, ať víš, jak dítěti látku vysvětlit.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-bezpecnost">
+    <p class="kicker">bezpečnost</p>
+    <h2 id="h-bezpecnost">Tvoje data zůstávají ve škole</h2>
+    <div class="features">
+      <div class="feature">
+        {{ icon("key") }}
+        <h3>Heslo neukládáme</h3>
+        <p>Použije se jednou při přihlášení. Dál Bakix drží jen zašifrovaný přístupový token, který můžeš kdykoli zrušit.</p>
+      </div>
+      <div class="feature">
+        {{ icon("database") }}
+        <h3>Známky neukládáme</h3>
+        <p>Známky, rozvrh ani zprávy nejdou do databáze. Načtou se ze školy, když se díváš, a za pár minut jsou pryč.</p>
+      </div>
+      <div class="feature">
+        {{ icon("shield") }}
+        <h3>Žádné sledování</h3>
+        <p>Žádné reklamy, žádná analytika, žádné cizí skripty. Stránka nenačítá nic z jiných webů.</p>
+      </div>
+    </div>
+    <p><br><a href="{{ url_for('public.security') }}">Jak přesně to funguje {{ icon("arrow-right") }}</a></p>
+  </section>
+
+  <section class="section faq" aria-labelledby="h-faq">
+    <p class="kicker">otázky</p>
+    <h2 id="h-faq">Na co se lidé ptají</h2>
+    <br>
+    {% for question, answer in faq %}
+      <details{% if loop.first %} open{% endif %}>
+        <summary>{{ question }}</summary>
+        <p>{{ answer }}</p>
+      </details>
+    {% endfor %}
+  </section>
+
+  <section class="section cta">
+    <h2>Zkus to. Zabere to minutu.</h2>
+    <div class="row">
+      <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Přihlásit se přes Bakaláře</a>
+      <a class="btn btn-secondary" href="{{ url_for('public.demo') }}">Ukázka bez přihlášení</a>
+    </div>
+  </section>
+{% endblock %}

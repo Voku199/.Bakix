@@ -1,0 +1,42 @@
+[project]
+name = "bakix"
+version = "2.0.0"
+description = "Bakix – Bakaláři na jeden pohled, pro žáky a rodiče"
+requires-python = ">=3.13"
+dependencies = [
+    "flask>=3.1",
+    "flask-sqlalchemy>=3.1",
+    "flask-migrate>=4.1",
+    "flask-wtf>=1.2",
+    "flask-limiter>=3.12",
+    "sqlalchemy>=2.0",
+    "requests>=2.32",            # Bakaláři API, seznam škol, volitelně AI
+    "cryptography>=44",          # šifrování tokenů Bakalářů v databázi (Fernet)
+    "python-dotenv>=1.1",
+    "tzdata>=2025.2",            # Europe/Prague i tam, kde OS databázi zón nemá
+    "waitress>=3.0",             # produkční server pro `python app.py` (Windows i Linux)
+    "gunicorn>=23; sys_platform != 'win32'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+    "ruff>=0.12",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["migrations", "legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101"]  # assert v testech je v pořádku
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S"]

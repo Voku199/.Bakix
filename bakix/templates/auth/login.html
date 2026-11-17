@@ -1,0 +1,47 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon %}
+{% block title %}Přihlášení{% endblock %}
+{% block page_class %}page-narrow{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    <header class="stack stack-sm">
+      <p class="kicker">přihlášení</p>
+      <h1>Přihlas se jako do Bakalářů</h1>
+      <p class="muted">Stejné jméno a heslo, jaké používáš ve škole. Žák i rodič.</p>
+    </header>
+
+    {% if school %}
+      <form method="post" class="card stack" action="{{ url_for('auth.login') }}" autocomplete="on">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="mesto" value="{{ school.city }}">
+        <input type="hidden" name="skola" value="{{ school.url }}">
+        <div class="picked">
+          {{ icon("graduation-cap") }}
+          <span class="grow"><strong>{{ school.name }}</strong><br><span class="muted small">{{ school.city }}</span></span>
+          <a class="small" href="{{ url_for('auth.login', zmenit=1) }}">Změnit</a>
+        </div>
+        <label class="field"><span>Uživatelské jméno</span>
+          <input class="input" name="jmeno" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="200" autofocus>
+        </label>
+        <label class="field"><span>Heslo</span>
+          <input class="input" name="heslo" type="password" autocomplete="current-password" required maxlength="200">
+        </label>
+        <button class="btn btn-primary btn-block" type="submit">Přihlásit se</button>
+        <p class="hint">{{ icon("lock") }} Heslo Bakix použije jednou a zahodí. Neukládá ho. <a href="{{ url_for('public.security') }}">Jak to funguje</a></p>
+      </form>
+    {% else %}
+      <div class="card stack">
+        <form method="get" action="{{ url_for('auth.login') }}" class="stack" role="search">
+          <label class="field"><span>Najdi svoji školu</span>
+            <input class="input" name="q" type="search" value="{{ query }}" placeholder="Město nebo název školy" autocomplete="off" minlength="2" required autofocus
+                   data-school-search="{{ url_for('auth.school_results') }}" data-results="#skoly">
+          </label>
+          <button class="btn btn-secondary" type="submit" data-hide-with-js>{{ icon("search") }} Hledat</button>
+        </form>
+        <div id="skoly" aria-live="polite">{% include "auth/_schools.html" %}</div>
+      </div>
+    {% endif %}
+
+    <p class="center muted">Chceš se jen podívat? <a href="{{ url_for('public.demo') }}">Otevři ukázku</a>, nic nevyplňuješ.</p>
+  </div>
+{% endblock %}

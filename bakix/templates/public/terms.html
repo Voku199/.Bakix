@@ -1,0 +1,34 @@
+{% extends "layouts/base.html" %}
+{% set public_page = True %}
+{% block title %}Podmínky používání{% endblock %}
+{% block description %}Podmínky používání Bakixu: nezávislý, bezplatný přehled dat z Bakalářů pro žáky a rodiče.{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <article class="prose">
+    <p class="kicker">podmínky</p>
+    <h1>Podmínky používání</h1>
+    <p class="muted">Platí od {{ updated_on|date(year=True) }}.</p>
+
+    <h2>Co je Bakix</h2>
+    <p>Bakix je bezplatná webová aplikace, která přehledně zobrazuje data ze školního systému Bakaláři. Provozuje ji {{ config.PRIVACY_CONTROLLER }}. Bakix je nezávislý projekt: není oficiální aplikací Bakalářů a s jejich výrobcem není nijak spojen. „Bakaláři“ je označení produktu jeho výrobce.</p>
+
+    <h2>Kdo ho může používat</h2>
+    <p>Kdokoli, kdo má vlastní účet žáka nebo rodiče v Bakalářích své školy. Přihlašuj se jen svými údaji.</p>
+
+    <h2>Na co se nespoléhat</h2>
+    <ul>
+      <li>Závazná jsou vždy data ve školním systému. Bakix je může zobrazit se zpožděním nebo neúplně, například při výpadku školního serveru.</li>
+      <li>Kalkulačka průměru a tipy k učení jsou orientační.</li>
+      <li>Odpovědi AI se můžou mýlit. Platí to, co říká učitel.</li>
+    </ul>
+
+    <h2>Co nedělat</h2>
+    <p>Nezkoušej se přihlašovat k cizím účtům, nepřetěžuj službu automatickými dotazy a neobcházej její ochrany.</p>
+
+    <h2>Dostupnost a odpovědnost</h2>
+    <p>Bakix je poskytován zdarma a tak, jak je. Děláme, co umíme, aby fungoval, ale nepřetržitý provoz zaručit nemůžeme a službu můžeme změnit nebo ukončit.</p>
+
+    <h2>Konec používání</h2>
+    <p>Kdykoli stačí smazat účet v <a href="{{ url_for('account.index') }}">nastavení účtu</a>. Jak nakládáme s údaji, popisují <a href="{{ url_for('public.privacy_policy') }}">zásady ochrany soukromí</a>.</p>
+  </article>
+{% endblock %}

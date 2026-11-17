@@ -1,0 +1,22 @@
+# Denní úklid podle lhůt ze zásad ochrany soukromí (bakix/services/privacy.py).
+[Unit]
+Description=Bakix: denní úklid neaktivních účtů
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=svc-bakix
+Group=svc-bakix
+WorkingDirectory=/home/voku/bakix-app
+EnvironmentFile=/etc/bakix/bakix.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/voku/bakix-app/.venv/bin/flask --app wsgi cleanup
+
+StateDirectory=bakix
+StateDirectoryMode=0750
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only

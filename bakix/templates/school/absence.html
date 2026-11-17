@@ -1,0 +1,38 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, page_header, load_error %}
+{% block title %}Absence{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    <p><a href="{{ url_for('.marks') }}">{{ icon("chevron-left") }} Známky</a></p>
+    {{ page_header("Absence", kicker="absence", lead="Zameškané hodiny za tohle pololetí.") }}
+    {% if error %}
+      {{ load_error(error) }}
+    {% elif absence %}
+      <div class="stats">
+        <div class="stat"><span class="stat-value">{{ absence.total }}</span><span class="stat-label">zameškaných hodin</span></div>
+        <div class="stat"><span class="stat-value">{{ absence.excused }}</span><span class="stat-label">omluvených</span></div>
+        <div class="stat"><span class="stat-value">{{ absence.unexcused }}</span><span class="stat-label">neomluvených</span></div>
+        <div class="stat"><span class="stat-value">{{ absence.unsolved }}</span><span class="stat-label">čeká na omluvu</span></div>
+        <div class="stat"><span class="stat-value">{{ absence.late }}</span><span class="stat-label">pozdních příchodů</span></div>
+      </div>
+      {% if absence.subjects %}
+        <section class="card" aria-labelledby="h-predmety">
+          <div class="card-head"><h2 id="h-predmety">Podle předmětů</h2></div>
+          <ul class="list">
+            {% for s in absence.subjects %}
+              <li class="item">
+                <span class="grow">
+                  <span class="item-title">{{ s.subject }}</span>
+                  <progress class="meter" max="100" value="{{ s.percent|round(1) }}">{{ s.percent|round|int }} %</progress>
+                </span>
+                <span class="item-end mono">{{ s.missed }} z {{ s.lessons }}<br>{{ s.percent|round|int }} %{% if absence.threshold and s.percent >= absence.threshold %} <span class="chip chip-danger">přes limit</span>{% endif %}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if absence.threshold %}<p class="hint">Škola má hranici {{ absence.threshold|round|int }} % zameškaných hodin.</p>{% endif %}
+        </section>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endblock %}

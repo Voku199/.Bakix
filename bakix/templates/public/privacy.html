@@ -1,0 +1,47 @@
+{% extends "layouts/base.html" %}
+{% set public_page = True %}
+{% block title %}Zásady ochrany soukromí{% endblock %}
+{% block description %}Jaké osobní údaje Bakix zpracovává, proč, jak dlouho a jak je smazat. Heslo ani známky se neukládají.{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <article class="prose">
+    <p class="kicker">soukromí</p>
+    <h1>Zásady ochrany soukromí</h1>
+    <p class="muted">Platí od {{ updated_on|date(year=True) }}.</p>
+
+    <h2>Kdo je správce</h2>
+    <p>{{ config.PRIVACY_CONTROLLER }}. Kontakt: <a href="mailto:{{ config.PRIVACY_CONTACT_EMAIL }}">{{ config.PRIVACY_CONTACT_EMAIL }}</a>.</p>
+
+    <h2>Co zpracováváme a jak dlouho</h2>
+    <div class="table-wrap">
+      <table class="table">
+        {% for what, how_long in retention %}
+          <tr><th scope="row">{{ what }}</th><td>{{ how_long }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p>Technické záznamy serveru (logy) obsahují čas a typ požadavku, ne obsah tvých dat ani uživatelské jméno.</p>
+
+    <h2>Proč</h2>
+    <p>Jen proto, abychom ti mohli zobrazit tvoje školní data, o která sis přihlášením řekl/a (čl. 6 odst. 1 písm. b GDPR). Žádný marketing, žádné profilování, žádný prodej údajů.</p>
+
+    <h2>Komu údaje předáváme</h2>
+    <div class="table-wrap">
+      <table class="table">
+        {% for p in processors %}
+          <tr><th scope="row">{{ p.name }}</th><td>{{ p.purpose }}<br><span class="muted">{{ p.data }}</span></td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <p>Bakix běží na vlastním serveru provozovatele v České republice. Nikomu dalšímu údaje nepředáváme.</p>
+
+    <h2>Cookies</h2>
+    <p>Používáme jen nezbytné cookies: jednu pro přihlášení a jednu, která si pamatuje naposledy vybranou školu. Žádné sledovací ani reklamní cookies, proto tu není ani cookie lišta.</p>
+
+    <h2>Děti a rodiče</h2>
+    <p>Bakix zobrazuje jen to, co žákovi nebo rodiči škola v Bakalářích sama zpřístupňuje. Pokud je ti méně než 15 let, používej Bakix se souhlasem rodiče.</p>
+
+    <h2>Tvoje práva</h2>
+    <p>Máš právo na přístup k údajům, opravu, výmaz, omezení zpracování a přenositelnost a právo podat stížnost u Úřadu pro ochranu osobních údajů (uoou.gov.cz). Výmaz uděláš sám/sama jedním tlačítkem v <a href="{{ url_for('account.index') }}">účtu</a>, s ostatním napiš na kontakt výše.</p>
+  </article>
+{% endblock %}

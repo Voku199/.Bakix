@@ -1,0 +1,87 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, mark, mark_item %}
+{% block title %}{{ subject.name }}{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    <header class="stack stack-sm">
+      <p><a href="{{ url_for('.marks') }}">{{ icon("chevron-left") }} Známky</a></p>
+      <div class="row row-between">
+        <h1 class="grow">{{ subject.name }}</h1>
+        {% if subject.average_text %}
+          <div class="stat"><span class="stat-value">{{ subject.average_text }}</span><span class="stat-label">průměr</span></div>
+        {% endif %}
+      </div>
+      {% if subject.trend == "up" %}<p class="trend trend-up">{{ icon("trending-up") }} Poslední známky jsou lepší než ty předtím.</p>
+      {% elif subject.trend == "down" %}<p class="trend trend-down">{{ icon("trending-down") }} Poslední známky jsou horší než ty předtím.</p>{% endif %}
+    </header>
+
+    <div class="grid-overview">
+      <section class="card" aria-labelledby="h-vse">
+        <div class="card-head"><h2 id="h-vse">Známky</h2></div>
+        {% if subject.marks %}
+          <ul class="list">{% for m in subject.marks %}{{ mark_item(m, show_subject=False) }}{% endfor %}</ul>
+        {% else %}
+          <p class="empty">Zatím žádné známky.</p>
+        {% endif %}
+      </section>
+
+      <div class="stack">
+        <section class="card stack" aria-labelledby="h-coby">
+          <h2 id="h-coby">Co kdyby…</h2>
+          <form method="get" class="stack">
+            <div class="row">
+              <label class="field grow"><span>Dostanu známku</span>
+                <select class="select" name="znamka">
+                  {% for option in ["1", "1-", "2", "2-", "3", "3-", "4", "4-", "5"] %}
+                    <option value="{{ option }}"{% if option == what_if_mark %} selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="field grow"><span>s vahou</span>
+                <select class="select" name="vaha">
+                  {% for option in range(1, 11) %}
+                    <option value="{{ option }}"{% if option == weight %} selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+            </div>
+            <button class="btn btn-secondary" type="submit">Spočítat průměr</button>
+          </form>
+          {% if what_if %}
+            <p class="alert" role="status">{{ icon("info") }}<span>Průměr by vyšel na <strong>{{ what_if|decimal }}</strong>.</span></p>
+          {% endif %}
+          {% if goal %}
+            <p class="muted small">
+              Na {{ goal.grade }} na vysvědčení (průměr do {{ goal.limit|decimal }}) chybí zhruba
+              <strong>{{ plural(goal.ones_needed, "jednička", "jedničky", "jedniček") }}</strong> váhy {{ weight }}.
+            </p>
+          {% endif %}
+          <p class="hint">Orientační výpočet váženým průměrem. Škola může počítat jinak.</p>
+        </section>
+
+        <section class="card stack" aria-labelledby="h-uceni">
+          <h2 id="h-uceni">Potřebuješ s tím pomoct?</h2>
+          <p class="muted">Bakix sepíše zadání pro AI podle toho, co se v předmětu právě probírá.</p>
+          <p><a class="btn btn-primary" href="{{ url_for('.study_page', predmet=subject.id) }}">{{ icon("sparkles") }} Sepsat zadání</a></p>
+          {% if knowix %}
+            <p class="small">Angličtinu si můžeš procvičit i na <a href="{{ knowix.url }}" rel="noopener">Knowixu {{ icon("external-link") }}</a>.</p>
+          {% endif %}
+        </section>
+
+        {% if themes %}
+          <section class="card" aria-labelledby="h-temata">
+            <div class="card-head"><h2 id="h-temata">Co se probíralo</h2></div>
+            <ul class="list">
+              {% for t in themes %}
+                <li class="item">
+                  <span class="grow">{{ t.text }}</span>
+                  {% if t.day %}<span class="item-end">{{ t.day|relative_day }}</span>{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{# Výsledky hledání školy. Vkládá se do login.html i samostatně pro našeptávání. #}
+{% if results %}
+  <ul class="school-list">
+    {% for s in results %}
+      <li><a class="school" href="{{ url_for('auth.login', mesto=s.city, skola=s.url) }}"><strong>{{ s.name }}</strong><small>{{ s.city }}</small></a></li>
+    {% endfor %}
+  </ul>
+{% elif searched %}
+  <p class="empty">Nic jsme nenašli. Zkus název města, kde škola je.</p>
+{% endif %}

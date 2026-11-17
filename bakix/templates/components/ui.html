@@ -1,0 +1,109 @@
+{#
+  Komponenty UI. Import: {% from "components/ui.html" import icon, mark, lesson_list, ... %}
+  Všechny jsou předvedené na /styleguide (ve vývoji).
+#}
+
+{# Ikona ze spritu static/img/icons.svg. Bez `label` je dekorativní a čtečka ji přeskočí. #}
+{% macro icon(name, label=None, class="") -%}
+  <svg class="icon {{ class }}"{% if label %} role="img" aria-label="{{ label }}"{% else %} aria-hidden="true" focusable="false"{% endif %}><use href="{{ asset('img/icons.svg') }}#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# Hláška. Kategorie odpovídají flash(): success, error, info, warn. #}
+{% set _alert_icons = {"success": "check", "error": "circle-alert", "info": "info", "warn": "circle-alert"} %}
+{% macro alert(category, message) -%}
+  {% set category = category if category in _alert_icons else "info" %}
+  <div class="alert alert-{{ category }}"{% if category == "error" %} role="alert"{% endif %}>
+    {{ icon(_alert_icons[category]) }}
+    <p>{{ message }}</p>
+  </div>
+{%- endmacro %}
+
+{# Známka jako razítko. `m` je school.Mark; barvu určuje m.level (0 = bez barvy). #}
+{% macro mark(m, size="") -%}
+  <span class="mark{% if m.level %} mark-{{ m.level }}{% endif %}{% if size %} mark-{{ size }}{% endif %}" title="{{ m.subject }}{% if m.weight %}, váha {{ m.weight }}{% endif %}">{{ m.text }}</span>
+{%- endmacro %}
+
+{# Nadpis stránky s popiskem (drobné verzálky) a volitelným perexem. Tělo volání se vykreslí vpravo. #}
+{% macro page_header(title, kicker=None, lead=None) -%}
+  <header class="row row-between">
+    <div class="grow">
+      {% if kicker %}<p class="kicker">{{ kicker }}</p>{% endif %}
+      <h1>{{ title }}</h1>
+      {% if lead %}<p class="muted">{{ lead }}</p>{% endif %}
+    </div>
+    {% if caller %}<div class="row">{{ caller() }}</div>{% endif %}
+  </header>
+{%- endmacro %}
+
+{# Část stránky, kterou se nepodařilo načíst. #}
+{% macro load_error(message) -%}
+  <div class="alert alert-warn">{{ icon("circle-alert") }}<p>{{ message }}</p></div>
+{%- endmacro %}
+
+{# Tlačítko „Obnovit“: zahodí krátkou paměť a načte data ze školy znovu. #}
+{% macro refresh_button(space) -%}
+  <form method="post" action="{{ url_for(space ~ '.refresh') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="zpet" value="{{ request.path }}">
+    <button class="btn btn-ghost btn-sm" type="submit" title="Načíst znovu ze školy">{{ icon("rotate-ccw") }}<span class="sr-only">Obnovit</span></button>
+  </form>
+{%- endmacro %}
+
+{# Hodiny jednoho dne. `states` je seznam "past" / "now" / "" stejné délky (insights.lesson_states). #}
+{% macro lesson_list(day, states=None, compact=False) -%}
+  <ol class="lessons">
+    {% for lesson in day.lessons %}
+      {% set state = states[loop.index0] if states else "" %}
+      <li class="lesson{% if lesson.cancelled %} is-cancelled is-changed{% elif lesson.changed %} is-changed{% elif state == 'now' %} is-now{% endif %}{% if state == 'past' %} is-past{% endif %}">
+        <span class="lesson-time">{{ lesson.begin|clock }}<small>{{ lesson.end|clock }}</small></span>
+        <span>
+          <span class="lesson-title">{{ lesson.abbrev if compact and lesson.abbrev else lesson.subject }}</span>
+          {% if state == "now" %}<span class="chip chip-primary">teď</span>{% endif %}
+          {% if lesson.changed %}
+            <span class="lesson-sub">{{ lesson.change }}</span>
+          {% elif not compact and lesson.teacher %}
+            <span class="lesson-sub">{{ lesson.teacher }}</span>
+          {% endif %}
+        </span>
+        {% if lesson.room %}<span class="lesson-room">{{ lesson.room }}</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+{%- endmacro %}
+
+{# Řádek známky v seznamu. #}
+{% macro mark_item(m, show_subject=True) -%}
+  <li class="item">
+    {{ mark(m) }}
+    <span class="grow">
+      <span class="item-title">{{ m.subject if show_subject else (m.topic or m.caption or "Známka") }}</span>
+      <span class="item-sub clamp-2">
+        {%- if show_subject -%}{{ [m.caption, m.theme]|select|join(" · ") }}{%- else -%}{{ m.caption if m.theme else "" }}{%- endif -%}
+      </span>
+    </span>
+    <span class="item-end">
+      {% if m.day %}{{ m.day|relative_day }}{% endif %}
+      {% if m.weight %}<br><span class="mono">váha {{ m.weight }}</span>{% endif %}
+    </span>
+  </li>
+{%- endmacro %}
+
+{# Tip „na čem zapracovat“ s nabídkou zadání pro AI. `a` je insights.Attention. #}
+{% macro attention_tip(a, space, parent=False) -%}
+  <div class="tip">
+    {% if a.mark %}{{ mark(a.mark, "lg") }}{% else %}{{ icon("trending-down") }}{% endif %}
+    <div class="tip-body">
+      <p class="item-title">{{ a.title }}</p>
+      {% if a.detail %}<p class="item-sub">{{ a.detail }}</p>{% endif %}
+      <p class="small">
+        {% if a.topic %}
+          Vypadá to na téma <strong>{{ a.topic }}</strong>.
+          {{ "Mám sepsat zadání pro AI, se kterým to dítěti pomůžeš vysvětlit?" if parent else "Mám ti sepsat zadání pro AI, které tě to naučí podle toho, co teď berete?" }}
+        {% else %}
+          {{ "Mám sepsat zadání pro AI, se kterým dítěti s předmětem pomůžeš?" if parent else "Mám ti sepsat zadání pro AI, které ti s tím pomůže?" }}
+        {% endif %}
+      </p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for(space ~ '.study_page', predmet=a.subject.id, tema=a.topic or none, znamka=a.mark.text if a.mark else none) }}">{{ icon("sparkles") }} Sepsat zadání</a>
+    </div>
+  </div>
+{%- endmacro %}

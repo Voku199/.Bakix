@@ -1,121 +1,86 @@
-import logging
+"""Spuštění Bakixu jedním příkazem: `python app.py`.
+
+Všechno se nastavuje v souboru .env (vzor: .env.example):
+
+    BAKIX_ENV   development (výchozí pro app.py) | production
+    HOST        na jaké adrese poslouchat (výchozí 127.0.0.1)
+    PORT        na jakém portu (výchozí 5000)
+    THREADS     počet vláken v produkci (výchozí 8)
+
+Co skript udělá:
+  1. načte .env,
+  2. připraví databázi (provede migrace, takže první spuštění nic dalšího nepotřebuje),
+  3. spustí server: ve vývoji vestavěný server Flasku s automatickým načítáním změn,
+     v produkci waitress (funguje na Windows i Linuxu, jeden proces s vlákny).
+
+Bez .env se spustí vývojový režim na http://127.0.0.1:5000. Na veřejný server patří
+BAKIX_ENV=production a vyplněné klíče; bez nich produkce odmítne nastartovat.
+"""
+
+import ipaddress
 import os
-import threading
+import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv()
 
-from app import create_app
+ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
 
-_debug = os.getenv("DEBUG", "False").strip().lower() in ("1", "true", "yes")
+# Příkaz `flask …` a gunicorn mají výchozí produkci. `python app.py` bez .env je skoro vždycky
+# první spuštění na vlastním počítači, proto tady vývojový režim.
+if "BAKIX_ENV" not in os.environ:
+    os.environ["BAKIX_ENV"] = "development"
+    print("BAKIX_ENV není nastavené: spouštím vývojový režim. Na server dej BAKIX_ENV=production.")
 
-logging.basicConfig(
-    level=logging.DEBUG if _debug else logging.INFO,
-    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-    datefmt="%H:%M:%S",
-)
-
-_instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance")
-os.makedirs(_instance_dir, exist_ok=True)
-_log_file = os.path.join(_instance_dir, "bakix.log")
-
-from logging.handlers import RotatingFileHandler as _RFH
-_fh = _RFH(_log_file, maxBytes=5_000_000, backupCount=3, encoding="utf-8")
-_fh.setLevel(logging.DEBUG if _debug else logging.INFO)
-_fh.setFormatter(logging.Formatter(
-    "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-))
-logging.getLogger().addHandler(_fh)
-
-_log = logging.getLogger("bakix.startup")
-
-app = create_app()
-app.config["DEBUG"]     = _debug
-app.config["TEST_MODE"] = os.getenv("TEST", "").strip().lower() in ("1", "true", "yes")
+from bakix import create_app  # noqa: E402  (až po načtení .env)
 
 
-def _send_unavailable_alert(error: str) -> None:
-    api_key = os.getenv("RESEND_API_KEY", "").strip()
-    if not api_key:
-        _log.error("RESEND_API_KEY není nastaven — alert email nelze odeslat")
-        return
+def _is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
     try:
-        import resend
-        resend.api_key = api_key
-        resend.Emails.send({
-            "from": os.getenv("RESEND_FROM_EMAIL", "alert@bakix.cz"),
-            "to": ["vojta.kurinec@gmail.com"],
-            "subject": "Bakix není spuštěný pro veřejnou dostupnost",
-            "html": (
-                "<h2>⚠️ Bakix není veřejně dostupný</h2>"
-                "<p>Web <strong>bakix.cz</strong> není dostupný z internetu, "
-                "přestože server byl spuštěn v produkčním režimu.</p>"
-                f"<p><strong>Chyba:</strong> <code>{error}</code></p>"
-            ),
-        })
-        _log.info("Alert email odeslán na vojta.kurinec@gmail.com")
-    except Exception as exc:
-        _log.error("Nepodařilo se odeslat alert email: %s", exc)
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
-def _check_public_availability() -> None:
-    import time
-    import requests
-    time.sleep(8)  # počkáme na plné spuštění serveru
-    url = "https://bakix.cz"
+def main() -> int:
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "5000"))
+    threads = int(os.environ.get("THREADS", "8"))
+
     try:
-        resp = requests.get(url, timeout=15)
-        if resp.status_code < 500:
-            _log.info("bakix.cz je veřejně dostupný (HTTP %d)", resp.status_code)
-            return
-        error = f"HTTP {resp.status_code}"
-    except Exception as exc:
-        error = str(exc)
+        app = create_app()
+    except RuntimeError as error:
+        print(f"Bakix se nespustil: {error}", file=sys.stderr)
+        return 1
 
-    _log.error("bakix.cz není veřejně dostupný: %s", error)
-    _send_unavailable_alert(error)
+    # Reloader spouští skript dvakrát; migrace stačí jednou, v rodičovském procesu.
+    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        from flask_migrate import upgrade
+
+        with app.app_context():
+            upgrade(directory=str(ROOT / "migrations"))
+
+    if app.debug:
+        # Interaktivní debugger umí spouštět kód, proto jen na vlastním počítači.
+        local = _is_loopback(host)
+        if not local:
+            print("Vývojový režim na veřejné adrese: debugger a automatické načítání jsou vypnuté.")
+        print(
+            f"Bakix (vývoj) běží na http://{host}:{port}  ·  ukázka: /ukazka  ·  styl: /styleguide"
+        )
+        app.run(host=host, port=port, debug=local, use_debugger=local, use_reloader=local)
+        return 0
+
+    from waitress import serve
+
+    print(f"Bakix (produkce) běží na http://{host}:{port}, {threads} vláken")
+    # Jeden proces: paměť na školní data, zámky obnovy tokenů i limity pak platí pro celý web.
+    serve(app, host=host, port=port, threads=threads, ident=None)
+    return 0
+
 
 if __name__ == "__main__":
-    _base = os.path.dirname(os.path.abspath(__file__))
-    log   = logging.getLogger("bakix")
-
-    def _resolve(p: str) -> str:
-        return p if os.path.isabs(p) else os.path.join(_base, p)
-
-    if _debug:
-        # ── Lokální vývoj ─────────────────────────────────────────────────y
-        cert_file = os.getenv("FLASK_SSL_CERT", "").strip()
-        key_file  = os.getenv("FLASK_SSL_KEY",  "").strip()
-
-        ssl_context = None
-        if cert_file and key_file:
-            cert_file = _resolve(cert_file)
-            key_file  = _resolve(key_file)
-            if os.path.isfile(cert_file) and os.path.isfile(key_file):
-                ssl_context = (cert_file, key_file)
-                log.info("Dev server (HTTPS): https://0.0.0.0:9994")
-            else:
-                log.warning("Cert soubory nenalezeny, fallback na HTTP")
-
-        if not ssl_context:
-            log.info("Dev server (HTTP): http://0.0.0.0:9994")
-
-        app.run(host="0.0.0.0", port=9995, debug=True, ssl_context=ssl_context)
-
-    else:
-        # ── Produkce ──────────────────────────────────────────────────────
-        from waitress import serve
-        threading.Thread(target=_check_public_availability, daemon=True).start()
-        log.info("Production server (waitress): http://0.0.0.0:9994")
-        serve(
-            app,
-            host="0.0.0.0",
-            port=9995,
-            threads=4,
-            # Trust Caddy (127.0.0.1) as a proxy so X-Forwarded-For reaches Flask.
-            # Without this, Waitress strips all proxy headers by default.
-            trusted_proxy="127.0.0.1",
-            trusted_proxy_headers=["x-forwarded-for", "x-forwarded-proto", "x-forwarded-host"],
-            clear_untrusted_proxy_headers=True,
-        )
+    sys.exit(main())

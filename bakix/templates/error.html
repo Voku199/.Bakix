@@ -1,0 +1,10 @@
+{% extends "layouts/base.html" %}
+{% block title %}Chyba {{ code }}{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <div class="stack">
+    <p class="error-code">CHYBA {{ code }}</p>
+    <h1>{{ message }}</h1>
+    <p><a class="btn btn-primary" href="{{ url_for('public.index') }}">Zpět na začátek</a></p>
+  </div>
+{% endblock %}

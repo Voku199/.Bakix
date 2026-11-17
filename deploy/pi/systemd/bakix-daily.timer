@@ -1,0 +1,10 @@
+[Unit]
+Description=Bakix: denní úklid ve 3:40
+
+[Timer]
+# Místní čas Pi (Europe/Prague). Persistent: když Pi ve 3:40 neběželo, doběhne po startu.
+OnCalendar=*-*-* 03:40:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

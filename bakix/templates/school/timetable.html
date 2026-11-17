@@ -1,0 +1,31 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, lesson_list, page_header, load_error %}
+{% block title %}Rozvrh{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {% call page_header("Rozvrh", kicker="týden od " ~ monday|date) %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('.timetable', tyden=previous.isoformat()) }}">{{ icon("chevron-left") }}<span class="sr-only">Předchozí týden</span></a>
+      {% if not is_current %}<a class="btn btn-secondary btn-sm" href="{{ url_for('.timetable') }}">Tento týden</a>{% endif %}
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('.timetable', tyden=following.isoformat()) }}"><span class="sr-only">Další týden</span>{{ icon("chevron-right") }}</a>
+    {% endcall %}
+
+    {% if error %}
+      {{ load_error(error) }}
+    {% elif days %}
+      <div class="week">
+        {% for day in days %}
+          <section class="card{% if day.day == today %} day-today{% endif %}" aria-labelledby="den-{{ loop.index }}">
+            <div class="card-head">
+              <h2 id="den-{{ loop.index }}">{{ weekdays[day.day.weekday()]|capitalize }} <span class="muted small mono">{{ day.day.day }}. {{ day.day.month }}.</span></h2>
+              {% if day.day == today %}<span class="chip chip-primary">dnes</span>{% endif %}
+            </div>
+            {% if day.note %}<p class="muted small">{{ day.note }}</p>{% endif %}
+            {% if day.lessons %}{{ lesson_list(day, states.get(day.day), compact=True) }}{% endif %}
+          </section>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">V tomhle týdnu není v rozvrhu žádná výuka.</p>
+    {% endif %}
+  </div>
+{% endblock %}

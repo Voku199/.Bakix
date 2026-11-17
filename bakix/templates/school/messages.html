@@ -1,0 +1,29 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, page_header, load_error %}
+{% block title %}Zprávy{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {{ page_header("Zprávy", kicker="komens", lead="Přijaté zprávy ze školy. Odpovědět se dá v Bakalářích.") }}
+    {% if error %}
+      {{ load_error(error) }}
+    {% elif messages %}
+      <ul class="card list">
+        {% for m in messages %}
+          <li>
+            <a class="item" href="{{ url_for('.message', message_id=m.id) }}">
+              <span class="dot{% if m.read %} dot-off{% endif %}"{% if not m.read %} role="img" aria-label="Nepřečtená"{% endif %}></span>
+              <span class="grow">
+                <span class="item-title">{{ m.title }}</span>
+                <span class="item-sub clamp-2">{{ m.sender }}{% if m.text %} · {{ m.text[:140] }}{% endif %}</span>
+              </span>
+              <span class="item-end">{% if m.sent %}{{ m.sent.date()|relative_day }}{% endif %}{% if m.attachments %}<br>{{ icon("paperclip", label="Příloha") }}{% endif %}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">Žádné zprávy.</p>
+    {% endif %}
+  </div>
+{% endblock %}

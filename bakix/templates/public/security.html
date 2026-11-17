@@ -1,0 +1,54 @@
+{% extends "layouts/base.html" %}
+{% set public_page = True %}
+{% from "components/ui.html" import icon %}
+{% block title %}Bezpečnost: co se děje s tvým heslem a daty{% endblock %}
+{% block description %}Bakix neukládá heslo do Bakalářů ani známky. Popisujeme přesně, co se při přihlášení děje, co si server pamatuje a jak to smazat.{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <article class="prose">
+    <p class="kicker">bezpečnost</p>
+    <h1>Co se děje s tvým heslem a daty</h1>
+    <p class="lead">Do Bakixu zadáváš přístup do školy. Tady je bez příkras popsané, co s ním děláme.</p>
+
+    <h2>Přihlášení</h2>
+    <ol>
+      <li>Vybereš školu z oficiálního seznamu škol Bakalářů. Na jinou adresu Bakix přihlašovací údaje nepošle.</li>
+      <li>Jméno a heslo odešle server Bakixu šifrovaným spojením tvojí škole. Ta vrátí přístupový token.</li>
+      <li><strong>Heslo se v tu chvíli zahodí.</strong> Neukládá se do databáze, do logu ani nikam jinam.</li>
+      <li>Token se zašifruje samostatným klíčem a uloží. Slouží k načítání tvých dat, dokud se neodhlásíš.</li>
+    </ol>
+
+    <h2>Co si Bakix pamatuje</h2>
+    <div class="table-wrap">
+      <table class="table">
+        {% for what, how_long in retention %}
+          <tr><th scope="row">{{ what }}</th><td>{{ how_long }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+
+    <h2>Co Bakix nedělá</h2>
+    <ul>
+      <li>Nic v Bakalářích nemění: neposílá zprávy, nepotvrzuje je a neoznačuje jako přečtené.</li>
+      <li>Nenačítá nic z cizích webů. Žádná analytika, reklamy, písma ani skripty třetích stran.</li>
+      <li>Neposílá tvoje známky ani jméno žádné AI. Zadání pro AI si kopíruješ sám/sama a neobsahuje nic osobního.</li>
+      <li>Nedotazuje se školy na pozadí, když aplikaci nepoužíváš.</li>
+    </ul>
+
+    <h2>Jak přístup zrušit</h2>
+    <p>V <a href="{{ url_for('account.index') }}">účtu</a> jsou dvě tlačítka: <strong>Odhlásit ze všech zařízení</strong> a <strong>Smazat účet</strong>. Smazání odstraní všechno, co o tobě Bakix má. Účet, na který se nikdo nepřihlásil {{ config.INACTIVE_ACCOUNT_DAYS }} dní, se smaže sám. Změnou hesla v Bakalářích přestane uložený token platit také.</p>
+
+    <h2>Technicky</h2>
+    <ul>
+      <li>Token je šifrovaný pomocí Fernet (AES + HMAC) klíčem odděleným od klíče pro cookies.</li>
+      <li>Přihlašovací cookie je <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>.</li>
+      <li>Každý formulář má ochranu proti CSRF, přihlášení má omezení počtu pokusů.</li>
+      <li>Content-Security-Policy povoluje jen vlastní soubory (<code>default-src 'self'</code>, bez <code>unsafe-inline</code>).</li>
+      <li>Zprávy ze školy se zobrazují jako čistý text. HTML od školy ani od AI se nikdy nevykresluje.</li>
+    </ul>
+
+    <h2>Našel jsi chybu?</h2>
+    <p>Napiš na <a href="mailto:{{ config.PRIVACY_CONTACT_EMAIL }}">{{ config.PRIVACY_CONTACT_EMAIL }}</a>. Bezpečnostní hlášení mají přednost.</p>
+    <p class="muted small">Bakix je nezávislý projekt a není oficiální aplikací systému Bakaláři.</p>
+  </article>
+{% endblock %}

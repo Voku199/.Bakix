@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, page_header, load_error %}
+{% block title %}Úkoly{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    {{ page_header("Úkoly", kicker="úkoly", lead="Nehotové úkoly, seřazené podle termínu.") }}
+    {% if error %}
+      {{ load_error(error) }}
+    {% elif homeworks %}
+      <ul class="stack">
+        {% for hw in homeworks %}
+          <li class="card stack stack-sm">
+            <div class="row row-between">
+              <h2>{{ hw.subject or "Úkol" }}</h2>
+              {% if hw.due %}
+                <span class="chip{% if hw.due < today %} chip-danger{% elif (hw.due - today).days <= 1 %} chip-warn{% endif %}">{{ icon("clock") }} {{ "po termínu, " if hw.due < today }}{{ hw.due|relative_day }}</span>
+              {% endif %}
+            </div>
+            <p class="message-body">{{ hw.content }}</p>
+            <p class="muted small">
+              {% if hw.assigned %}Zadáno {{ hw.assigned|relative_day }}.{% endif %}
+              {% if hw.has_attachments %}{{ icon("paperclip") }} Přílohy najdeš v Bakalářích.{% endif %}
+            </p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">Žádné úkoly. Hotovo.</p>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,0 +1,13 @@
+# Bakix 2 na bakix.cz. Nahrazuje blok staré verze (ta běžela přes waitress na portu 9995).
+# Než ho zapneš, starou službu zastav. Na bloky ostatních projektů (knowix.cz…) se nesahá.
+
+www.bakix.cz {
+    redir https://bakix.cz{uri} permanent
+}
+
+bakix.cz {
+    encode zstd gzip
+    header -Server
+    # Bezpečnostní hlavičky (CSP, HSTS…) a cache statických souborů nastavuje aplikace sama.
+    reverse_proxy 127.0.0.1:9960
+}

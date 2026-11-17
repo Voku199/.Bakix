@@ -1,0 +1,71 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon, alert %}
+{% block title %}Styleguide{% endblock %}
+{% block content %}
+  <div class="stack stack-lg">
+    <header>
+      <p class="kicker">design systém</p>
+      <h1>Styleguide</h1>
+      <p class="muted">Tokeny a komponenty na jednom místě. Zdroj: static/css/app.css a templates/components/ui.html.</p>
+    </header>
+
+    <section class="stack"><h2>Paleta</h2>
+      <p class="muted">Klik přepne paletu pro tenhle prohlížeč (jen ve vývoji). Natrvalo se nastavuje v .env: <code>BAKIX_PALETTE={{ palette.key }}</code>.</p>
+      <div class="choices">
+        {% for p in palettes %}
+          <a class="btn {{ 'btn-primary' if p.key == palette.key else 'btn-secondary' }} btn-sm" href="{{ url_for('public.styleguide', paleta=p.key) }}">{{ p.name }}</a>
+        {% endfor %}
+      </div>
+      <p class="small"><strong>{{ palette.name }}.</strong> {{ palette.note }}</p>
+      <div class="swatches">
+        <div class="swatch sw-bg">bg</div><div class="swatch">paper</div><div class="swatch sw-sand">sand</div>
+        <div class="swatch sw-hair">hair</div><div class="swatch sw-ink">ink</div>
+        <div class="swatch sw-accent">accent</div><div class="swatch sw-clay">clay</div>
+      </div>
+    </section>
+
+    <section class="stack"><h2>Tvary</h2>
+      <p class="muted">Natrvalo v .env: <code>BAKIX_SHAPE={{ shape }}</code>.</p>
+      <div class="choices">
+        {% for key, (name, note) in shapes.items() %}
+          <a class="btn {{ 'btn-primary' if key == shape else 'btn-secondary' }} btn-sm" href="{{ url_for('public.styleguide', tvar=key) }}">{{ name }}</a>
+        {% endfor %}
+      </div>
+      <p class="small"><strong>{{ shapes[shape][0] }}.</strong> {{ shapes[shape][1] }}</p>
+    </section>
+
+    <section class="stack"><h2>Známky</h2>
+      <div class="row">
+        {% for text, level in [("1", 1), ("2-", 2), ("3", 3), ("4", 4), ("5", 5), ("N", 0), ("8/10", 0)] %}<span class="mark{% if level %} mark-{{ level }}{% endif %}">{{ text }}</span>{% endfor %}
+        <span class="mark mark-1 mark-sm">1</span><span class="mark mark-5 mark-lg">5</span>
+      </div>
+    </section>
+
+    <section class="stack"><h2>Písmo</h2>
+      <h1>Nadpis 1: Newsreader</h1><h2>Nadpis 2</h2><h3>Nadpis 3</h3>
+      <p>Text: Geist. Příliš žluťoučký kůň úpěl ďábelské ódy.</p>
+      <p class="lead">Perex: Newsreader, pro úvodní odstavce.</p>
+      <p class="mono">Mono: Geist Mono 8:00–8:45</p><p class="kicker">popisek · drobné verzálky</p>
+    </section>
+
+    <section class="stack"><h2>Tlačítka a štítky</h2>
+      <div class="row">
+        <button class="btn btn-primary" type="button">Hlavní</button><button class="btn btn-secondary" type="button">Vedlejší</button>
+        <button class="btn btn-ghost" type="button">Odkaz</button><button class="btn btn-danger" type="button">Nebezpečné</button>
+        <button class="btn btn-primary btn-sm" type="button">Malé</button>
+      </div>
+      <div class="row">
+        <span class="chip">štítek</span><span class="chip chip-primary">teď</span><span class="chip chip-warn">zítra</span>
+        <span class="chip chip-danger">po termínu</span><span class="chip chip-success">hotovo</span>
+      </div>
+    </section>
+
+    <section class="stack"><h2>Hlášky</h2>
+      {{ alert("info", "Informace.") }}{{ alert("success", "Povedlo se.") }}{{ alert("warn", "Část dat se nepodařilo načíst.") }}{{ alert("error", "Špatné jméno nebo heslo.") }}
+    </section>
+
+    <section class="stack"><h2>Ikony</h2>
+      <div class="row">{% for name in ["house", "award", "calendar", "list-checks", "mail", "sparkles", "user", "search", "copy", "lock", "shield", "key", "database", "users", "graduation-cap", "trending-up", "trending-down", "paperclip", "clock", "eye", "rotate-ccw", "external-link"] %}<span title="{{ name }}">{{ icon(name) }}</span>{% endfor %}</div>
+    </section>
+  </div>
+{% endblock %}

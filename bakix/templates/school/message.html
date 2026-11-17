@@ -1,0 +1,18 @@
+{% extends "layouts/base.html" %}
+{% from "components/ui.html" import icon %}
+{% block title %}{{ message.title }}{% endblock %}
+{% block page_class %}page-reading{% endblock %}
+{% block content %}
+  <article class="stack">
+    <p><a href="{{ url_for('.messages') }}">{{ icon("chevron-left") }} Zprávy</a></p>
+    <h1>{{ message.title }}</h1>
+    <p class="muted">{{ message.sender }}{% if message.sent %} · {{ message.sent.date()|date(weekday=True, year=True) }}, {{ message.sent|clock }}{% endif %}</p>
+    <div class="card message-body">{{ message.text or "Zpráva nemá žádný text." }}</div>
+    {% if message.attachments %}
+      <p class="muted small">{{ icon("paperclip") }} Zpráva má {{ plural(message.attachments, "přílohu", "přílohy", "příloh") }}. Otevřeš je v Bakalářích.</p>
+    {% endif %}
+    {% if not message.read %}
+      <p class="muted small">Bakix zprávu v Bakalářích neoznačuje jako přečtenou.</p>
+    {% endif %}
+  </article>
+{% endblock %}
